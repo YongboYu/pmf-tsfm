@@ -1,0 +1,6 @@
+outs:
+- md5: 4ddfd563223f3580029c5c095cb5e7b6.dir
+  size: 853615074
+  nfiles: 4
+  hash: md5
+  path: raw_logs

@@ -1,0 +1,6 @@
+outs:
+- md5: 53fa73afefaccc717e60a656a4210fac.dir
+  size: 382571
+  nfiles: 4
+  hash: md5
+  path: time_series

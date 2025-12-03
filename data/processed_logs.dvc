@@ -1,0 +1,6 @@
+outs:
+- md5: c16cfb2ee977bab5894b519537616b75.dir
+  size: 1314599266
+  nfiles: 5
+  hash: md5
+  path: processed_logs
