@@ -2,4 +2,4 @@
     remote = google_cloud
 ['remote "google_cloud"']
     url = gdrive://1akNG1VbBQF6hGClPieTtAVyRsb1872xu/dvcstore
-    gdrive_use_service_account = true
+    gdrive_use_service_account = false
