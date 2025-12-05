@@ -1,0 +1,3 @@
+name: BPI2019_1
+path: ${paths.data_dir}/time_series/BPI2019_1.parquet
+split_ratio: [0.6, 0.2, 0.2]
