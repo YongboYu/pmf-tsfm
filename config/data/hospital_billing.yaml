@@ -1,0 +1,3 @@
+name: Hospital_Billing
+path: ${paths.data_dir}/time_series/Hospital_Billing.parquet
+split_ratio: [0.6, 0.2, 0.2]
