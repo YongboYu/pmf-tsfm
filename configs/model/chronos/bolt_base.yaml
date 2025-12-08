@@ -1,0 +1,7 @@
+name: chronos_bolt_base
+family: chronos
+id: amazon/chronos-bolt-base
+variant: bolt_base
+quantile_levels: [0.1, 0.5, 0.9]
+
+

@@ -1,0 +1,6 @@
+name: chronos_bolt_tiny
+family: chronos
+id: amazon/chronos-bolt-tiny
+variant: bolt_tiny
+quantile_levels: [0.1, 0.5, 0.9]
+
