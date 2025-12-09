@@ -1,0 +1,13 @@
+# Moirai MoE Base (Mixture of Experts)
+name: moirai_moe_base
+family: moirai
+id: Salesforce/moirai-moe-1.0-R-base
+variant: moe_base
+torch_dtype: float32
+num_samples: 100
+patch_size: 16  # Fixed for MoE
+
+# Device compatibility: cuda (recommended), cpu only
+# MPS NOT supported - MoE layers don't work on MPS
+supported_devices: [cuda, cpu]
+fallback_device: cpu

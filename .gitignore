@@ -205,3 +205,17 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# Project-specific ignores
+# Generated outputs and results
+outputs/
+results/
+
+# macOS
+.DS_Store
+
+# Temporary/scratch files
+temp/
+
+# Old example code (superseded by main pipeline)
+example/

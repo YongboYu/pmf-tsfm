@@ -1,0 +1,13 @@
+# Moirai 2.0 Small
+name: moirai_2_0_small
+family: moirai
+id: Salesforce/moirai-2.0-R-small
+variant: 2_0_small
+torch_dtype: float32
+num_samples: 100
+patch_size: 32
+
+# Device compatibility: cuda (recommended), cpu
+# MPS has limited support - some operations may fail
+supported_devices: [cuda, cpu]
+fallback_device: cpu
