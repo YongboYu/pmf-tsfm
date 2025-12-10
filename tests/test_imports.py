@@ -41,4 +41,3 @@ class TestBaseAdapter:
 
         with pytest.raises(TypeError):
             BaseAdapter({})  # type: ignore
-
