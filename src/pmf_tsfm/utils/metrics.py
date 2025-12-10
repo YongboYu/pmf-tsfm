@@ -15,7 +15,7 @@ Future extension point:
 
 import json
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Any
 
 import numpy as np
 from sklearn.metrics import mean_absolute_error, mean_squared_error
@@ -24,8 +24,8 @@ from sklearn.metrics import mean_absolute_error, mean_squared_error
 def compute_metrics(
     predictions: np.ndarray,
     targets: np.ndarray,
-    feature_names: Optional[List[str]] = None,
-) -> Dict[str, Any]:
+    feature_names: list[str] | None = None,
+) -> dict[str, Any]:
     """
     Compute comprehensive forecasting metrics.
 
@@ -90,7 +90,7 @@ def compute_metrics(
     }
 
 
-def print_metrics(metrics: Dict[str, Any], title: str = "") -> None:
+def print_metrics(metrics: dict[str, Any], title: str = "") -> None:
     """Print metrics summary."""
     s = metrics["summary"]
 
@@ -110,8 +110,8 @@ def print_metrics(metrics: Dict[str, Any], title: str = "") -> None:
 
 
 def save_metrics(
-    metrics: Dict[str, Any],
-    output_path: Union[str, Path],
+    metrics: dict[str, Any],
+    output_path: str | Path,
 ) -> None:
     """Save metrics to JSON file."""
     output_path = Path(output_path)
@@ -123,7 +123,7 @@ def save_metrics(
     print(f"  Metrics saved to {output_path}")
 
 
-def print_aggregate_summary(all_metrics: Dict[str, Dict[str, Any]]) -> None:
+def print_aggregate_summary(all_metrics: dict[str, dict[str, Any]]) -> None:
     """
     Print aggregate summary across multiple datasets/models.
 

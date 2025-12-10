@@ -9,7 +9,7 @@ Uses absolute point splits for clear, reproducible data partitioning.
 """
 
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -54,9 +54,9 @@ class ZeroShotDataModule:
         self.train_end = train_end
         self.val_end = val_end
 
-        self.data: Optional[pd.DataFrame] = None
-        self.feature_names: Optional[List[str]] = None
-        self.metadata: Dict[str, Any] = {}
+        self.data: pd.DataFrame | None = None
+        self.feature_names: list[str] | None = None
+        self.metadata: dict[str, Any] = {}
 
     @classmethod
     def from_config(cls, data_cfg: DictConfig, prediction_length: int = 7) -> "ZeroShotDataModule":
@@ -101,7 +101,7 @@ class ZeroShotDataModule:
             f"  Splits: train={self.train_end}, val={self.val_end - self.train_end}, test={test_length}"
         )
 
-    def _create_expanding_sequences(self, split: str) -> Dict[str, Any]:
+    def _create_expanding_sequences(self, split: str) -> dict[str, Any]:
         """
         Create sequences with expanding window for specified split.
 
@@ -132,8 +132,8 @@ class ZeroShotDataModule:
             target_start = self.val_end
             target_end = total_length - self.prediction_length
 
-        inputs = []
-        targets = []
+        inputs: list[np.ndarray] = []
+        targets_list: list[np.ndarray] = []
 
         for target_idx in range(target_start, target_end + 1):
             # Input: all data from beginning up to target_idx (expanding window)
@@ -142,17 +142,17 @@ class ZeroShotDataModule:
             target_seq = full_data[target_idx : target_idx + self.prediction_length]
 
             inputs.append(input_seq)
-            targets.append(target_seq)
+            targets_list.append(target_seq)
 
         # Convert targets to numpy array (uniform shape)
-        if targets:
-            targets = np.array(targets)
+        if targets_list:
+            targets = np.array(targets_list)
         else:
             targets = np.empty((0, self.prediction_length, full_data.shape[1]))
 
         return {"inputs": inputs, "targets": targets}
 
-    def prepare_data_for_model(self, split: str = "test") -> Dict[str, Any]:
+    def prepare_data_for_model(self, split: str = "test") -> dict[str, Any]:
         """
         Prepare data for zero-shot inference.
 
@@ -181,7 +181,7 @@ class ZeroShotDataModule:
 
         print(f"Prepared {split} data:")
         print(f"  - Sequences: {len(sequences['inputs'])}")
-        print(f"  - Features: {len(self.feature_names)}")
+        print(f"  - Features: {len(self.feature_names) if self.feature_names else 0}")
         print(f"  - Target shape: {sequences['targets'].shape}")
         if sequences["inputs"]:
             print(

@@ -10,7 +10,7 @@ Handles multivariate time series by forecasting each feature separately.
 
 import time
 import warnings
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -62,7 +62,7 @@ class ChronosAdapter(BaseAdapter):
         device: str = "mps",
         torch_dtype: str = "float32",
         prediction_length: int = 7,
-        quantile_levels: Optional[List[float]] = None,
+        quantile_levels: list[float] | None = None,
         **kwargs,
     ):
         """
@@ -91,6 +91,7 @@ class ChronosAdapter(BaseAdapter):
 
         self.quantile_levels = quantile_levels or self.QUANTILE_LEVELS
         self._is_chronos2 = self._detect_chronos2()
+        self.pipeline: Any = None  # Set in load_model()
 
     def _detect_chronos2(self) -> bool:
         """Detect if model is Chronos 2.0 (uses different API)."""
@@ -134,10 +135,10 @@ class ChronosAdapter(BaseAdapter):
 
     def predict(
         self,
-        prepared_data: Dict[str, Any],
-        prediction_length: Optional[int] = None,
+        prepared_data: dict[str, Any],
+        prediction_length: int | None = None,
         **kwargs,
-    ) -> Tuple[np.ndarray, np.ndarray]:
+    ) -> tuple[np.ndarray, np.ndarray]:
         """
         Generate predictions for multivariate time series.
 
@@ -161,9 +162,9 @@ class ChronosAdapter(BaseAdapter):
 
     def _predict_bolt(
         self,
-        prepared_data: Dict[str, Any],
+        prepared_data: dict[str, Any],
         prediction_length: int,
-    ) -> Tuple[np.ndarray, np.ndarray]:
+    ) -> tuple[np.ndarray, np.ndarray]:
         """Chronos Bolt prediction using predict_quantiles API."""
         inputs = prepared_data["inputs"]
         feature_names = prepared_data["feature_names"]
@@ -190,6 +191,7 @@ class ChronosAdapter(BaseAdapter):
                 context = torch.tensor(univariate, dtype=torch.float32).unsqueeze(0)
 
                 try:
+                    assert self.pipeline is not None
                     quantiles, mean = self.pipeline.predict_quantiles(
                         inputs=context,
                         prediction_length=prediction_length,
@@ -212,9 +214,9 @@ class ChronosAdapter(BaseAdapter):
 
     def _predict_chronos2_batched(
         self,
-        prepared_data: Dict[str, Any],
+        prepared_data: dict[str, Any],
         prediction_length: int,
-    ) -> Tuple[np.ndarray, np.ndarray]:
+    ) -> tuple[np.ndarray, np.ndarray]:
         """
         Chronos 2.0 prediction using predict_df API with batched features.
 
@@ -261,6 +263,7 @@ class ChronosAdapter(BaseAdapter):
 
             try:
                 # Single batched prediction call for all features
+                assert self.pipeline is not None
                 pred_df = self.pipeline.predict_df(
                     batch_df,
                     prediction_length=prediction_length,

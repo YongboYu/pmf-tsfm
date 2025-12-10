@@ -36,7 +36,7 @@ def save_predictions(
     predictions: np.ndarray,
     targets: np.ndarray,
     quantiles: np.ndarray,
-    output_dir: str,
+    output_dir: str | Path,
     model_name: str,
     dataset_name: str,
     metadata: dict,
@@ -53,20 +53,20 @@ def save_predictions(
     Returns:
         Path to output directory
     """
-    output_dir = Path(output_dir)
-    output_dir.mkdir(parents=True, exist_ok=True)
+    output_path = Path(output_dir)
+    output_path.mkdir(parents=True, exist_ok=True)
 
     prefix = f"{dataset_name}_{model_name}"
 
-    np.save(output_dir / f"{prefix}_predictions.npy", predictions)
-    np.save(output_dir / f"{prefix}_targets.npy", targets)
-    np.save(output_dir / f"{prefix}_quantiles.npy", quantiles)
+    np.save(output_path / f"{prefix}_predictions.npy", predictions)
+    np.save(output_path / f"{prefix}_targets.npy", targets)
+    np.save(output_path / f"{prefix}_quantiles.npy", quantiles)
 
-    with open(output_dir / f"{prefix}_metadata.json", "w") as f:
+    with open(output_path / f"{prefix}_metadata.json", "w") as f:
         json.dump(metadata, f, indent=2, default=str)
 
-    print(f"Predictions saved to {output_dir}/{prefix}_*")
-    return output_dir
+    print(f"Predictions saved to {output_path}/{prefix}_*")
+    return output_path
 
 
 def run_inference(cfg: DictConfig) -> dict:

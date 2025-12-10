@@ -23,7 +23,6 @@ Usage:
 
 import json
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
 
 import hydra
 import numpy as np
@@ -37,7 +36,7 @@ from pmf_tsfm.utils.metrics import (
 )
 
 
-def find_result_files(results_dir: Path) -> List[Tuple[str, str]]:
+def find_result_files(results_dir: Path) -> list[tuple[str, str]]:
     """
     Find all prediction files in results directory.
 
@@ -59,7 +58,7 @@ def load_predictions(
     results_dir: Path,
     dataset_name: str,
     model_name: str,
-) -> Tuple[np.ndarray, np.ndarray, Optional[Dict]]:
+) -> tuple[np.ndarray, np.ndarray, dict | None]:
     """
     Load predictions, targets, and metadata from disk.
 
@@ -90,7 +89,7 @@ def evaluate_single(
     dataset_name: str,
     model_name: str,
     save: bool = True,
-) -> Dict:
+) -> dict:
     """
     Evaluate a single model-dataset result.
 
@@ -129,7 +128,7 @@ def evaluate_single(
     return metrics
 
 
-def evaluate_all(results_dir: Path, save: bool = True) -> Dict[str, Dict]:
+def evaluate_all(results_dir: Path, save: bool = True) -> dict[str, dict]:
     """
     Evaluate all results in directory.
 
