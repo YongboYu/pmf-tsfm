@@ -1,0 +1,29 @@
+# @package _global_
+
+# Evaluation configuration
+# Usage: python evaluate.py task=zero_shot
+
+defaults:
+  - _self_
+  - paths: default
+
+# Task type (zero_shot, lora, full_tune)
+task: zero_shot
+
+# Optional filters (dataset name and model name as strings)
+# Set to evaluate specific subset, or leave null for all
+dataset: null
+model: null
+
+# Results directory to evaluate: outputs/{task}/
+results_dir: ${paths.output_dir}/${task}
+
+# Save metrics to disk
+save: true
+
+# ============== Hydra Settings ==============
+hydra:
+  run:
+    dir: ${paths.output_dir}/hydra/eval/${now:%Y-%m-%d}/${now:%H-%M-%S}
+  job:
+    chdir: false

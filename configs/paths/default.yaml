@@ -1,0 +1,11 @@
+# Path configurations
+
+# Project root
+root_dir: ${oc.env:PROJECT_ROOT,${hydra:runtime.cwd}}
+
+# Data directory
+data_dir: ${paths.root_dir}/data/time_series
+
+# Output directory (new unified structure)
+# Structure: outputs/{task}/{dataset}/{model}/
+output_dir: ${paths.root_dir}/outputs

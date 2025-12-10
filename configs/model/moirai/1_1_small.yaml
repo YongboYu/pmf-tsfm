@@ -1,0 +1,13 @@
+# Moirai 1.1 Small (14M params)
+name: moirai_1_1_small
+family: moirai
+id: Salesforce/moirai-1.1-R-small
+variant: 1_1_small
+torch_dtype: float32
+num_samples: 100
+patch_size: 32
+
+# Device compatibility: cuda (recommended), cpu
+# MPS has limited support - some operations may fail
+supported_devices: [cuda, cpu]
+fallback_device: cpu

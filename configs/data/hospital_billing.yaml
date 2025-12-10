@@ -1,3 +1,9 @@
+# Hospital Billing dataset
+# Shape: (726, 73)
+# Date range: 2013-07-04 to 2015-06-29
 name: Hospital_Billing
-path: ${paths.data_dir}/time_series/Hospital_Billing.parquet
-split_ratio: [0.6, 0.2, 0.2]
+path: ${paths.data_dir}/Hospital_Billing.parquet
+
+# Absolute point splits: train-val-test = (436, 145, 145)
+train_end: 436     # Training: [0, 436)
+val_end: 581       # Validation: [436, 581), Test: [581, 726)

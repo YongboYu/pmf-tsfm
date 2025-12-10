@@ -1,0 +1,38 @@
+# @package _global_
+
+# Zero-shot inference configuration
+# Usage: python inference.py model=chronos/bolt_small data=bpi2017
+
+defaults:
+  - _self_
+  - paths: default
+  - model: chronos/bolt_small
+  - data: bpi2017
+
+# ============== Global Settings ==============
+seed: 42
+print_config: false
+
+# Task type (for output directory structure)
+task: zero_shot
+
+# Device configuration
+# Options: cuda (default for cluster), mps (macOS), cpu (fallback)
+# Some models may not support all devices - see device compatibility
+device: cuda
+
+# Forecasting horizon
+prediction_length: 7
+
+# Output directory structure: outputs/{task}/{dataset}/{model}/
+output_dir: ${paths.output_dir}/${task}/${data.name}/${model.name}
+
+# ============== Hydra Settings ==============
+hydra:
+  run:
+    dir: ${paths.output_dir}/hydra/${task}/${now:%Y-%m-%d}/${now:%H-%M-%S}
+  sweep:
+    dir: ${paths.output_dir}/hydra/${task}/multirun/${now:%Y-%m-%d}/${now:%H-%M-%S}
+    subdir: ${hydra.job.num}
+  job:
+    chdir: false
