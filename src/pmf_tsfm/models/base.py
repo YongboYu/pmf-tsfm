@@ -1,7 +1,7 @@
 """Base adapter class for time series foundation models."""
 
 from abc import ABC, abstractmethod
-from typing import Any, Dict, Optional, Tuple
+from typing import Any
 
 import numpy as np
 import torch
@@ -74,10 +74,10 @@ class BaseAdapter(ABC):
     @abstractmethod
     def predict(
         self,
-        prepared_data: Dict[str, Any],
-        prediction_length: Optional[int] = None,
+        prepared_data: dict[str, Any],
+        prediction_length: int | None = None,
         **kwargs,
-    ) -> Tuple[np.ndarray, np.ndarray]:
+    ) -> tuple[np.ndarray, np.ndarray]:
         """
         Generate predictions for multivariate time series.
 

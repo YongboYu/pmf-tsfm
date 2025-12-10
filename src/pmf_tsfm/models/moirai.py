@@ -11,7 +11,7 @@ Handles multivariate time series by forecasting each feature separately.
 
 import time
 import warnings
-from typing import Any, Dict, Optional, Tuple
+from typing import Any
 
 import numpy as np
 from omegaconf import DictConfig
@@ -175,8 +175,8 @@ class MoiraiAdapter(BaseAdapter):
     def _forecast_single_variable(
         self,
         univariate_series: np.ndarray,
-        context_length: Optional[int] = None,
-    ) -> Dict[str, np.ndarray]:
+        context_length: int | None = None,
+    ) -> dict[str, np.ndarray]:
         """Forecast a single univariate time series."""
         from gluonts.dataset.common import ListDataset
 
@@ -228,10 +228,10 @@ class MoiraiAdapter(BaseAdapter):
 
     def predict(
         self,
-        prepared_data: Dict[str, Any],
-        prediction_length: Optional[int] = None,
+        prepared_data: dict[str, Any],
+        prediction_length: int | None = None,
         **kwargs,
-    ) -> Tuple[np.ndarray, np.ndarray]:
+    ) -> tuple[np.ndarray, np.ndarray]:
         """
         Generate predictions for multivariate time series.
 
