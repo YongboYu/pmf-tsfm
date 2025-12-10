@@ -91,6 +91,7 @@ class ChronosAdapter(BaseAdapter):
 
         self.quantile_levels = quantile_levels or self.QUANTILE_LEVELS
         self._is_chronos2 = self._detect_chronos2()
+        self.pipeline: Any = None  # Set in load_model()
 
     def _detect_chronos2(self) -> bool:
         """Detect if model is Chronos 2.0 (uses different API)."""
@@ -190,6 +191,7 @@ class ChronosAdapter(BaseAdapter):
                 context = torch.tensor(univariate, dtype=torch.float32).unsqueeze(0)
 
                 try:
+                    assert self.pipeline is not None
                     quantiles, mean = self.pipeline.predict_quantiles(
                         inputs=context,
                         prediction_length=prediction_length,
@@ -261,6 +263,7 @@ class ChronosAdapter(BaseAdapter):
 
             try:
                 # Single batched prediction call for all features
+                assert self.pipeline is not None
                 pred_df = self.pipeline.predict_df(
                     batch_df,
                     prediction_length=prediction_length,

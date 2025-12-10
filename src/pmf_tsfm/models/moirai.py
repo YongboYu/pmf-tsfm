@@ -176,7 +176,7 @@ class MoiraiAdapter(BaseAdapter):
         self,
         univariate_series: np.ndarray,
         context_length: int | None = None,
-    ) -> dict[str, np.ndarray]:
+    ) -> dict[str, Any]:
         """Forecast a single univariate time series."""
         from gluonts.dataset.common import ListDataset
 

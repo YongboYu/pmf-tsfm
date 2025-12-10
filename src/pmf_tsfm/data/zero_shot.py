@@ -132,8 +132,8 @@ class ZeroShotDataModule:
             target_start = self.val_end
             target_end = total_length - self.prediction_length
 
-        inputs = []
-        targets = []
+        inputs: list[np.ndarray] = []
+        targets_list: list[np.ndarray] = []
 
         for target_idx in range(target_start, target_end + 1):
             # Input: all data from beginning up to target_idx (expanding window)
@@ -142,11 +142,11 @@ class ZeroShotDataModule:
             target_seq = full_data[target_idx : target_idx + self.prediction_length]
 
             inputs.append(input_seq)
-            targets.append(target_seq)
+            targets_list.append(target_seq)
 
         # Convert targets to numpy array (uniform shape)
-        if targets:
-            targets = np.array(targets)
+        if targets_list:
+            targets = np.array(targets_list)
         else:
             targets = np.empty((0, self.prediction_length, full_data.shape[1]))
 
@@ -181,7 +181,7 @@ class ZeroShotDataModule:
 
         print(f"Prepared {split} data:")
         print(f"  - Sequences: {len(sequences['inputs'])}")
-        print(f"  - Features: {len(self.feature_names)}")
+        print(f"  - Features: {len(self.feature_names) if self.feature_names else 0}")
         print(f"  - Target shape: {sequences['targets'].shape}")
         if sequences["inputs"]:
             print(
