@@ -52,7 +52,8 @@ class BaseAdapter(ABC):
         self.pipeline = None
         self._is_loaded = False
 
-    def _parse_dtype(self, dtype_str: str) -> torch.dtype:
+    @staticmethod
+    def _parse_dtype(dtype_str: str) -> torch.dtype:
         """Parse dtype string to torch dtype."""
         dtype_map = {
             "float32": torch.float32,

@@ -34,7 +34,8 @@ def test_import_utils():
 class TestBaseAdapter:
     """Tests for BaseAdapter class."""
 
-    def test_base_adapter_is_abstract(self):
+    @staticmethod
+    def test_base_adapter_is_abstract():
         """Test that BaseAdapter cannot be instantiated directly."""
         from pmf_tsfm.models.base import BaseAdapter
 
