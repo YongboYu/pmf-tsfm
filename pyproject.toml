@@ -51,14 +51,6 @@ dev = [
     "pre-commit>=3.0.0",
 ]
 
-timesfm_legacy = [
-    "timesfm==1.3.0; python_version < '3.12'",
-]
-
-timesfm_v25 = [
-    "timesfm @ https://github.com/google-research/timesfm/archive/refs/heads/master.zip ; python_version >= '3.11'",
-]
-
 [project.scripts]
 pmf-inference = "pmf_tsfm.inference:main"
 
@@ -114,6 +106,7 @@ exclude = [
     "temp/",
     "example/",
 ]
+
 [[tool.mypy.overrides]]
 module = "tests.*"
 ignore_errors = true
@@ -123,7 +116,6 @@ ignore_errors = true
 # =============================================================================
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-norecursedirs = ["data", "logs", "outputs", "results", "temp"]
 python_files = ["test_*.py", "*_test.py"]
 python_functions = ["test_*"]
 python_classes = ["Test*"]
