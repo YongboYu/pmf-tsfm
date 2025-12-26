@@ -1,0 +1,23 @@
+# TimesFM 2.5 - 200M PyTorch checkpoint
+name: timesfm_2_5_200m
+family: timesfm
+id: google/timesfm-2.5-200m-pytorch
+variant: 2_5_200m
+freq: D
+torch_dtype: bfloat16
+quantile_levels: [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
+
+# Compilation parameters forwarded to timesfm.ForecastConfig
+forecast_config:
+  max_context: 1024
+  max_horizon: 64
+  normalize_inputs: true
+  per_core_batch_size: 1
+  use_continuous_quantile_head: true
+  force_flip_invariance: true
+  infer_is_positive: true
+  fix_quantile_crossing: true
+
+# Device compatibility
+supported_devices: [cuda, cpu]
+fallback_device: cpu
