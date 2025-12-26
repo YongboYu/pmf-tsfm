@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import importlib
 import importlib.metadata
+import importlib.util
 import logging
 import os
 import re
@@ -54,7 +55,7 @@ class TimesFMAdapter(BaseAdapter):
         model_cfg: DictConfig,
         device: str = "cuda",
         prediction_length: int = 7,
-    ) -> TimesFMAdapter:
+    ) -> "TimesFMAdapter":
         """Create adapter from Hydra model config."""
         forecast_kwargs = dict(cls.DEFAULT_FORECAST_KWARGS)
         forecast_overrides = model_cfg.get("forecast_config") or {}
@@ -305,9 +306,7 @@ class TimesFMAdapter(BaseAdapter):
         if num_sequences == 0:
             num_features = len(feature_names)
             if num_features == 0:
-                raise ValueError(
-                    "No input sequences or feature names available for TimesFM inference."
-                )
+                raise ValueError("No input sequences or feature names available for TimesFM inference.")
             quantile_dim = self._quantile_dim or len(self.quantile_levels)
             return (
                 np.empty((0, pred_len, num_features)),
@@ -318,9 +317,7 @@ class TimesFMAdapter(BaseAdapter):
 
         predictions = np.zeros((num_sequences, pred_len, num_features), dtype=np.float32)
         quantile_dim = self._quantile_dim or len(self.quantile_levels)
-        quantiles_out = np.zeros(
-            (num_sequences, pred_len, num_features, quantile_dim), dtype=np.float32
-        )
+        quantiles_out = np.zeros((num_sequences, pred_len, num_features, quantile_dim), dtype=np.float32)
 
         for seq_idx, input_seq in enumerate(inputs):
             feature_series = self._split_features(input_seq, num_features)
@@ -383,16 +380,7 @@ class TimesFMAdapter(BaseAdapter):
         freq_map = getattr(self._legacy_module, "freq_map", None)
         if freq_map is None:
             raise AttributeError("Legacy TimesFM module is missing freq_map.")
-        if callable(freq_map):
-            return int(freq_map(self.freq))  # pylint: disable=not-callable
-        if isinstance(freq_map, dict):
-            try:
-                return int(freq_map[self.freq])
-            except KeyError as exc:
-                raise KeyError(
-                    f"Legacy TimesFM freq_map is missing frequency '{self.freq}'."
-                ) from exc
-        raise TypeError("Legacy TimesFM freq_map is not callable or a dict.")
+        return freq_map(self.freq)
 
     def _resolve_legacy_src_path(self) -> Path | None:
         """Locate the timesfm/v1/src folder."""
@@ -435,9 +423,7 @@ class TimesFMAdapter(BaseAdapter):
     @staticmethod
     def _clear_timesfm_modules() -> None:
         """Remove cached timesfm modules so we can import different versions."""
-        to_delete = [
-            name for name in sys.modules if name == "timesfm" or name.startswith("timesfm.")
-        ]
+        to_delete = [name for name in sys.modules if name == "timesfm" or name.startswith("timesfm.")]
         for name in to_delete:
             del sys.modules[name]
 
