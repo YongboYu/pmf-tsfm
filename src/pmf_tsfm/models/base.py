@@ -48,8 +48,8 @@ class BaseAdapter(ABC):
         self.kwargs = kwargs
 
         # Model state
-        self.model = None
-        self.pipeline = None
+        self.model: Any | None = None
+        self.pipeline: Any | None = None
         self._is_loaded = False
 
     def _parse_dtype(self, dtype_str: str) -> torch.dtype:
@@ -97,3 +97,7 @@ class BaseAdapter(ABC):
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}(name={self.model_name}, variant={self.variant})"
+
+
+
+

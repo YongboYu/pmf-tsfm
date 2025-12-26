@@ -166,6 +166,8 @@ class ChronosAdapter(BaseAdapter):
         prediction_length: int,
     ) -> tuple[np.ndarray, np.ndarray]:
         """Chronos Bolt prediction using predict_quantiles API."""
+        if self.pipeline is None:
+            raise RuntimeError("Model pipeline not loaded. Call load_model() first.")
         inputs = prepared_data["inputs"]
         feature_names = prepared_data["feature_names"]
 
@@ -225,6 +227,8 @@ class ChronosAdapter(BaseAdapter):
         """
         inputs = prepared_data["inputs"]
         feature_names = prepared_data["feature_names"]
+        if self.pipeline is None:
+            raise RuntimeError("Model pipeline not loaded. Call load_model() first.")
 
         num_sequences = len(inputs)
         num_features = len(feature_names)

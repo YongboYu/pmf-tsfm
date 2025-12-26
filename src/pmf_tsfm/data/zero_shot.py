@@ -146,11 +146,11 @@ class ZeroShotDataModule:
 
         # Convert targets to numpy array (uniform shape)
         if targets_list:
-            targets = np.array(targets_list)
+            targets_arr = np.asarray(targets_list)
         else:
-            targets = np.empty((0, self.prediction_length, full_data.shape[1]))
+            targets_arr = np.empty((0, self.prediction_length, full_data.shape[1]))
 
-        return {"inputs": inputs, "targets": targets}
+        return {"inputs": inputs, "targets": targets_arr}
 
     def prepare_data_for_model(self, split: str = "test") -> dict[str, Any]:
         """
@@ -168,6 +168,9 @@ class ZeroShotDataModule:
         """
         if self.data is None:
             self.setup()
+
+        if self.feature_names is None:
+            raise RuntimeError("Feature names not loaded. Call setup() first.")
 
         sequences = self._create_expanding_sequences(split)
 
