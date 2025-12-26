@@ -55,7 +55,7 @@ class TimesFMAdapter(BaseAdapter):
         model_cfg: DictConfig,
         device: str = "cuda",
         prediction_length: int = 7,
-    ) -> TimesFMAdapter:
+    ) -> "TimesFMAdapter":
         """Create adapter from Hydra model config."""
         forecast_kwargs = dict(cls.DEFAULT_FORECAST_KWARGS)
         forecast_overrides = model_cfg.get("forecast_config") or {}
@@ -380,7 +380,7 @@ class TimesFMAdapter(BaseAdapter):
         freq_map = getattr(self._legacy_module, "freq_map", None)
         if freq_map is None:
             raise AttributeError("Legacy TimesFM module is missing freq_map.")
-        return int(freq_map(self.freq))
+        return freq_map(self.freq)
 
     def _resolve_legacy_src_path(self) -> Path | None:
         """Locate the timesfm/v1/src folder."""
