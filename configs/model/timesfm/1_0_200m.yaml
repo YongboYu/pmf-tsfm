@@ -1,0 +1,19 @@
+# TimesFM 1.0 - 200M legacy checkpoint
+name: timesfm_1_0_200m
+family: timesfm
+id: google/timesfm-1.0-200m-pytorch
+variant: 1_0_200m
+freq: D
+torch_dtype: float32
+quantile_levels: [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
+
+legacy_src_path: ${oc.env:TIMESFM_V1_PATH,null}
+
+forecast_config:
+  max_context: 1024
+  max_horizon: 64
+  per_core_batch_size: 16
+  normalize_inputs: true
+
+supported_devices: [cuda, cpu]
+fallback_device: cpu

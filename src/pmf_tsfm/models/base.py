@@ -48,8 +48,8 @@ class BaseAdapter(ABC):
         self.kwargs = kwargs
 
         # Model state
-        self.model = None
-        self.pipeline = None
+        self.model: Any | None = None
+        self.pipeline: Any | None = None
         self._is_loaded = False
 
     def _parse_dtype(self, dtype_str: str) -> torch.dtype:
