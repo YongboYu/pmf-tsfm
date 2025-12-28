@@ -384,7 +384,7 @@ class TimesFMAdapter(BaseAdapter):
         if freq_map is None:
             raise AttributeError("Legacy TimesFM module is missing freq_map.")
         if callable(freq_map):
-            return int(freq_map(self.freq))
+            return int(freq_map(self.freq))  # pylint: disable=not-callable
         if isinstance(freq_map, dict):
             try:
                 return int(freq_map[self.freq])
