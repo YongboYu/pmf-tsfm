@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import importlib
 import importlib.metadata
-import importlib.util
 import logging
 import os
 import re
@@ -384,7 +383,16 @@ class TimesFMAdapter(BaseAdapter):
         freq_map = getattr(self._legacy_module, "freq_map", None)
         if freq_map is None:
             raise AttributeError("Legacy TimesFM module is missing freq_map.")
-        return int(freq_map(self.freq))
+        if callable(freq_map):
+            return int(freq_map(self.freq))
+        if isinstance(freq_map, dict):
+            try:
+                return int(freq_map[self.freq])
+            except KeyError as exc:
+                raise KeyError(
+                    f"Legacy TimesFM freq_map is missing frequency '{self.freq}'."
+                ) from exc
+        raise TypeError("Legacy TimesFM freq_map is not callable or a dict.")
 
     def _resolve_legacy_src_path(self) -> Path | None:
         """Locate the timesfm/v1/src folder."""
