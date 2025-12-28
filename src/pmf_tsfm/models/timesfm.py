@@ -306,7 +306,9 @@ class TimesFMAdapter(BaseAdapter):
         if num_sequences == 0:
             num_features = len(feature_names)
             if num_features == 0:
-                raise ValueError("No input sequences or feature names available for TimesFM inference.")
+                raise ValueError(
+                    "No input sequences or feature names available for TimesFM inference."
+                )
             quantile_dim = self._quantile_dim or len(self.quantile_levels)
             return (
                 np.empty((0, pred_len, num_features)),
@@ -317,7 +319,9 @@ class TimesFMAdapter(BaseAdapter):
 
         predictions = np.zeros((num_sequences, pred_len, num_features), dtype=np.float32)
         quantile_dim = self._quantile_dim or len(self.quantile_levels)
-        quantiles_out = np.zeros((num_sequences, pred_len, num_features, quantile_dim), dtype=np.float32)
+        quantiles_out = np.zeros(
+            (num_sequences, pred_len, num_features, quantile_dim), dtype=np.float32
+        )
 
         for seq_idx, input_seq in enumerate(inputs):
             feature_series = self._split_features(input_seq, num_features)
@@ -423,7 +427,9 @@ class TimesFMAdapter(BaseAdapter):
     @staticmethod
     def _clear_timesfm_modules() -> None:
         """Remove cached timesfm modules so we can import different versions."""
-        to_delete = [name for name in sys.modules if name == "timesfm" or name.startswith("timesfm.")]
+        to_delete = [
+            name for name in sys.modules if name == "timesfm" or name.startswith("timesfm.")
+        ]
         for name in to_delete:
             del sys.modules[name]
 
