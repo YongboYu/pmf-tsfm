@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
 import importlib
 import importlib.metadata
 import logging
@@ -384,7 +383,7 @@ class TimesFMAdapter(BaseAdapter):
         freq_map = getattr(self._legacy_module, "freq_map", None)
         if freq_map is None:
             raise AttributeError("Legacy TimesFM module is missing freq_map.")
-        if isinstance(freq_map, Callable):
+        if callable(freq_map):
             return int(freq_map(self.freq))
         if isinstance(freq_map, dict):
             try:
