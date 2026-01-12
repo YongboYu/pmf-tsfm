@@ -116,6 +116,17 @@ def run_inference(cfg: DictConfig) -> dict:
     )
     adapter.load_model()
 
+    # Load LoRA adapter if specified
+    lora_adapter_path = cfg.get("lora_adapter_path")
+    if lora_adapter_path:
+        if cfg.model.family in {"moirai", "chronos"}:
+            adapter.load_lora_adapter(lora_adapter_path)
+        else:
+            print(
+                "  Warning: LoRA adapter loading only supported for Moirai/Chronos, "
+                "ignoring lora_adapter_path"
+            )
+
     # ========== Step 3: Generate Predictions ==========
     print("\n[3/3] Generating predictions...")
     predictions, quantiles = adapter.predict(

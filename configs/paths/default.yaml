@@ -9,3 +9,6 @@ data_dir: ${paths.root_dir}/data/time_series
 # Output directory (new unified structure)
 # Structure: outputs/{task}/{dataset}/{model}/
 output_dir: ${paths.root_dir}/outputs
+
+# Results directory (for training outputs)
+results_dir: ${paths.root_dir}/results

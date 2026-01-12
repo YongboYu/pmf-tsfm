@@ -1,0 +1,8 @@
+#  Start Date: 2018-02-08 00:00:00+00:00
+#  End Date:   2018-12-11 00:00:00+00:00
+#  Length:     307 records
+#  Shape:      (307, 149)
+# start_time = '2018-10-11 00:00:00'
+# five folds on entire training set: 49 days
+# train-val-test: (184, 61, 62)    should be (185, 61, 61) better
+# test: 56 sequences (392 rows)

@@ -1,0 +1,52 @@
+# Training configuration for LoRA and full fine-tuning
+# Usage: 
+#   python -m pmf_tsfm.train task=lora_tune model=moirai/1_1_small data=bpi2017
+#   python -m pmf_tsfm.train task=lora_tune model=moirai/1_1_large data=bpi2017
+
+defaults:
+  - _self_
+  - paths: default
+  - model: moirai/1_1_small
+  - data: bpi2017
+  - task: lora_tune
+  - lora: default
+
+# ============== Global Settings ==============
+seed: 42
+print_config: false
+
+# Device: cpu, cuda, mps
+device: cuda
+
+# Forecasting parameters (fixed for training)
+prediction_length: 7
+context_length: 48  # Fixed input length for training
+
+# Output directory for training results
+output_dir: ${paths.results_dir}/${task.name}/${data.name}/${model.name}
+
+# ============== Training Settings ==============
+training:
+  epochs: 10
+  batch_size: 32
+  learning_rate: 1.0e-4
+  weight_decay: 0.01
+  gradient_clip: 1.0
+  eval_every: 1
+  save_every: 5
+  early_stopping_patience: 3
+
+# ============== Checkpointing ==============
+checkpoint:
+  save_dir: ${output_dir}/checkpoints
+  resume_from: null
+
+# ============== Hydra Settings ==============
+hydra:
+  run:
+    dir: ${paths.results_dir}/hydra/train/${now:%Y-%m-%d}/${now:%H-%M-%S}
+  sweep:
+    dir: ${paths.results_dir}/hydra/train/multirun/${now:%Y-%m-%d}/${now:%H-%M-%S}
+    subdir: ${hydra.job.num}
+  job:
+    chdir: false

@@ -1,0 +1,8 @@
+#  Start Date: 2013-07-04 00:00:00+00:00
+#  End Date:   2015-06-29 00:00:00+00:00
+#  Length:     726 records
+#  Shape:      (726, 73)
+# start_time = '2015-02-05 00:00:00'
+# five folds on entire training set: 116 days
+# train-val-test: (436, 145, 145)
+# test: 139 sequences (973 rows)

@@ -1,0 +1,29 @@
+# Main configuration file for zero-shot forecasting
+# Usage: python inference.py model=chronos/bolt_small data=bpi2017
+
+defaults:
+  - _self_
+  - paths: default
+  - model: chronos/bolt_small
+  - data: bpi2017
+  - task: zero_shot
+
+# ============== Global Settings ==============
+seed: 42
+print_config: false
+
+# Device: cpu, cuda, mps
+device: mps
+
+# Forecasting horizon
+prediction_length: 7
+
+# ============== Hydra Settings ==============
+hydra:
+  run:
+    dir: ${paths.output_dir}/hydra/${now:%Y-%m-%d}/${now:%H-%M-%S}
+  sweep:
+    dir: ${paths.output_dir}/hydra/multirun/${now:%Y-%m-%d}/${now:%H-%M-%S}
+    subdir: ${hydra.job.num}
+  job:
+    chdir: false  # Don't change working directory

@@ -1,0 +1,21 @@
+# LoRA configuration for fine-tuning
+# Based on KIT-IAI Decision-Focused Fine-Tuning Paper (Table 3)
+
+# LoRA rank - controls adaptation capacity
+r: 8
+
+# LoRA alpha - scaling factor (typically 2x rank)
+alpha: 16
+
+# LoRA dropout - regularization (0 for no regularization)
+dropout: 0.0
+
+# Target modules - attention layers to adapt
+target_modules:
+  - q_proj
+  - k_proj
+  - v_proj
+  - out_proj
+
+# Bias handling
+bias: none

@@ -4,6 +4,9 @@
 name: BPI2017
 path: ${paths.data_dir}/BPI2017.parquet
 
+# Data split ratio [train, val, test]
+split_ratio: [0.6, 0.2, 0.2]
+
 # Absolute point splits: train-val-test = (191, 64, 64)
 train_end: 191     # Training: [0, 191)
 val_end: 255       # Validation: [191, 255), Test: [255, 319)

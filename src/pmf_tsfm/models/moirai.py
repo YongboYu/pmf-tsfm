@@ -17,12 +17,13 @@ import numpy as np
 from omegaconf import DictConfig
 
 from pmf_tsfm.models.base import BaseAdapter
+from pmf_tsfm.models.mixins import LoRAMixin
 
 # Suppress warnings
 warnings.filterwarnings("ignore")
 
 
-class MoiraiAdapter(BaseAdapter):
+class MoiraiAdapter(BaseAdapter, LoRAMixin):
     """
     Unified adapter for Salesforce Moirai models.
 
@@ -94,6 +95,11 @@ class MoiraiAdapter(BaseAdapter):
             self.patch_size = 16  # Fixed for MoE
 
         self.base_module = None
+
+        # LoRA fine-tuning state
+        self._lora_applied = False
+        self._lora_adapter_path: str | None = None
+        self._peft_model = None  # Stores PEFT-wrapped model for training
 
     def _detect_version(self) -> str:
         """Detect Moirai version from variant."""
@@ -293,3 +299,86 @@ class MoiraiAdapter(BaseAdapter):
         print(f"Output: {predictions.shape}")
 
         return predictions, quantiles_out
+
+    # ========================================================================
+    # LoRA Fine-Tuning Methods (via LoRAMixin)
+    # ========================================================================
+
+    def _create_base_model_for_lora(self, context_length: int):
+        """Create Moirai forecast model for LoRA wrapping.
+
+        Only supported for Moirai 1.1 models currently.
+        """
+        if self.model_version != "1.1":
+            raise NotImplementedError(
+                f"LoRA fine-tuning only supported for Moirai 1.1, got {self.model_version}"
+            )
+
+        from uni2ts.model.moirai import MoiraiForecast
+
+        return MoiraiForecast(
+            module=self.base_module,
+            prediction_length=self.prediction_length,
+            context_length=context_length,
+            patch_size=self.patch_size,
+            num_samples=self.num_samples,
+            target_dim=1,
+            feat_dynamic_real_dim=0,
+            past_feat_dynamic_real_dim=0,
+        )
+
+    def _get_default_lora_targets(self) -> list[str]:
+        """Return default LoRA target modules for Moirai."""
+        return ["q_proj", "k_proj", "v_proj", "out_proj"]
+
+    def forward_train(
+        self,
+        batch: dict,
+    ) -> tuple:
+        """Forward pass for training returning predictions and loss.
+
+        Args:
+            batch: Dict with past_target, past_observed_target, past_is_pad, future_target
+
+        Returns:
+            Tuple of (predictions, loss)
+        """
+        import torch
+
+        if self._peft_model is None:
+            raise RuntimeError("No PEFT model available. Call apply_lora() first.")
+
+        past_target = batch["past_target"].to(self.device).float()
+        past_observed_target = batch["past_observed_target"].to(self.device).bool()
+        past_is_pad = batch["past_is_pad"].to(self.device).bool()
+        future_target = batch["future_target"].to(self.device).float()
+
+        # Get distribution from model
+        outputs = self._peft_model._get_distr(
+            patch_size=self.patch_size,
+            past_target=past_target,
+            past_observed_target=past_observed_target,
+            past_is_pad=past_is_pad,
+        )
+
+        # Format predictions
+        preds_mean = outputs.mean
+        if preds_mean.ndim == 3:
+            preds_mean = preds_mean.unsqueeze(0)
+        predictions = self._peft_model._format_preds(self.patch_size, preds_mean, 1)
+        if predictions.ndim == 3:
+            predictions = predictions.mean(dim=1)
+        if predictions.ndim == 2:
+            predictions = predictions.unsqueeze(-1)
+
+        # Compute MSE loss
+        loss = torch.nn.MSELoss()(predictions, future_target)
+
+        return predictions, loss
+
+    def to(self, device: str) -> "MoiraiAdapter":
+        """Move model to device."""
+        self.device = device
+        if self._peft_model is not None:
+            self._peft_model = self._peft_model.to(device)
+        return self
