@@ -4,6 +4,9 @@
 name: Sepsis
 path: ${paths.data_dir}/Sepsis.parquet
 
+# Data split ratio [train, val, test]
+split_ratio: [0.6, 0.2, 0.2]
+
 # Absolute point splits: train-val-test = (275, 92, 92)
 train_end: 275     # Training: [0, 275)
 val_end: 367       # Validation: [275, 367), Test: [367, 459)

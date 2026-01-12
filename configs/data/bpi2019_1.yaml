@@ -4,6 +4,9 @@
 name: BPI2019_1
 path: ${paths.data_dir}/BPI2019_1.parquet
 
+# Data split ratio [train, val, test]
+split_ratio: [0.6, 0.2, 0.2]
+
 # Absolute point splits: train-val-test = (185, 61, 61)
 train_end: 185     # Training: [0, 185)
 val_end: 246       # Validation: [185, 246), Test: [246, 307)

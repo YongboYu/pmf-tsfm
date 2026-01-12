@@ -18,6 +18,7 @@ import torch
 from omegaconf import DictConfig
 
 from pmf_tsfm.models.base import BaseAdapter
+from pmf_tsfm.models.mixins import LoRAMixin
 
 # Suppress deprecation warnings
 warnings.filterwarnings("ignore", message=".*torch_dtype.*deprecated.*")
@@ -25,7 +26,7 @@ warnings.filterwarnings("ignore", message=".*past_key_values.*deprecated.*")
 warnings.filterwarnings("ignore", message=".*dtype.*deprecated.*")
 
 
-class ChronosAdapter(BaseAdapter):
+class ChronosAdapter(BaseAdapter, LoRAMixin):
     """
     Adapter for Amazon Chronos models.
 
@@ -92,6 +93,12 @@ class ChronosAdapter(BaseAdapter):
         self.quantile_levels = quantile_levels or self.QUANTILE_LEVELS
         self._is_chronos2 = self._detect_chronos2()
         self.pipeline: Any = None  # Set in load_model()
+
+        # LoRA fine-tuning state
+        self._lora_applied = False
+        self._lora_adapter_path: str | None = None
+        self._peft_model = None  # Stores PEFT-wrapped model for training
+        self._context_length: int | None = None
 
     def _detect_chronos2(self) -> bool:
         """Detect if model is Chronos 2.0 (uses different API)."""
@@ -310,3 +317,176 @@ class ChronosAdapter(BaseAdapter):
         print(f"Completed in {total_time:.1f}s | Output: {predictions.shape}")
 
         return predictions, quantiles_out
+
+    # ========================================================================
+    # LoRA Fine-Tuning Methods (via LoRAMixin)
+    # ========================================================================
+
+    def _create_base_model_for_lora(self, context_length: int):
+        """Create Chronos model for LoRA wrapping.
+
+        Only supported for Chronos Bolt models (T5-based).
+        Chronos 2.0 uses a different architecture and is not supported.
+
+        Returns the inner T5 model from the ChronosBoltPipeline.
+        """
+        if self._is_chronos2:
+            raise NotImplementedError(
+                "LoRA fine-tuning is not supported for Chronos 2.0. "
+                "Use Chronos Bolt (tiny/mini/small/base) instead."
+            )
+
+        if self.pipeline is None:
+            raise RuntimeError("Model not loaded. Call load_model() first.")
+
+        # ChronosBoltPipeline has 'inner_model' attribute for the T5 model
+        # Store the pipeline reference for later use
+        self._context_length = context_length
+
+        # Get the inner model (T5ForConditionalGeneration)
+        if hasattr(self.pipeline, "inner_model"):
+            return self.pipeline.inner_model
+        elif hasattr(self.pipeline, "model"):
+            return self.pipeline.model
+        else:
+            raise AttributeError(
+                "Cannot find inner model in Chronos pipeline. "
+                "Expected 'inner_model' or 'model' attribute."
+            )
+
+    def _get_default_lora_targets(self) -> list[str]:
+        """Return default LoRA target modules for Chronos (T5-based).
+
+        Chronos Bolt uses T5 architecture with attention projections:
+        - q, k, v, o for attention
+        """
+        # T5 attention layer names (matching reference implementation)
+        return ["q", "v"]  # Minimal set from reference, can expand to ["q", "k", "v", "o"]
+
+    def apply_lora(self, lora_config: dict, context_length: int = 48) -> None:
+        """Apply LoRA adaptation to Chronos Bolt model.
+
+        Overrides the mixin method to handle Chronos-specific setup.
+
+        Args:
+            lora_config: Dict with keys: r, alpha, dropout, target_modules, bias
+            context_length: Fixed context length for training
+        """
+        if not self._is_loaded:
+            raise RuntimeError("Model not loaded. Call load_model() first.")
+
+        if self._is_chronos2:
+            raise NotImplementedError(
+                "LoRA fine-tuning is not supported for Chronos 2.0. "
+                "Use Chronos Bolt (tiny/mini/small/base) instead."
+            )
+
+        from peft import LoraConfig, get_peft_model
+
+        # Get the inner model
+        inner_model = self._create_base_model_for_lora(context_length)
+
+        # Get target modules (use config or defaults)
+        target_modules = lora_config.get("target_modules")
+        if target_modules is None:
+            target_modules = self._get_default_lora_targets()
+
+        peft_config = LoraConfig(
+            r=lora_config.get("r", 2),
+            lora_alpha=lora_config.get("alpha", 4),
+            lora_dropout=lora_config.get("dropout", 0.1),
+            target_modules=list(target_modules),
+            bias=lora_config.get("bias", "none"),
+        )
+
+        print("Applying LoRA to Chronos Bolt...")
+        print(f"  Rank: {peft_config.r}")
+        print(f"  Alpha: {peft_config.lora_alpha}")
+        print(f"  Target modules: {peft_config.target_modules}")
+
+        self._peft_model = get_peft_model(inner_model, peft_config)
+        self._peft_model.print_trainable_parameters()
+        self._lora_applied = True
+
+        # Store context length for training
+        self._context_length = context_length
+
+    def load_lora_adapter(self, adapter_path: str, context_length: int = 48) -> None:
+        """Load a pre-trained LoRA adapter for Chronos Bolt inference.
+
+        Args:
+            adapter_path: Path to the saved LoRA adapter
+            context_length: Context length for the model (should match training)
+        """
+        if not self._is_loaded:
+            raise RuntimeError("Model not loaded. Call load_model() first.")
+
+        if self._is_chronos2:
+            raise NotImplementedError("LoRA fine-tuning is not supported for Chronos 2.0.")
+
+        from peft import PeftModel
+
+        # Get the inner model
+        inner_model = self._create_base_model_for_lora(context_length)
+
+        print(f"Loading LoRA adapter from: {adapter_path}")
+        self._peft_model = PeftModel.from_pretrained(inner_model, adapter_path)
+
+        # Merge LoRA weights for efficient inference
+        print("  Merging LoRA weights...")
+        self._peft_model = self._peft_model.merge_and_unload()
+
+        # Update the pipeline's inner model with merged weights
+        if hasattr(self.pipeline, "inner_model"):
+            self.pipeline.inner_model = self._peft_model
+        elif hasattr(self.pipeline, "model"):
+            self.pipeline.model = self._peft_model
+
+        self._lora_applied = True
+        self._lora_adapter_path = adapter_path
+        print("  LoRA adapter loaded and merged successfully")
+
+    def forward_train(
+        self,
+        batch: dict,
+    ) -> tuple:
+        """Forward pass for Chronos Bolt training.
+
+        Args:
+            batch: Dict with 'context' (past values) and 'target' (future values)
+
+        Returns:
+            Tuple of (predictions, loss)
+        """
+        if self._peft_model is None:
+            raise RuntimeError("No PEFT model available. Call apply_lora() first.")
+
+        # Expected format from DataLoader: context (B, context_len), target (B, pred_len)
+        context = batch["context"].to(self.device).float()
+        target = batch["target"].to(self.device).float()
+
+        # Chronos Bolt model takes context/target float tensors and returns a loss.
+        try:
+            outputs = self._peft_model(
+                context=context,
+                target=target,
+            )
+
+            loss = outputs.loss
+            quantiles = outputs.quantile_preds if hasattr(outputs, "quantile_preds") else None
+
+            return quantiles, loss
+
+        except Exception as e:
+            raise RuntimeError(
+                f"Chronos forward pass failed: {e}. "
+                "Chronos Bolt training expects context/target float tensors. "
+                "See temp/lora_tune/chronos_lora.py for a working reference."
+            )
+
+    def to(self, device: str) -> "ChronosAdapter":
+        """Move model to device."""
+        self.device = device
+        if self._peft_model is not None:
+            self._peft_model = self._peft_model.to(device)
+        return self

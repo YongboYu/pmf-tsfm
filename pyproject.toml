@@ -16,23 +16,19 @@ dependencies = [
     "pandas>=2.0.0",
     "torch>=2.0.0",
     "scikit-learn>=1.3.0",
-    
     # Configuration
     "hydra-core>=1.3.0",
     "omegaconf>=2.3.0",
-    
     # Data
     "pyarrow>=14.0.0",
-    
     # Logging
     "rich>=13.0.0",
-    
     # Models - Chronos
     "chronos-forecasting>=1.4.0",
-    
     # Models - Moirai (uni2ts)
     "uni2ts>=1.0.0",
     "gluonts>=0.14.0",
+    "peft>=0.7.0",
 ]
 
 [project.optional-dependencies]

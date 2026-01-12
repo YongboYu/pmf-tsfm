@@ -1,7 +1,9 @@
 # @package _global_
 
 # Zero-shot inference configuration
-# Usage: python inference.py model=chronos/bolt_small data=bpi2017
+# Usage: 
+#   python -m pmf_tsfm.inference model=chronos/bolt_small data=bpi2017
+#   python -m pmf_tsfm.inference model=moirai/1_1_small data=bpi2017 lora_adapter_path=./results/lora_tune/...
 
 defaults:
   - _self_
@@ -23,6 +25,10 @@ device: cuda
 
 # Forecasting horizon
 prediction_length: 7
+
+# LoRA adapter path (optional, for fine-tuned models)
+# Set this to load a LoRA adapter for inference
+lora_adapter_path: null
 
 # Output directory structure: outputs/{task}/{dataset}/{model}/
 output_dir: ${paths.output_dir}/${task}/${data.name}/${model.name}

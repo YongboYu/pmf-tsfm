@@ -1,0 +1,14 @@
+_target_: src.data.timeseries_datamodules.TimeSeriesForecastingData
+dataset_name: "BPI2017"
+data_dir: "${paths.data_dir}/time_series/BPI2017.parquet"
+#batch_size: 128
+# shape:（319，21）
+#  Start Date: 2016-02-10 00:00:00+00:00
+#  End Date:   2016-12-24 00:00:00+00:00
+# five folds on entire training set: 51 days
+# start_time = '2016-10-22 00:00:00'
+# train-val-test: (191, 64, 64)
+# test 58 sequences (406 rows)
+train_val_test_split: [191, 64, 64]
+num_workers: 0
+pin_memory: False
