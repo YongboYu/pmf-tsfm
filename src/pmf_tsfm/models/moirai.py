@@ -345,6 +345,7 @@ class MoiraiAdapter(BaseAdapter, LoRAMixin):
         """
         import torch
 
+        # pylint: disable=protected-access
         if self._peft_model is None:
             raise RuntimeError("No PEFT model available. Call apply_lora() first.")
 

@@ -5,7 +5,7 @@ time series foundation models like Moirai and Chronos with LoRA.
 """
 
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any, Literal, TypeAlias
 
 import numpy as np
 import pandas as pd
@@ -35,10 +35,10 @@ class MoiraiTrainingDataset(Dataset):
         self.context_length = context_length
         self.prediction_length = prediction_length
         self.seq_length = context_length + prediction_length
-        self.num_features = data.shape[1]
+        self.num_features = int(data.shape[1])
 
         # Calculate valid starting indices
-        self.num_samples = max(0, len(self.data) - self.seq_length + 1)
+        self.num_samples: int = max(0, len(self.data) - self.seq_length + 1)
 
     def __len__(self) -> int:
         return self.num_samples * self.num_features
@@ -97,10 +97,10 @@ class ChronosTrainingDataset(Dataset):
         self.context_length = context_length
         self.prediction_length = prediction_length
         self.seq_length = context_length + prediction_length
-        self.num_features = data.shape[1]
+        self.num_features = int(data.shape[1])
 
         # Calculate valid starting indices
-        self.num_samples = max(0, len(self.data) - self.seq_length + 1)
+        self.num_samples: int = max(0, len(self.data) - self.seq_length + 1)
 
     def __len__(self) -> int:
         return self.num_samples * self.num_features
@@ -123,6 +123,9 @@ class ChronosTrainingDataset(Dataset):
             "context": torch.from_numpy(context),  # (context_length,)
             "target": torch.from_numpy(target),  # (prediction_length,)
         }
+
+
+TrainingDatasetClass: TypeAlias = type[MoiraiTrainingDataset] | type[ChronosTrainingDataset]
 
 
 def moirai_collate_fn(batch: list[dict]) -> dict[str, torch.Tensor]:
@@ -231,7 +234,7 @@ class TrainingDataModule:
         )
         print(f"  Model family: {self.model_family}")
 
-    def _get_dataset_class(self) -> type[Dataset]:
+    def _get_dataset_class(self) -> TrainingDatasetClass:
         """Get the appropriate dataset class for the model family."""
         if self.model_family == "chronos":
             return ChronosTrainingDataset

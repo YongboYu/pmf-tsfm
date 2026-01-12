@@ -39,7 +39,7 @@ class FullTuneMixin:
         Returns:
             Model with parameters to optimize
         """
-        pass
+        raise NotImplementedError
 
     @abstractmethod
     def _create_base_model_for_training(self, context_length: int) -> Any:
@@ -51,7 +51,7 @@ class FullTuneMixin:
         Returns:
             Model instance ready for training
         """
-        pass
+        raise NotImplementedError
 
     def prepare_for_full_tuning(self, context_length: int = 48) -> None:
         """Prepare model for full fine-tuning by unfreezing all parameters.

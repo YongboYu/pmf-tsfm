@@ -22,6 +22,7 @@ Usage:
 
 import json
 from pathlib import Path
+from typing import Protocol, cast
 
 import hydra
 import numpy as np
@@ -30,6 +31,12 @@ from omegaconf import DictConfig, OmegaConf
 
 from pmf_tsfm.data import ZeroShotDataModule
 from pmf_tsfm.models import get_model_adapter
+
+
+class LoRAInferenceAdapter(Protocol):
+    """Protocol for adapters that support LoRA adapter loading."""
+
+    def load_lora_adapter(self, adapter_path: str, context_length: int = 48) -> None: ...
 
 
 def save_predictions(
@@ -120,7 +127,8 @@ def run_inference(cfg: DictConfig) -> dict:
     lora_adapter_path = cfg.get("lora_adapter_path")
     if lora_adapter_path:
         if cfg.model.family in {"moirai", "chronos"}:
-            adapter.load_lora_adapter(lora_adapter_path)
+            lora_adapter = cast(LoRAInferenceAdapter, adapter)
+            lora_adapter.load_lora_adapter(lora_adapter_path)
         else:
             print(
                 "  Warning: LoRA adapter loading only supported for Moirai/Chronos, "

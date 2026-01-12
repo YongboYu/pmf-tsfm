@@ -98,6 +98,7 @@ class ChronosAdapter(BaseAdapter, LoRAMixin):
         self._lora_applied = False
         self._lora_adapter_path: str | None = None
         self._peft_model = None  # Stores PEFT-wrapped model for training
+        self._context_length: int | None = None
 
     def _detect_chronos2(self) -> bool:
         """Detect if model is Chronos 2.0 (uses different API)."""

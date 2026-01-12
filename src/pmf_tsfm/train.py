@@ -10,19 +10,33 @@ Usage:
     python -m pmf_tsfm.train model=moirai/1_1_large data=bpi2017 training.epochs=5
 """
 
-import hydra
-from omegaconf import DictConfig, OmegaConf
-from pathlib import Path
 import sys
+from pathlib import Path
+from typing import Any, Protocol, cast
 
+import hydra
 import numpy as np
 import torch
+from omegaconf import DictConfig, OmegaConf
 
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 
 
+class LoRATrainAdapter(Protocol):
+    """Protocol describing LoRA-capable adapters used by the training loop."""
+
+    model: torch.nn.Module | None
+
+    def load_model(self) -> None: ...
+    def apply_lora(self, lora_config: dict, context_length: int = 48) -> None: ...
+    def to(self, device: str) -> Any: ...
+    def get_trainable_parameters(self) -> tuple[int, int]: ...
+    def forward_train(self, batch: dict) -> tuple: ...
+    def save_lora_adapter(self, output_dir: str) -> None: ...
+
+
 def train_epoch(
-    model,
+    model: LoRATrainAdapter,
     train_loader,
     optimizer,
     device: str,
@@ -30,16 +44,20 @@ def train_epoch(
     gradient_clip: float = 1.0,
 ) -> float:
     """Run one training epoch."""
+    assert model.model is not None
     model.model.train()
     total_loss = 0.0
     num_batches = 0
 
-    scaler = torch.cuda.amp.GradScaler() if use_amp and device == "cuda" else None
+    scaler: torch.cuda.amp.GradScaler | None = None
+    if use_amp and device == "cuda":
+        scaler = torch.cuda.amp.GradScaler()
 
     for batch_idx, batch in enumerate(train_loader):
         optimizer.zero_grad()
 
         if use_amp and device == "cuda":
+            assert scaler is not None
             with torch.cuda.amp.autocast(dtype=torch.bfloat16):
                 _, loss = model.forward_train(batch)
             scaler.scale(loss).backward()
@@ -63,12 +81,13 @@ def train_epoch(
 
 
 def validate(
-    model,
+    model: LoRATrainAdapter,
     val_loader,
     device: str,
     use_amp: bool = True,
 ) -> float:
     """Run validation."""
+    assert model.model is not None
     model.model.eval()
     total_loss = 0.0
     num_batches = 0
@@ -144,18 +163,22 @@ def train(cfg: DictConfig) -> dict:
     if cfg.model.family not in supported_families:
         raise ValueError(f"LoRA training supports: {supported_families}, got: {cfg.model.family}")
 
-    adapter = get_model_adapter(
-        model_cfg=cfg.model,
-        device=device,
-        prediction_length=cfg.prediction_length,
+    adapter = cast(
+        LoRATrainAdapter,
+        get_model_adapter(
+            model_cfg=cfg.model,
+            device=device,
+            prediction_length=cfg.prediction_length,
+        ),
     )
     adapter.load_model()
 
     # Apply LoRA
-    lora_config = OmegaConf.to_container(cfg.lora, resolve=True)
+    lora_config = cast(dict[str, Any], OmegaConf.to_container(cfg.lora, resolve=True))
     adapter.apply_lora(lora_config, context_length=cfg.context_length)
     adapter.to(device)
 
+    assert adapter.model is not None
     trainable, total = adapter.get_trainable_parameters()
     print(f"  Trainable: {trainable:,} / {total:,} ({100 * trainable / total:.2f}%)")
 

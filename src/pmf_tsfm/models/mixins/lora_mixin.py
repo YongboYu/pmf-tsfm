@@ -43,7 +43,7 @@ class LoRAMixin:
         Returns:
             Model instance ready for PEFT wrapping
         """
-        pass
+        raise NotImplementedError
 
     @abstractmethod
     def _get_default_lora_targets(self) -> list[str]:
@@ -52,7 +52,7 @@ class LoRAMixin:
         Returns:
             List of module name patterns to apply LoRA to
         """
-        pass
+        raise NotImplementedError
 
     def apply_lora(self, lora_config: dict, context_length: int = 48) -> None:
         """Apply LoRA adaptation to the model for fine-tuning.
@@ -155,7 +155,7 @@ class LoRAMixin:
     @model.setter
     def model(self, value: Any) -> None:
         """Allow base adapters to set a model attribute without conflicting with LoRA."""
-        setattr(self, "_model", value)
+        self._model = value
 
     def lora_to(self, device: str) -> None:
         """Move LoRA model to device."""
