@@ -32,6 +32,8 @@ class LoRAMixin:
     _lora_applied: bool = False
     _lora_adapter_path: str | None = None
     _peft_model: Any = None
+    _full_tune_enabled: bool = False
+    _full_tune_model: Any | None = None
 
     @abstractmethod
     def _create_base_model_for_lora(self, context_length: int) -> Any:
@@ -145,6 +147,11 @@ class LoRAMixin:
     @property
     def model(self) -> Any:
         """Return the trainable model (PEFT model if LoRA applied)."""
+        if (
+            getattr(self, "_full_tune_enabled", False)
+            and getattr(self, "_full_tune_model", None) is not None
+        ):
+            return self._full_tune_model
         if self._peft_model is not None:
             return self._peft_model
         base_model = getattr(self, "pipeline", None) or getattr(self, "base_module", None)

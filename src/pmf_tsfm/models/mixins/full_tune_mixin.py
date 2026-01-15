@@ -143,3 +143,26 @@ class FullTuneMixin:
         """Move full-tune model to device."""
         if hasattr(self, "_full_tune_model") and self._full_tune_model is not None:
             self._full_tune_model = self._full_tune_model.to(device)
+
+    @property
+    def model(self):
+        """Return the trainable model for the training loop.
+
+        For full fine-tuning, returns _full_tune_model.
+        Falls back to base model attributes if not in full tune mode.
+        """
+        if self._full_tune_enabled and hasattr(self, "_full_tune_model"):
+            return self._full_tune_model
+        # Fallback to base class model if available
+        if hasattr(self, "_peft_model") and self._peft_model is not None:
+            return self._peft_model
+        if hasattr(self, "pipeline"):
+            return getattr(self, "pipeline", None)
+        if hasattr(self, "base_module"):
+            return getattr(self, "base_module", None)
+        return None
+
+    @model.setter
+    def model(self, value) -> None:
+        """Allow setting model attribute."""
+        self._model = value
