@@ -63,6 +63,21 @@ class FullTuneTrainAdapter(TrainAdapter, Protocol):
     def forward_train_full(self, batch: dict) -> tuple: ...
 
 
+class Chronos2TrainAdapter(Protocol):
+    """Protocol for Chronos 2.0 adapters using the native fit API."""
+
+    def fit_chronos2(
+        self,
+        train_inputs: list[dict],
+        validation_inputs: list[dict] | None = None,
+        num_steps: int = 100,
+        learning_rate: float = 1e-5,
+        batch_size: int = 32,
+    ): ...
+
+    def save_full_checkpoint(self, output_dir: str) -> None: ...
+
+
 def train_epoch(
     model: LoRATrainAdapter | FullTuneTrainAdapter,
     train_loader,
@@ -185,7 +200,7 @@ def train_full(
     adapter.to(device)
 
     # Get trainable model
-    trainable_model = adapter._full_tune_model
+    trainable_model = adapter.model
     assert trainable_model is not None
 
     trainable, total = adapter.get_full_tune_parameters()
@@ -380,9 +395,11 @@ def train(cfg: DictConfig) -> dict:
     # ========== Training Mode ==========
     if is_full_tune:
         # Check for Chronos 2.0 which uses native fit API
-        if hasattr(adapter, "_is_chronos2") and adapter._is_chronos2:
+        if getattr(adapter, "is_chronos2", False):
             print("\n  Chronos 2.0 detected - using native fit() API")
             print("  Note: Native fit requires different data format, using data_module arrays")
+
+            chronos2_adapter = cast(Chronos2TrainAdapter, adapter)
 
             # Prepare data for Chronos 2.0 native fit
             train_data = data_module.train_data
@@ -404,7 +421,7 @@ def train(cfg: DictConfig) -> dict:
                     val_inputs.append({"target": val_values[:, col_idx]})
 
             # Use native fit API
-            adapter.fit_chronos2(
+            chronos2_adapter.fit_chronos2(
                 train_inputs=train_inputs,
                 validation_inputs=val_inputs,
                 num_steps=cfg.training.epochs * 10,  # Convert epochs to steps
@@ -417,7 +434,7 @@ def train(cfg: DictConfig) -> dict:
             print("=" * 70)
             save_dir = getattr(cfg.task, "checkpoint_save_dir", "checkpoints")
             final_path = Path(cfg.output_dir) / save_dir / "final"
-            adapter.save_full_checkpoint(str(final_path))
+            chronos2_adapter.save_full_checkpoint(str(final_path))
             print(f"  Final checkpoint: {final_path}")
             return {"status": "complete", "model": "chronos2", "final_path": str(final_path)}
 

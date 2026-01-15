@@ -114,6 +114,11 @@ class ChronosAdapter(BaseAdapter, LoRAMixin, FullTuneMixin):
             "chronos2" in variant_lower or "chronos_2" in variant_lower or "s3://" in model_id_lower
         )
 
+    @property
+    def is_chronos2(self) -> bool:
+        """Expose Chronos 2.0 detection without protected access."""
+        return self._is_chronos2
+
     def load_model(self) -> None:
         """Load Chronos model."""
         model_type = "Chronos 2.0" if self._is_chronos2 else "Chronos Bolt"

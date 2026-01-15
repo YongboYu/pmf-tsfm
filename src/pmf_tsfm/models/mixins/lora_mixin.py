@@ -32,6 +32,8 @@ class LoRAMixin:
     _lora_applied: bool = False
     _lora_adapter_path: str | None = None
     _peft_model: Any = None
+    _full_tune_enabled: bool = False
+    _full_tune_model: Any | None = None
 
     @abstractmethod
     def _create_base_model_for_lora(self, context_length: int) -> Any:
