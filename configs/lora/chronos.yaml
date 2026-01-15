@@ -1,25 +1,18 @@
-# LoRA configuration for Chronos Bolt models
-# Chronos uses T5 architecture with different attention layer names
+# LoRA configuration for Chronos Bolt fine-tuning
 
-# LoRA rank - lower than Moirai due to smaller model size
-r: 2
+# LoRA rank - controls adaptation capacity
+r: 8
 
 # LoRA alpha - scaling factor (typically 2x rank)
-alpha: 4
+alpha: 16
 
-# LoRA dropout - regularization
-dropout: 0.1
+# LoRA dropout - regularization (0 for no regularization)
+dropout: 0.0
 
-# Target modules - T5 attention layers
-# Chronos Bolt T5 uses short names: q, k, v, o
+# Target modules - T5 attention projections used in Chronos Bolt
 target_modules:
   - q
-  - k
   - v
-  - o
 
 # Bias handling
 bias: none
-
-# Note: Chronos Bolt models are T5-based encoder-decoders
-# The inner model (pipeline.inner_model) is a T5ForConditionalGeneration

@@ -145,6 +145,11 @@ class LoRAMixin:
     @property
     def model(self) -> Any:
         """Return the trainable model (PEFT model if LoRA applied)."""
+        if (
+            getattr(self, "_full_tune_enabled", False)
+            and getattr(self, "_full_tune_model", None) is not None
+        ):
+            return self._full_tune_model
         if self._peft_model is not None:
             return self._peft_model
         base_model = getattr(self, "pipeline", None) or getattr(self, "base_module", None)

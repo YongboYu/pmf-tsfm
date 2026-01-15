@@ -10,6 +10,7 @@ Handles multivariate time series by forecasting each feature separately.
 
 import time
 import warnings
+from pathlib import Path
 from typing import Any
 
 import numpy as np
@@ -18,7 +19,7 @@ import torch
 from omegaconf import DictConfig
 
 from pmf_tsfm.models.base import BaseAdapter
-from pmf_tsfm.models.mixins import LoRAMixin
+from pmf_tsfm.models.mixins import FullTuneMixin, LoRAMixin
 
 # Suppress deprecation warnings
 warnings.filterwarnings("ignore", message=".*torch_dtype.*deprecated.*")
@@ -26,7 +27,7 @@ warnings.filterwarnings("ignore", message=".*past_key_values.*deprecated.*")
 warnings.filterwarnings("ignore", message=".*dtype.*deprecated.*")
 
 
-class ChronosAdapter(BaseAdapter, LoRAMixin):
+class ChronosAdapter(BaseAdapter, LoRAMixin, FullTuneMixin):
     """
     Adapter for Amazon Chronos models.
 
@@ -99,6 +100,10 @@ class ChronosAdapter(BaseAdapter, LoRAMixin):
         self._lora_adapter_path: str | None = None
         self._peft_model = None  # Stores PEFT-wrapped model for training
         self._context_length: int | None = None
+
+        # Full fine-tuning state
+        self._full_tune_enabled = False
+        self._full_tune_model = None
 
     def _detect_chronos2(self) -> bool:
         """Detect if model is Chronos 2.0 (uses different API)."""
@@ -391,12 +396,17 @@ class ChronosAdapter(BaseAdapter, LoRAMixin):
         if target_modules is None:
             target_modules = self._get_default_lora_targets()
 
+        lora_r = lora_config.get("r", 2)
+        lora_alpha = lora_config.get("alpha", 4)
+        lora_dropout = lora_config.get("dropout", 0.1)
+        lora_bias = lora_config.get("bias", "none")
+
         peft_config = LoraConfig(
-            r=lora_config.get("r", 2),
-            lora_alpha=lora_config.get("alpha", 4),
-            lora_dropout=lora_config.get("dropout", 0.1),
+            r=lora_r,
+            lora_alpha=lora_alpha,
+            lora_dropout=lora_dropout,
             target_modules=list(target_modules),
-            bias=lora_config.get("bias", "none"),
+            bias=lora_bias,
         )
 
         print("Applying LoRA to Chronos Bolt...")
@@ -404,7 +414,29 @@ class ChronosAdapter(BaseAdapter, LoRAMixin):
         print(f"  Alpha: {peft_config.lora_alpha}")
         print(f"  Target modules: {peft_config.target_modules}")
 
-        self._peft_model = get_peft_model(inner_model, peft_config)
+        try:
+            self._peft_model = get_peft_model(inner_model, peft_config)
+        except ValueError as exc:
+            msg = str(exc)
+            if "Target modules" not in msg:
+                raise
+
+            fallback_targets = self._get_default_lora_targets()
+            if list(target_modules) == fallback_targets:
+                raise
+
+            print(
+                "  Warning: target_modules not found in Chronos Bolt model. "
+                f"Falling back to default targets: {fallback_targets}"
+            )
+            peft_config = LoraConfig(
+                r=lora_r,
+                lora_alpha=lora_alpha,
+                lora_dropout=lora_dropout,
+                target_modules=fallback_targets,
+                bias=lora_bias,
+            )
+            self._peft_model = get_peft_model(inner_model, peft_config)
         self._peft_model.print_trainable_parameters()
         self._lora_applied = True
 
@@ -489,4 +521,169 @@ class ChronosAdapter(BaseAdapter, LoRAMixin):
         self.device = device
         if self._peft_model is not None:
             self._peft_model = self._peft_model.to(device)
+        if self._full_tune_model is not None:
+            self._full_tune_model = self._full_tune_model.to(device)
         return self
+
+    # ========================================================================
+    # Full Fine-Tuning Methods (via FullTuneMixin)
+    # ========================================================================
+
+    def save_full_checkpoint(self, output_dir: str) -> None:
+        """Save full fine-tuning checkpoint.
+
+        Chronos 2.0 uses the pipeline's save_pretrained method.
+        Chronos Bolt uses standard state_dict saving from the mixin.
+        """
+        if self._is_chronos2:
+            if self.pipeline is None:
+                raise RuntimeError("Model pipeline not loaded. Call load_model() first.")
+
+            output_path = Path(output_dir)
+            output_path.mkdir(parents=True, exist_ok=True)
+
+            print(f"Saving Chronos 2.0 checkpoint to: {output_path}")
+            self.pipeline.save_pretrained(str(output_path))
+            print("  Checkpoint saved successfully")
+            return
+
+        FullTuneMixin.save_full_checkpoint(self, output_dir)
+
+    def _create_base_model_for_training(self, context_length: int):
+        """Create Chronos Bolt model for full fine-tuning.
+
+        Only supported for Chronos Bolt models.
+        Chronos 2.0 uses a different training paradigm (native fit API).
+
+        Returns the inner model from the ChronosBoltPipeline with all
+        parameters unfrozen for full fine-tuning.
+        """
+        if self._is_chronos2:
+            raise NotImplementedError(
+                "Full fine-tuning via this method is not supported for Chronos 2.0. "
+                "Use fit_chronos2() method instead which wraps the native fit API."
+            )
+
+        if self.pipeline is None:
+            raise RuntimeError("Model not loaded. Call load_model() first.")
+
+        self._context_length = context_length
+
+        # Get the inner model from ChronosBoltPipeline
+        if hasattr(self.pipeline, "inner_model"):
+            inner_model = self.pipeline.inner_model
+        elif hasattr(self.pipeline, "model"):
+            inner_model = self.pipeline.model
+        else:
+            raise AttributeError(
+                "Cannot find inner model in Chronos pipeline. "
+                "Expected 'inner_model' or 'model' attribute."
+            )
+
+        return inner_model
+
+    def _get_trainable_model(self):
+        """Return the model instance being trained.
+
+        For full fine-tuning, returns the model set by prepare_for_full_tuning().
+        For LoRA, returns the PEFT model.
+        """
+        if self._full_tune_enabled and self._full_tune_model is not None:
+            return self._full_tune_model
+        if self._peft_model is not None:
+            return self._peft_model
+        raise RuntimeError(
+            "No trainable model available. Call prepare_for_full_tuning() or apply_lora() first."
+        )
+
+    def forward_train_full(self, batch: dict) -> tuple:
+        """Forward pass for full fine-tuning (all parameters trainable).
+
+        Args:
+            batch: Dict with 'context' (past values) and 'target' (future values)
+
+        Returns:
+            Tuple of (predictions, loss)
+        """
+        if not self._full_tune_enabled or self._full_tune_model is None:
+            raise RuntimeError(
+                "Full fine-tuning not enabled. Call prepare_for_full_tuning() first."
+            )
+
+        context = batch["context"].to(self.device).float()
+        target = batch["target"].to(self.device).float()
+
+        try:
+            outputs = self._full_tune_model(
+                context=context,
+                target=target,
+            )
+
+            loss = outputs.loss
+            quantiles = outputs.quantile_preds if hasattr(outputs, "quantile_preds") else None
+
+            return quantiles, loss
+
+        except Exception as e:
+            raise RuntimeError(
+                f"Chronos Bolt forward pass failed: {e}. "
+                "Ensure context and target have correct shapes."
+            )
+
+    def fit_chronos2(
+        self,
+        train_inputs: list[dict],
+        validation_inputs: list[dict] | None = None,
+        num_steps: int = 100,
+        learning_rate: float = 1e-5,
+        batch_size: int = 32,
+    ):
+        """Fine-tune Chronos 2.0 using the native fit API.
+
+        This is a separate training paradigm from the PyTorch training loop.
+        Chronos 2.0 provides its own fit() method for fine-tuning.
+
+        Args:
+            train_inputs: List of dicts with 'target' key containing time series data
+            validation_inputs: Optional validation data in same format
+            num_steps: Number of training steps
+            learning_rate: Learning rate for fine-tuning
+            batch_size: Batch size for training
+
+        Returns:
+            Fine-tuned Chronos2Pipeline
+
+        Example:
+            train_inputs = [{"target": np.array([1.0, 2.0, 3.0, ...])} for series in data]
+            finetuned = adapter.fit_chronos2(train_inputs, num_steps=100)
+        """
+        if not self._is_chronos2:
+            raise ValueError(
+                "fit_chronos2() is only for Chronos 2.0 models. "
+                "For Chronos Bolt, use prepare_for_full_tuning() instead."
+            )
+
+        if not self._is_loaded or self.pipeline is None:
+            raise RuntimeError("Model not loaded. Call load_model() first.")
+
+        print("Fine-tuning Chronos 2.0 with native fit API...")
+        print(f"  Training samples: {len(train_inputs)}")
+        print(f"  Steps: {num_steps}")
+        print(f"  Learning rate: {learning_rate}")
+        print(f"  Batch size: {batch_size}")
+
+        # Call the native fit method
+        finetuned_pipeline = self.pipeline.fit(
+            inputs=train_inputs,
+            prediction_length=self.prediction_length,
+            validation_inputs=validation_inputs,
+            num_steps=num_steps,
+            learning_rate=learning_rate,
+            batch_size=batch_size,
+        )
+
+        # Update pipeline reference
+        self.pipeline = finetuned_pipeline
+        print("  Fine-tuning complete!")
+
+        return finetuned_pipeline
