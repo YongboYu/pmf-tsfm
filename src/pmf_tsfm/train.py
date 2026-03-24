@@ -446,14 +446,13 @@ def train(cfg: DictConfig) -> dict:
             data_module=data_module,
             context_length=context_length,
         )
-    else:
-        # LoRA fine-tuning
-        return train_lora(
-            cfg=cfg,
-            adapter=cast(LoRATrainAdapter, adapter),
-            device=device,
-            data_module=data_module,
-        )
+    # LoRA fine-tuning
+    return train_lora(
+        cfg=cfg,
+        adapter=cast(LoRATrainAdapter, adapter),
+        device=device,
+        data_module=data_module,
+    )
 
 
 @hydra.main(version_base="1.3", config_path="../../configs", config_name="train")

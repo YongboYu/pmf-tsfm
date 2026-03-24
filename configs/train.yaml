@@ -1,5 +1,5 @@
 # Training configuration for LoRA and full fine-tuning
-# Usage: 
+# Usage:
 #   python -m pmf_tsfm.train task=lora_tune model=moirai/1_1_small data=bpi2017
 #   python -m pmf_tsfm.train task=lora_tune model=moirai/1_1_large data=bpi2017
 

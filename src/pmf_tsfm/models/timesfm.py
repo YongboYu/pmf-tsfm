@@ -9,7 +9,7 @@ import os
 import re
 import sys
 from pathlib import Path
-from typing import Any
+from typing import Any, ClassVar
 
 import numpy as np
 from omegaconf import DictConfig
@@ -32,8 +32,8 @@ class TimesFMAdapter(BaseAdapter):
     results back into a multivariate tensor.
     """
 
-    DEFAULT_QUANTILES = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
-    DEFAULT_FORECAST_KWARGS = {
+    DEFAULT_QUANTILES: ClassVar[list[float]] = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
+    DEFAULT_FORECAST_KWARGS: ClassVar[dict[str, Any]] = {
         "max_context": 1024,
         "max_horizon": 64,
         "normalize_inputs": True,
@@ -44,7 +44,7 @@ class TimesFMAdapter(BaseAdapter):
         "fix_quantile_crossing": True,
     }
 
-    V2P5_CLASS_MAP = {
+    V2P5_CLASS_MAP: ClassVar[dict[str, str]] = {
         "2_5_200m": "TimesFM_2p5_200M_torch",
     }
 

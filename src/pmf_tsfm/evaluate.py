@@ -170,23 +170,22 @@ def main(cfg: DictConfig):
 
     if not results_dir.exists():
         print(f"Results directory not found: {results_dir}")
-        return
+        return None
 
     if cfg.get("all", False):
         # Evaluate all results
         return evaluate_all(results_dir, save=cfg.get("save", True))
-    else:
-        # Evaluate specific model-dataset pair
-        if not cfg.get("model_name") or not cfg.get("dataset_name"):
-            # If no specific pair, evaluate all
-            return evaluate_all(results_dir, save=cfg.get("save", True))
+    # Evaluate specific model-dataset pair
+    if not cfg.get("model_name") or not cfg.get("dataset_name"):
+        # If no specific pair, evaluate all
+        return evaluate_all(results_dir, save=cfg.get("save", True))
 
-        return evaluate_single(
-            results_dir,
-            cfg.dataset_name,
-            cfg.model_name,
-            save=cfg.get("save", True),
-        )
+    return evaluate_single(
+        results_dir,
+        cfg.dataset_name,
+        cfg.model_name,
+        save=cfg.get("save", True),
+    )
 
 
 if __name__ == "__main__":

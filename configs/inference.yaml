@@ -1,7 +1,7 @@
 # @package _global_
 
 # Zero-shot inference configuration
-# Usage: 
+# Usage:
 #   python -m pmf_tsfm.inference model=chronos/bolt_small data=bpi2017
 #   python -m pmf_tsfm.inference model=moirai/1_1_small data=bpi2017 lora_adapter_path=./results/lora_tune/...
 

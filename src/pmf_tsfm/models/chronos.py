@@ -11,7 +11,7 @@ Handles multivariate time series by forecasting each feature separately.
 import time
 import warnings
 from pathlib import Path
-from typing import Any
+from typing import Any, ClassVar
 
 import numpy as np
 import pandas as pd
@@ -39,7 +39,7 @@ class ChronosAdapter(BaseAdapter, LoRAMixin, FullTuneMixin):
     - Chronos 2.0 - uses predict_df API with DataFrames (batched by item_id)
     """
 
-    QUANTILE_LEVELS = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
+    QUANTILE_LEVELS: ClassVar[list[float]] = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
 
     @classmethod
     def from_config(
@@ -145,10 +145,12 @@ class ChronosAdapter(BaseAdapter, LoRAMixin, FullTuneMixin):
             load_time = time.time() - start_time
             print(f"  Loaded in {load_time:.2f}s on {self.device}")
 
-        except ImportError:
-            raise ImportError("chronos package not found. Install: pip install chronos-forecasting")
-        except Exception as e:
-            raise RuntimeError(f"Failed to load {self.model_id}: {e}")
+        except ImportError as err:
+            raise ImportError(
+                "chronos package not found. Install: pip install chronos-forecasting"
+            ) from err
+        except Exception as err:
+            raise RuntimeError(f"Failed to load {self.model_id}: {err}") from err
 
     def predict(
         self,
@@ -514,12 +516,12 @@ class ChronosAdapter(BaseAdapter, LoRAMixin, FullTuneMixin):
 
             return quantiles, loss
 
-        except Exception as e:
+        except Exception as err:
             raise RuntimeError(
-                f"Chronos forward pass failed: {e}. "
+                f"Chronos forward pass failed: {err}. "
                 "Chronos Bolt training expects context/target float tensors. "
                 "See temp/lora_tune/chronos_lora.py for a working reference."
-            )
+            ) from err
 
     def to(self, device: str) -> "ChronosAdapter":
         """Move model to device."""
@@ -629,11 +631,11 @@ class ChronosAdapter(BaseAdapter, LoRAMixin, FullTuneMixin):
 
             return quantiles, loss
 
-        except Exception as e:
+        except Exception as err:
             raise RuntimeError(
-                f"Chronos Bolt forward pass failed: {e}. "
+                f"Chronos Bolt forward pass failed: {err}. "
                 "Ensure context and target have correct shapes."
-            )
+            ) from err
 
     def fit_chronos2(
         self,

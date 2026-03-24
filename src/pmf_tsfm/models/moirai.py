@@ -140,10 +140,12 @@ class MoiraiAdapter(BaseAdapter, LoRAMixin, FullTuneMixin):
             load_time = time.time() - start_time
             print(f"  Loaded in {load_time:.2f}s on {self.device}")
 
-        except ImportError as e:
-            raise ImportError(f"uni2ts package not found. Install: pip install uni2ts\nError: {e}")
-        except Exception as e:
-            raise RuntimeError(f"Failed to load {self.model_id}: {e}")
+        except ImportError as err:
+            raise ImportError(
+                f"uni2ts package not found. Install: pip install uni2ts\nError: {err}"
+            ) from err
+        except Exception as err:
+            raise RuntimeError(f"Failed to load {self.model_id}: {err}") from err
 
     def _create_sequence_model(self, context_length: int):
         """Create a Moirai model with specific context length."""

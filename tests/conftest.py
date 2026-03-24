@@ -21,4 +21,3 @@ def sample_config():
         "prediction_length": 10,
         "device": "cpu",
     }
-
