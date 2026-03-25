@@ -1,9 +1,27 @@
 # @package _global_
 
-# Zero-shot inference configuration
+# Inference configuration (zero-shot and fine-tuned)
+#
 # Usage:
+#   # Zero-shot (no checkpoints needed)
 #   python -m pmf_tsfm.inference model=chronos/bolt_small data=bpi2017
-#   python -m pmf_tsfm.inference model=moirai/1_1_small data=bpi2017 lora_adapter_path=./results/lora_tune/...
+#   python -m pmf_tsfm.inference --multirun model=chronos/bolt_small,chronos/bolt_base data=bpi2017,bpi2019_1,sepsis,hospital_billing
+#
+#   # After LoRA fine-tuning (task=lora_tune routes output separately)
+#   python -m pmf_tsfm.inference model=chronos/bolt_small data=bpi2017 \
+#     task=lora_tune lora_adapter_path=results/lora_tune/BPI2017/chronos_bolt_small/lora_adapter/best
+#
+#   # After full fine-tuning (task=full_tune routes output separately)
+#   python -m pmf_tsfm.inference model=chronos/bolt_small data=bpi2017 \
+#     task=full_tune checkpoint_path=results/full_tune/BPI2017/chronos_bolt_small/checkpoints/best
+#
+#   # Chronos-2 full fine-tune (HF checkpoint directory)
+#   python -m pmf_tsfm.inference model=chronos/chronos2 data=bpi2017 \
+#     task=full_tune checkpoint_path=results/full_tune/BPI2017/chronos2/checkpoints/best
+#
+#   # Device override (for local mac testing vs cluster)
+#   python -m pmf_tsfm.inference device=mps model=chronos/bolt_small data=bpi2017
+#   python -m pmf_tsfm.inference device=cpu model=moirai/1_1_small data=bpi2017
 
 defaults:
   - _self_
@@ -15,22 +33,32 @@ defaults:
 seed: 42
 print_config: false
 
-# Task type (for output directory structure)
+# Task type controls output directory: zero_shot | lora_tune | full_tune
+# Override when running inference with fine-tuned models:
+#   task=lora_tune  (when lora_adapter_path is set)
+#   task=full_tune  (when checkpoint_path is set)
 task: zero_shot
 
-# Device configuration
-# Options: cuda (default for cluster), mps (macOS), cpu (fallback)
-# Some models may not support all devices - see device compatibility
+# Device: cuda (cluster), mps (macOS Apple Silicon), cpu (fallback)
 device: cuda
 
-# Forecasting horizon
+# Forecasting horizon (paper: 7-day horizon)
 prediction_length: 7
 
-# LoRA adapter path (optional, for fine-tuned models)
-# Set this to load a LoRA adapter for inference
+# LoRA adapter path — set to load LoRA-adapted weights for inference
+# Example: results/lora_tune/BPI2017/chronos_bolt_small/lora_adapter/best
 lora_adapter_path: null
 
-# Output directory structure: outputs/{task}/{dataset}/{model}/
+# Full fine-tune checkpoint path — set to load fully fine-tuned weights
+# For Chronos-Bolt/Moirai: path to directory containing model.pt
+# For Chronos-2: path to directory saved by pipeline.save_pretrained()
+checkpoint_path: null
+
+# Context length used during fine-tuning (must match training context_length)
+# Used when loading LoRA adapters or full checkpoints that need a fixed context
+context_length: 48
+
+# Output directory: outputs/{task}/{dataset}/{model}/
 output_dir: ${paths.output_dir}/${task}/${data.name}/${model.name}
 
 # ============== Hydra Settings ==============

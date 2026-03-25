@@ -1,7 +1,22 @@
 # Training configuration for LoRA and full fine-tuning
+#
+# Paper experiments (Section 4.1):
+#   LoRA:      Chronos-Bolt-small/base, MOIRAI-1.1-small/large
+#   Full tune: Chronos-Bolt-small/base, Chronos-2, MOIRAI-1.1-small/large
+#
 # Usage:
-#   python -m pmf_tsfm.train task=lora_tune model=moirai/1_1_small data=bpi2017
-#   python -m pmf_tsfm.train task=lora_tune model=moirai/1_1_large data=bpi2017
+#   # LoRA fine-tuning (default)
+#   python -m pmf_tsfm.train model=moirai/1_1_small data=bpi2017 lora=moirai
+#   python -m pmf_tsfm.train model=chronos/bolt_small data=bpi2017 lora=chronos
+#   python -m pmf_tsfm.train --multirun model=moirai/1_1_small,moirai/1_1_large data=bpi2017,bpi2019_1,sepsis,hospital_billing lora=moirai
+#
+#   # Full fine-tuning
+#   python -m pmf_tsfm.train task=full_tune model=moirai/1_1_small data=bpi2017
+#   python -m pmf_tsfm.train task=full_tune model=chronos/chronos2 data=bpi2017
+#
+#   # Specify device (for local mac testing vs cluster)
+#   python -m pmf_tsfm.train device=mps model=chronos/bolt_small data=bpi2017
+#   python -m pmf_tsfm.train device=cpu model=moirai/1_1_small data=bpi2017
 
 defaults:
   - _self_
@@ -15,19 +30,23 @@ defaults:
 seed: 42
 print_config: false
 
-# Device: cpu, cuda, mps
+# Device: cuda (cluster/GPU), mps (macOS Apple Silicon), cpu (fallback)
+# Override from CLI: device=mps for local testing, device=cuda for cluster
 device: cuda
 
-# Forecasting parameters (fixed for training)
+# Forecasting parameters (fixed for training; paper: horizon=7, context=48)
 prediction_length: 7
-context_length: 48  # Fixed input length for training
+context_length: 48
 
-# Output directory for training results
+# Output directory: results/{task}/{dataset}/{model}/
 output_dir: ${paths.results_dir}/${task.name}/${data.name}/${model.name}
 
-# ============== Training Settings ==============
+# ============== Training Hyperparameters ==============
+# Paper (Section 4.1):
+#   - LoRA: 3 epochs, batch_size=32, lr=1e-4, AdamW
+#   - Full fine-tune: follows [5,59] settings, batch_size=32
 training:
-  epochs: 10
+  epochs: 3                    # 3 epochs for LoRA (paper); override for full tune if needed
   batch_size: 32
   learning_rate: 1.0e-4
   weight_decay: 0.01
@@ -35,11 +54,10 @@ training:
   eval_every: 1
   save_every: 5
   early_stopping_patience: 3
-
-# ============== Checkpointing ==============
-checkpoint:
-  save_dir: ${output_dir}/checkpoints
-  resume_from: null
+  # DataLoader workers: 0 on macOS/MPS (multiprocessing conflicts with MPS context).
+  # Set to 4 on Linux/CUDA for faster data loading.
+  # CLI override: training.num_workers=4
+  num_workers: 0
 
 # ============== Hydra Settings ==============
 hydra:

@@ -223,3 +223,10 @@ temp/
 
 # Old example code (superseded by main pipeline)
 example/
+
+
+manuscript/
+presentation/
+
+# Reference scripts and papers (local working copies, not part of the codebase)
+temp_ref/

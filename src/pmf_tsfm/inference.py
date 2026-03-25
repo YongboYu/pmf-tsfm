@@ -1,23 +1,33 @@
 """
-Zero-shot forecasting inference script.
+Forecasting inference script — zero-shot, LoRA-adapted, and fully fine-tuned.
 
 Generates predictions only. Use evaluate.py for metrics computation.
 
 Usage:
-    # Default: chronos/bolt_small on BPI2017
+    # Zero-shot (default: chronos/bolt_small on BPI2017)
     python -m pmf_tsfm.inference
 
     # Specific model and dataset
     python -m pmf_tsfm.inference model=chronos/bolt_base data=sepsis
 
-    # Chronos 2.0
-    python -m pmf_tsfm.inference model=chronos/chronos2
+    # Device override (for macOS testing)
+    python -m pmf_tsfm.inference device=mps model=chronos/bolt_small data=bpi2017
+    python -m pmf_tsfm.inference device=cpu model=moirai/1_1_small data=bpi2017
 
-    # Multi-run with sweep
-    python -m pmf_tsfm.inference --multirun model=chronos/bolt_tiny,chronos/bolt_small
-
-    # Run on all 4 datasets
+    # All datasets (multirun)
     python -m pmf_tsfm.inference --multirun data=bpi2017,bpi2019_1,hospital_billing,sepsis
+
+    # After LoRA fine-tuning
+    python -m pmf_tsfm.inference model=chronos/bolt_small data=bpi2017 \\
+      task=lora_tune lora_adapter_path=results/lora_tune/BPI2017/chronos_bolt_small/lora_adapter/best
+
+    # After full fine-tuning (Chronos Bolt or Moirai)
+    python -m pmf_tsfm.inference model=chronos/bolt_small data=bpi2017 \\
+      task=full_tune checkpoint_path=results/full_tune/BPI2017/chronos_bolt_small/checkpoints/best
+
+    # After full fine-tuning (Chronos 2)
+    python -m pmf_tsfm.inference model=chronos/chronos2 data=bpi2017 \\
+      task=full_tune checkpoint_path=results/full_tune/BPI2017/chronos2/checkpoints/best
 """
 
 import json
@@ -37,6 +47,12 @@ class LoRAInferenceAdapter(Protocol):
     """Protocol for adapters that support LoRA adapter loading."""
 
     def load_lora_adapter(self, adapter_path: str, context_length: int = 48) -> None: ...
+
+
+class FullTuneInferenceAdapter(Protocol):
+    """Protocol for adapters that support full fine-tune checkpoint loading."""
+
+    def load_full_checkpoint(self, checkpoint_path: str, context_length: int = 48) -> None: ...
 
 
 def save_predictions(
@@ -78,11 +94,11 @@ def save_predictions(
 
 def run_inference(cfg: DictConfig) -> dict:
     """
-    Run zero-shot forecasting pipeline.
+    Run forecasting pipeline (zero-shot, LoRA-adapted, or fully fine-tuned).
 
     Pipeline:
-    1. Load data with expanding window
-    2. Load pre-trained model
+    1. Load data with expanding window (all prior data up to each test timestep)
+    2. Load pre-trained model; optionally load LoRA adapter or full checkpoint
     3. Generate predictions
     4. Save predictions to disk
 
@@ -96,20 +112,52 @@ def run_inference(cfg: DictConfig) -> dict:
     torch.manual_seed(cfg.seed)
     np.random.seed(cfg.seed)
 
-    # Print run info
+    # Resolve device with fallback
+    device = cfg.device
+    if device.startswith("cuda") and not torch.cuda.is_available():
+        fallback = cfg.model.get("fallback_device", "cpu")
+        print(f"Warning: CUDA not available, falling back to {fallback}")
+        device = fallback
+    elif device == "mps" and not torch.backends.mps.is_available():
+        fallback = cfg.model.get("fallback_device", "cpu")
+        print(f"Warning: MPS not available, falling back to {fallback}")
+        device = fallback
+
+    # Determine run mode
+    task = cfg.get("task", "zero_shot")
+    lora_adapter_path = cfg.get("lora_adapter_path")
+    checkpoint_path = cfg.get("checkpoint_path")
+    context_length = int(cfg.get("context_length", 48))
+
+    if checkpoint_path:
+        mode = "FULL FINE-TUNE INFERENCE"
+    elif lora_adapter_path:
+        mode = "LORA INFERENCE"
+    else:
+        mode = "ZERO-SHOT INFERENCE"
+
     print("=" * 70)
-    print("ZERO-SHOT INFERENCE")
-    print(f"  Model: {cfg.model.name}")
-    print(f"  Data:  {cfg.data.name}")
-    print(f"  Device: {cfg.device}")
+    print(mode)
+    print(f"  Model:  {cfg.model.name}")
+    print(f"  Data:   {cfg.data.name}")
+    print(f"  Device: {device}")
     print(f"  Prediction Length: {cfg.prediction_length}")
+    print(f"  Task:   {task}")
+    if lora_adapter_path:
+        print(f"  LoRA adapter: {lora_adapter_path}")
+    if checkpoint_path:
+        print(f"  Checkpoint:   {checkpoint_path}")
     print("=" * 70)
 
     # ========== Step 1: Prepare Data ==========
     print("\n[1/3] Preparing data...")
+    # Use pre-split files from paths.processed_dir if available; otherwise
+    # fall back to runtime splitting from the raw parquet.
+    processed_dir: str | None = cfg.get("paths", {}).get("processed_dir")  # type: ignore[assignment]
     data_module = ZeroShotDataModule.from_config(
         data_cfg=cfg.data,
         prediction_length=cfg.prediction_length,
+        processed_dir=processed_dir,
     )
     data_module.setup()
     prepared_data = data_module.prepare_data_for_model(split="test")
@@ -118,21 +166,30 @@ def run_inference(cfg: DictConfig) -> dict:
     print("\n[2/3] Loading model...")
     adapter = get_model_adapter(
         model_cfg=cfg.model,
-        device=cfg.device,
+        device=device,
         prediction_length=cfg.prediction_length,
     )
     adapter.load_model()
 
-    # Load LoRA adapter if specified
-    lora_adapter_path = cfg.get("lora_adapter_path")
+    # Load LoRA adapter if specified (Moirai/Chronos only)
     if lora_adapter_path:
         if cfg.model.family in {"moirai", "chronos"}:
             lora_adapter = cast(LoRAInferenceAdapter, adapter)
-            lora_adapter.load_lora_adapter(lora_adapter_path)
+            lora_adapter.load_lora_adapter(lora_adapter_path, context_length=context_length)
         else:
             print(
-                "  Warning: LoRA adapter loading only supported for Moirai/Chronos, "
-                "ignoring lora_adapter_path"
+                f"  Warning: LoRA not supported for {cfg.model.family}, ignoring lora_adapter_path"
+            )
+
+    # Load full fine-tune checkpoint if specified
+    if checkpoint_path:
+        if cfg.model.family in {"moirai", "chronos"}:
+            full_adapter = cast(FullTuneInferenceAdapter, adapter)
+            full_adapter.load_full_checkpoint(checkpoint_path, context_length=context_length)
+        else:
+            print(
+                f"  Warning: Full checkpoint loading not supported for {cfg.model.family}, "
+                "ignoring checkpoint_path"
             )
 
     # ========== Step 3: Generate Predictions ==========
@@ -146,6 +203,10 @@ def run_inference(cfg: DictConfig) -> dict:
     targets = prepared_data["targets"]
 
     metadata = {
+        "mode": mode,
+        "task": task,
+        "lora_adapter_path": lora_adapter_path,
+        "checkpoint_path": checkpoint_path,
         "config": OmegaConf.to_container(cfg, resolve=True),
         "data_metadata": prepared_data["metadata"],
         "feature_names": prepared_data["feature_names"],
@@ -164,9 +225,8 @@ def run_inference(cfg: DictConfig) -> dict:
     )
 
     print("\n" + "=" * 70)
-    print("INFERENCE COMPLETE")
+    print(f"{mode} COMPLETE")
     print(f"  Output: {output_path}")
-    print(f"  Run evaluation: python evaluate.py --results-dir {output_path}")
     print("=" * 70)
 
     return {

@@ -338,6 +338,45 @@ class MoiraiAdapter(BaseAdapter, LoRAMixin, FullTuneMixin):
         """Return default LoRA target modules for Moirai."""
         return ["q_proj", "k_proj", "v_proj", "out_proj"]
 
+    def load_lora_adapter(self, adapter_path: str, context_length: int = 48) -> None:
+        """Load a LoRA adapter and merge weights into base_module for inference.
+
+        Overrides LoRAMixin to merge LoRA deltas back into the Moirai base module
+        so that the standard predict() path (which creates sequence models from
+        base_module) uses the fine-tuned weights.
+
+        Args:
+            adapter_path: Path to the saved LoRA adapter directory
+            context_length: Context length used during LoRA training (must match)
+        """
+        if not self._is_loaded:
+            raise RuntimeError("Model not loaded. Call load_model() first.")
+
+        from peft import PeftModel
+
+        base_model = self._create_base_model_for_lora(context_length)
+
+        print(f"Loading Moirai LoRA adapter from: {adapter_path}")
+        peft_model = PeftModel.from_pretrained(base_model, adapter_path)
+
+        # Merge LoRA deltas into the base model weights in-place, then unwrap.
+        # This modifies base_module's attention layer parameters so existing
+        # predict() logic (which creates new MoiraiForecast from base_module) will
+        # automatically use the adapted weights.
+        print("  Merging LoRA weights into base module...")
+        merged_model = peft_model.merge_and_unload()
+
+        # Explicitly update base_module to the merged MoiraiModule
+        if hasattr(merged_model, "module"):
+            self.base_module = merged_model.module
+        else:
+            self.base_module = merged_model
+
+        self._peft_model = merged_model
+        self._lora_applied = True
+        self._lora_adapter_path = adapter_path
+        print("  LoRA adapter merged successfully — predict() uses fine-tuned weights")
+
     def forward_train(
         self,
         batch: dict,
@@ -428,6 +467,75 @@ class MoiraiAdapter(BaseAdapter, LoRAMixin, FullTuneMixin):
             past_feat_dynamic_real_dim=0,
         )
 
+    def load_full_checkpoint(self, checkpoint_path: str, context_length: int = 48) -> None:
+        """Load a full fine-tune checkpoint and update base_module for inference.
+
+        Overrides FullTuneMixin to update base_module so that the standard predict()
+        path (which creates sequence models from base_module) uses the fine-tuned weights.
+
+        Supports two checkpoint formats:
+        1. HuggingFace format: directory with config.json + model weights
+           (saved via base_module.save_pretrained)
+        2. PyTorch state_dict: directory containing model.pt
+           (saved via torch.save of MoiraiForecast state_dict)
+
+        Args:
+            checkpoint_path: Path to checkpoint directory
+            context_length: Context length used during training
+        """
+        if not self._is_loaded:
+            raise RuntimeError("Model not loaded. Call load_model() first.")
+
+        from pathlib import Path
+
+        import torch
+
+        checkpoint_dir = Path(checkpoint_path)
+
+        # Try HuggingFace format first (base_module.save_pretrained)
+        hf_config = checkpoint_dir / "config.json"
+        if hf_config.exists():
+            print(f"Loading Moirai HF checkpoint from: {checkpoint_dir}")
+            from uni2ts.model.moirai import MoiraiModule
+
+            self.base_module = MoiraiModule.from_pretrained(str(checkpoint_dir))
+            self._full_tune_enabled = True
+            print("  Checkpoint loaded (HF format) — predict() uses fine-tuned weights")
+            return
+
+        # Fall back to state_dict format (model.pt inside directory)
+        checkpoint_file = checkpoint_dir / "model.pt"
+        if not checkpoint_file.exists():
+            raise FileNotFoundError(
+                f"No checkpoint found at {checkpoint_dir}. "
+                "Expected 'config.json' (HF format) or 'model.pt' (state_dict format)."
+            )
+
+        print(f"Loading Moirai checkpoint from: {checkpoint_file}")
+        state_dict = torch.load(checkpoint_file, map_location="cpu")
+
+        # Create a MoiraiForecast to receive the state_dict, then extract the module
+        from uni2ts.model.moirai import MoiraiForecast
+
+        forecast_model = MoiraiForecast(
+            module=self.base_module,
+            prediction_length=self.prediction_length,
+            context_length=context_length,
+            patch_size=self.patch_size,
+            num_samples=self.num_samples,
+            target_dim=1,
+            feat_dynamic_real_dim=0,
+            past_feat_dynamic_real_dim=0,
+        )
+        forecast_model.load_state_dict(state_dict)
+
+        # Update base_module so predict() creates sequence models with loaded weights
+        if hasattr(forecast_model, "module"):
+            self.base_module = forecast_model.module
+        self._full_tune_model = forecast_model
+        self._full_tune_enabled = True
+        print("  Checkpoint loaded (state_dict format) — predict() uses fine-tuned weights")
+
     def _get_trainable_model(self):
         """Return the model instance being trained.
 
@@ -441,6 +549,42 @@ class MoiraiAdapter(BaseAdapter, LoRAMixin, FullTuneMixin):
         raise RuntimeError(
             "No trainable model available. Call prepare_for_full_tuning() or apply_lora() first."
         )
+
+    def save_full_checkpoint(self, output_dir: str) -> None:
+        """Save full fine-tuning checkpoint.
+
+        Saves base_module in HuggingFace format (config.json + model weights) so
+        the checkpoint can be loaded via from_pretrained() and published to the Hub.
+        Falls back to state_dict if save_pretrained is not available.
+
+        Args:
+            output_dir: Directory to save the checkpoint
+        """
+        if not self._full_tune_enabled:
+            raise RuntimeError(
+                "Full fine-tuning not enabled. Call prepare_for_full_tuning() first."
+            )
+
+        from pathlib import Path
+
+        import torch
+
+        output_path = Path(output_dir)
+        output_path.mkdir(parents=True, exist_ok=True)
+
+        # Prefer HuggingFace format for HF Hub publishability
+        if hasattr(self.base_module, "save_pretrained"):
+            print(f"Saving Moirai checkpoint (HF format) to: {output_path}")
+            self.base_module.save_pretrained(str(output_path))
+            print("  Checkpoint saved — reload with MoiraiModule.from_pretrained()")
+            return
+
+        # Fall back to state_dict of the full MoiraiForecast
+        checkpoint_file = output_path / "model.pt"
+        print(f"Saving Moirai checkpoint (state_dict) to: {checkpoint_file}")
+        assert self._full_tune_model is not None
+        torch.save(self._full_tune_model.state_dict(), checkpoint_file)
+        print("  Checkpoint saved")
 
     def forward_train_full(self, batch: dict) -> tuple:
         """Forward pass for full fine-tuning (all parameters trainable).
