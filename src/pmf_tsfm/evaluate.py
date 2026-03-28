@@ -199,20 +199,25 @@ def main(cfg: DictConfig):
     if all_metrics:
         rows = []
         for key, m in all_metrics.items():
+            s = m.get("summary", {})
+            mae_mean = s.get("MAE_mean", float("nan"))
+            mae_std = s.get("MAE_std", float("nan"))
+            rmse_mean = s.get("RMSE_mean", float("nan"))
+            rmse_std = s.get("RMSE_std", float("nan"))
             run.log(
                 {
-                    f"eval/{key}/mae_mean": m.get("mae_mean", float("nan")),
-                    f"eval/{key}/rmse_mean": m.get("rmse_mean", float("nan")),
+                    f"eval/{key}/mae_mean": mae_mean,
+                    f"eval/{key}/rmse_mean": rmse_mean,
                 }
             )
             rows.append(
                 [
                     m.get("dataset_name", ""),
                     m.get("model_name", ""),
-                    round(m.get("mae_mean", float("nan")), 4),
-                    round(m.get("mae_std", float("nan")), 4),
-                    round(m.get("rmse_mean", float("nan")), 4),
-                    round(m.get("rmse_std", float("nan")), 4),
+                    round(mae_mean, 4),
+                    round(mae_std, 4),
+                    round(rmse_mean, 4),
+                    round(rmse_std, 4),
                 ]
             )
         run.log_table(
@@ -220,6 +225,29 @@ def main(cfg: DictConfig):
             columns=["dataset", "model", "mae_mean", "mae_std", "rmse_mean", "rmse_std"],
             rows=rows,
         )
+
+    # Per-feature MAE/RMSE table across all model-dataset pairs
+    if all_metrics:
+        feat_rows = []
+        for _key, m in all_metrics.items():
+            dataset = m.get("dataset_name", "")
+            model = m.get("model_name", "")
+            for feat_name, feat_vals in (m.get("per_feature") or {}).items():
+                feat_rows.append(
+                    [
+                        dataset,
+                        model,
+                        feat_name,
+                        round(feat_vals.get("MAE", float("nan")), 4),
+                        round(feat_vals.get("RMSE", float("nan")), 4),
+                    ]
+                )
+        if feat_rows:
+            run.log_table(
+                key="eval/per_feature_table",
+                columns=["dataset", "model", "feature", "mae", "rmse"],
+                rows=feat_rows,
+            )
 
     run.log_summary({"eval/elapsed_s": elapsed, "eval/n_results": len(all_metrics or {})})
     run.finish()

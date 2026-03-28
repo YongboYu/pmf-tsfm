@@ -1,40 +1,57 @@
 #!/usr/bin/env bash
 # =============================================================================
-# run_inference_all.sh — Zero-shot inference for all paper models × all datasets.
+# run_inference_all.sh — Zero-shot inference for ALL model variants × datasets.
 #
-# Each model-dataset pair runs sequentially (single GPU).
-# Wall time is printed per run so you can estimate total runtime.
+# 13 model variants × 4 datasets = 52 runs (single GPU, sequential).
+# (timesfm/1_0_200m requires TIMESFM_V1_PATH in .env — see .env.example)
+# Wall time is printed per run.
 #
 # Usage:
 #   bash scripts/run_inference_all.sh                   # all models × all datasets
 #   bash scripts/run_inference_all.sh bpi2017           # one dataset, all models
-#   WANDB_MODE=online bash scripts/run_inference_all.sh # enable W&B logging
+#   LOGGER=wandb bash scripts/run_inference_all.sh      # enable W&B logging
 #
 # Environment:
-#   LOGGER      - logger config name (default: disabled; set to wandb for logging)
-#   DATASETS    - space-separated list of dataset config names
-#   MODELS      - space-separated list of model config paths (e.g. chronos/chronos2)
+#   LOGGER    - logger config name (default: disabled)
+#   DATASETS  - space-separated dataset config names (override default)
 # =============================================================================
 set -euo pipefail
 source "$(dirname "$0")/env.sh"
 
 LOGGER="${LOGGER:-disabled}"
-
-# Default: all four paper datasets
 DATASETS="${*:-bpi2017 bpi2019_1 sepsis hospital_billing}"
 
-# Default: all three paper zero-shot models
+# ---------------------------------------------------------------------------
+# All 13 zero-shot model variants (Chronos × 5, Moirai × 5, TimesFM × 3)
+# ---------------------------------------------------------------------------
 MODELS=(
+    # Chronos family (5 variants)
+    "chronos/bolt_tiny"
+    "chronos/bolt_mini"
+    "chronos/bolt_small"
+    "chronos/bolt_base"
     "chronos/chronos2"
+    # Moirai family (5 variants)
+    "moirai/1_1_small"
+    "moirai/1_1_base"
+    "moirai/1_1_large"
     "moirai/2_0_small"
+    "moirai/moe_base"
+    # TimesFM family (3 variants)
+    # timesfm/1_0_200m requires:
+    #   - uv sync --extra timesfm_legacy
+    #   - TIMESFM_V1_PATH=/path/to/timesfm-repo/src  (in .env)
+    #   See .env.example for details.
+    "timesfm/1_0_200m"
+    "timesfm/2_0_500m"
     "timesfm/2_5_200m"
 )
 
 echo ""
 echo "============================================================"
-echo "  Zero-shot Inference — All Models × All Datasets"
+echo "  Zero-shot Inference — All Model Variants × All Datasets"
+echo "  Models   : ${#MODELS[@]} variants"
 echo "  Datasets : ${DATASETS}"
-echo "  Models   : ${MODELS[*]}"
 echo "  Logger   : ${LOGGER}"
 echo "  Started  : $(date)"
 echo "============================================================"
@@ -46,9 +63,8 @@ FAILED=0
 
 for DATASET in $DATASETS; do
     for MODEL in "${MODELS[@]}"; do
-        MODEL_NAME="${MODEL//\//_}"   # chronos/chronos2 → chronos_chronos2 (for display)
-        echo "--- [$(date +%H:%M:%S)] ${DATASET} / ${MODEL_NAME} ---"
-
+        MODEL_LABEL="${MODEL//\//_}"
+        echo "--- [$(date +%H:%M:%S)] ${DATASET} / ${MODEL_LABEL} ---"
         RUN_START=$(date +%s)
 
         python -m pmf_tsfm.inference \
@@ -58,26 +74,22 @@ for DATASET in $DATASETS; do
             logger="${LOGGER}" \
             && RUN_STATUS=OK || RUN_STATUS=FAILED
 
-        RUN_END=$(date +%s)
-        RUN_ELAPSED=$((RUN_END - RUN_START))
-
+        RUN_ELAPSED=$(( $(date +%s) - RUN_START ))
         if [[ "${RUN_STATUS}" == "OK" ]]; then
             echo "    OK  ${RUN_ELAPSED}s"
-            RUNS=$((RUNS + 1))
+            RUNS=$(( RUNS + 1 ))
         else
             echo "    FAILED  ${RUN_ELAPSED}s  (continuing...)"
-            FAILED=$((FAILED + 1))
+            FAILED=$(( FAILED + 1 ))
         fi
         echo ""
     done
 done
 
-TOTAL_END=$(date +%s)
-TOTAL_ELAPSED=$((TOTAL_END - TOTAL_START))
-
+TOTAL_ELAPSED=$(( $(date +%s) - TOTAL_START ))
 echo "============================================================"
 echo "  Inference complete"
-echo "  Successful: ${RUNS} / $((RUNS + FAILED))"
-echo "  Total time: ${TOTAL_ELAPSED}s ($(date -ud "@${TOTAL_ELAPSED}" "+%H:%M:%S" 2>/dev/null || echo "${TOTAL_ELAPSED}s"))"
-echo "  Finished: $(date)"
+echo "  Successful : ${RUNS} / $(( RUNS + FAILED ))"
+echo "  Total time : ${TOTAL_ELAPSED}s"
+echo "  Finished   : $(date)"
 echo "============================================================"
