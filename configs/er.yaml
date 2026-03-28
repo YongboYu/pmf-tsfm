@@ -1,0 +1,56 @@
+# @package _global_
+
+# Entropic Relevance (ER) evaluation configuration.
+#
+# Usage:
+#   # Chronos-2 zero-shot on BPI2017
+#   python -m pmf_tsfm.er.evaluate_er model=chronos/chronos2 data=bpi2017
+#
+#   # Moirai-2.0 zero-shot on BPI2017
+#   python -m pmf_tsfm.er.evaluate_er model=moirai/2_0_small data=bpi2017
+#
+#   # TimesFM-2.5 zero-shot on BPI2017
+#   python -m pmf_tsfm.er.evaluate_er model=timesfm/2_5_200m data=bpi2017
+#
+#   # Evaluate all paper models across all datasets (multirun)
+#   python -m pmf_tsfm.er.evaluate_er --multirun \
+#     model=chronos/chronos2,moirai/2_0_small,timesfm/2_5_200m \
+#     data=bpi2017,bpi2019_1,sepsis,hospital_billing
+#
+#   # After LoRA fine-tuning
+#   python -m pmf_tsfm.er.evaluate_er \
+#     model=chronos/chronos2 data=bpi2017 task=lora_tune
+#
+#   # Print resolved config
+#   python -m pmf_tsfm.er.evaluate_er print_config=true
+
+defaults:
+  - _self_
+  - paths: default
+  - model: chronos/chronos2
+  - data: bpi2017
+
+# Task that produced the predictions to evaluate.
+# One of: zero_shot | lora_tune | full_tune
+task: zero_shot
+
+# Prediction horizon in days (must match inference run).
+prediction_length: 7
+
+# Training / test split ratio used for the training-baseline DFG.
+# The training DFG is built from the first {train_ratio} fraction of the log.
+train_ratio: 0.8
+
+# Whether to save the ER results to JSON.
+save: true
+
+# Output directory for ER results.
+# Structure: outputs/er/{task}/{data.name}/{model.name}/
+output_dir: ${paths.output_dir}/er/${task}/${data.name}/${model.name}
+
+# Set to true to print the resolved Hydra configuration and exit.
+print_config: false
+
+hydra:
+  run:
+    dir: ${paths.root_dir}/.hydra_outputs/er/${now:%Y-%m-%d_%H-%M-%S}
