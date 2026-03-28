@@ -239,6 +239,11 @@ def run_er_all(cfg: DictConfig) -> dict:
         train_ers.append(train_er)
 
         # Per-model prediction DFG
+        window_step_metrics: dict[str, float] = {
+            "er/window/truth_er": truth_er,
+            "er/window/training_er": train_er,
+            "er/window/n_traces": float(n_traces),
+        }
         for model_name, preds_arr, feature_names in model_preds:
             pred_dfg_json = build_prediction_dfg(preds_arr[i], feature_names)
             pred_er, pred_fit, _ = compute_er(pred_dfg_json, traces)
@@ -250,6 +255,11 @@ def run_er_all(cfg: DictConfig) -> dict:
                     "n_traces": n_traces,
                 }
             )
+            window_step_metrics[f"er/window/{model_name}/pred_er"] = pred_er
+            window_step_metrics[f"er/window/{model_name}/fitting_ratio"] = pred_fit
+
+        # Log per-window ER time series (x-axis = window index)
+        run.log(window_step_metrics, step=i)
 
         if (i + 1) % 10 == 0 or (i + 1) == n_windows_ref:
             print(f"  {i + 1:3d}/{n_windows_ref}  truth={truth_er:.3f}  train={train_er:.3f}")
