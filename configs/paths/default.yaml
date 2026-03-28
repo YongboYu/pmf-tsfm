@@ -3,12 +3,17 @@
 # Project root
 root_dir: ${oc.env:PROJECT_ROOT,${hydra:runtime.cwd}}
 
-# Data directory
+# Raw data directory (original parquet files, one per dataset)
 data_dir: ${paths.root_dir}/data/time_series
 
-# Output directory (new unified structure)
+# Processed data directory — written by `python -m pmf_tsfm.data.preprocess`
+# Layout: {processed_dir}/{dataset_name}/{full,train,val,test}.parquet + metadata.json
+# Set to null to skip and split at runtime from the raw parquet every run.
+processed_dir: ${paths.root_dir}/data/processed
+
+# Output directory (predictions, quantiles, metadata)
 # Structure: outputs/{task}/{dataset}/{model}/
 output_dir: ${paths.root_dir}/outputs
 
-# Results directory (for training outputs)
+# Results directory (training checkpoints / LoRA adapters)
 results_dir: ${paths.root_dir}/results

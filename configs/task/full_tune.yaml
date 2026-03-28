@@ -4,22 +4,18 @@ name: "full_tune"
 # Context mode for training (fixed window only for training)
 context_mode: "fixed"
 
-# Context length for training sequences
+# Context length for training sequences (sliding 48-day window, paper Section 4.1)
 train_context_length: 48
+
+# Patch size for training (paper: fixed at 16 for all fine-tuning experiments)
+patch_size: 16
 
 # Checkpoint output directory (relative to output_dir)
 checkpoint_save_dir: "checkpoints"
 
-# Whether to use mixed precision training
+# Whether to use mixed precision training (disabled on MPS/CPU, active on CUDA)
 use_amp: true
 
 # Gradient checkpointing to reduce memory usage (slower but less memory)
+# Recommended for Moirai large on limited VRAM
 gradient_checkpointing: false
-
-# Full fine-tuning specific settings
-# Note: Full fine-tuning requires more GPU memory than LoRA
-# Recommended batch sizes:
-#   - Moirai small: batch_size 16-32
-#   - Moirai large: batch_size 4-8
-#   - Chronos small: batch_size 16-32
-#   - Chronos base: batch_size 8-16

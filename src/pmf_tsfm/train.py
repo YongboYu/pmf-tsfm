@@ -78,6 +78,11 @@ class Chronos2TrainAdapter(Protocol):
     def save_full_checkpoint(self, output_dir: str) -> None: ...
 
 
+def _effective_use_amp(use_amp: bool, device: str) -> bool:
+    """AMP (mixed precision) is only supported on CUDA devices."""
+    return use_amp and device.startswith("cuda")
+
+
 def train_epoch(
     model: LoRATrainAdapter | FullTuneTrainAdapter,
     train_loader,
@@ -94,14 +99,15 @@ def train_epoch(
     total_loss = 0.0
     num_batches = 0
 
+    use_amp = _effective_use_amp(use_amp, device)
     scaler: torch.cuda.amp.GradScaler | None = None
-    if use_amp and device == "cuda":
+    if use_amp:
         scaler = torch.cuda.amp.GradScaler()
 
     for batch_idx, batch in enumerate(train_loader):
         optimizer.zero_grad()
 
-        if use_amp and device == "cuda":
+        if use_amp:
             assert scaler is not None
             with torch.cuda.amp.autocast(dtype=torch.bfloat16):
                 _, loss = forward_fn(batch)
@@ -139,9 +145,10 @@ def validate(
     total_loss = 0.0
     num_batches = 0
 
+    use_amp = _effective_use_amp(use_amp, device)
     with torch.no_grad():
         for batch in val_loader:
-            if use_amp and device == "cuda":
+            if use_amp:
                 with torch.cuda.amp.autocast(dtype=torch.bfloat16):
                     _, loss = forward_fn(batch)
             else:
@@ -150,6 +157,10 @@ def validate(
             total_loss += loss.item()
             num_batches += 1
 
+    # Return inf when val loader is empty (val set smaller than one window);
+    # early stopping will simply not improve on inf.
+    if num_batches == 0:
+        return float("inf")
     return total_loss / num_batches
 
 
@@ -165,10 +176,18 @@ def train_lora(cfg: DictConfig, adapter: LoRATrainAdapter, device: str, data_mod
     print(f"  Trainable: {trainable:,} / {total:,} ({100 * trainable / total:.2f}%)")
 
     # Get data loaders
+    # num_workers: 0 on macOS/MPS (avoids multiprocessing conflicts),
+    # set to ≥2 on Linux/CUDA via task config or CLI override.
+    num_workers: int = int(cfg.training.get("num_workers", 0))
     train_loader = data_module.get_train_dataloader(
-        batch_size=cfg.training.batch_size, shuffle=True
+        batch_size=cfg.training.batch_size,
+        shuffle=True,
+        num_workers=num_workers,
     )
-    val_loader = data_module.get_val_dataloader(batch_size=cfg.training.batch_size)
+    val_loader = data_module.get_val_dataloader(
+        batch_size=cfg.training.batch_size,
+        num_workers=num_workers,
+    )
 
     print(f"  Train batches: {len(train_loader)}")
     print(f"  Val batches: {len(val_loader)}")
@@ -214,10 +233,16 @@ def train_full(
             print("  Warning: gradient checkpointing not supported by this model")
 
     # Get data loaders
+    num_workers: int = int(cfg.training.get("num_workers", 0))
     train_loader = data_module.get_train_dataloader(
-        batch_size=cfg.training.batch_size, shuffle=True
+        batch_size=cfg.training.batch_size,
+        shuffle=True,
+        num_workers=num_workers,
     )
-    val_loader = data_module.get_val_dataloader(batch_size=cfg.training.batch_size)
+    val_loader = data_module.get_val_dataloader(
+        batch_size=cfg.training.batch_size,
+        num_workers=num_workers,
+    )
 
     print(f"  Train batches: {len(train_loader)}")
     print(f"  Val batches: {len(val_loader)}")
@@ -340,6 +365,7 @@ def train(cfg: DictConfig) -> dict:
     torch.manual_seed(cfg.seed)
     np.random.seed(cfg.seed)
 
+    # Resolve device with fallback
     device = cfg.device
     if device.startswith("cuda") and not torch.cuda.is_available():
         fallback_device = cfg.model.get("fallback_device", "cpu")
@@ -358,22 +384,39 @@ def train(cfg: DictConfig) -> dict:
     if is_full_tune:
         context_length = int(cfg.task.get("train_context_length", context_length))
 
+    # Apply task-level patch_size override to model config (paper: 16 for all fine-tuning)
+    model_cfg = cfg.model
+    task_patch_size = cfg.task.get("patch_size")
+    if task_patch_size is not None and cfg.model.family == "moirai":
+        model_cfg = OmegaConf.merge(cfg.model, {"patch_size": task_patch_size})
+        print(f"  Overriding model patch_size → {task_patch_size} (from task config)")
+
     print("=" * 70)
     print(mode_str)
-    print(f"  Model: {cfg.model.name}")
-    print(f"  Data:  {cfg.data.name}")
-    print(f"  Device: {device}")
+    print(f"  Model:   {cfg.model.name}")
+    print(f"  Data:    {cfg.data.name}")
+    print(f"  Device:  {device}")
+    print(f"  Context: {context_length}  |  Horizon: {cfg.prediction_length}")
+    if task_patch_size is not None:
+        print(f"  Patch size: {task_patch_size}")
     print("=" * 70)
 
     # ========== Data ==========
     print("\n[1/4] Preparing data...")
+    # Use absolute split indices from data config for consistency with zero-shot inference.
+    # The data configs specify train_end/val_end computed from the same 60/20/20 ratio.
+    # Use pre-split files when available; fall back to runtime splitting.
+    processed_dir: str | None = cfg.get("paths", {}).get("processed_dir")  # type: ignore[assignment]
     data_module = TrainingDataModule(
         dataset_name=cfg.data.name,
         data_path=cfg.data.path,
         context_length=context_length,
         prediction_length=cfg.prediction_length,
+        train_end=cfg.data.get("train_end"),
+        val_end=cfg.data.get("val_end"),
         train_val_test_ratio=list(cfg.data.split_ratio),
         model_family=cfg.model.family,
+        processed_dir=processed_dir,
     )
     data_module.setup()
 
@@ -386,7 +429,7 @@ def train(cfg: DictConfig) -> dict:
         raise ValueError(f"Training supports: {supported_families}, got: {cfg.model.family}")
 
     adapter = get_model_adapter(
-        model_cfg=cfg.model,
+        model_cfg=model_cfg,
         device=device,
         prediction_length=cfg.prediction_length,
     )

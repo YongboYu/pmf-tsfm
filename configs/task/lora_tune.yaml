@@ -4,16 +4,14 @@ name: "lora_tune"
 # Context mode for training (fixed window only for training)
 context_mode: "fixed"
 
-# Context length for training sequences
+# Context length for training sequences (sliding 48-day window, paper Section 4.1)
 train_context_length: 48
+
+# Patch size for training (paper: fixed at 16 for all fine-tuning experiments)
+patch_size: 16
 
 # LoRA adapter output directory (relative to output_dir)
 adapter_save_dir: "lora_adapter"
 
-# Whether to use mixed precision training
+# Whether to use mixed precision training (disabled on MPS/CPU, active on CUDA)
 use_amp: true
-
-# Model-specific LoRA target modules (reference - actual used from lora/default.yaml)
-# These are the attention layers targeted for each model family:
-#   moirai: ["q_proj", "k_proj", "v_proj", "out_proj"]
-#   chronos_bolt: ["q", "k", "v", "o"]  # T5 attention layers

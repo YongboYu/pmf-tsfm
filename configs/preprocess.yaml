@@ -1,0 +1,54 @@
+# @package _global_
+
+# Data preprocessing configuration.
+#
+# Reads a raw parquet file and saves reproducible train/val/test splits
+# plus a metadata.json that can be uploaded to HuggingFace Datasets.
+#
+# Typical workflow:
+#
+#   Step 0 — run once before any experiments:
+#     python -m pmf_tsfm.data.preprocess data=bpi2017
+#     python -m pmf_tsfm.data.preprocess --multirun \
+#         data=bpi2017,bpi2019_1,sepsis,hospital_billing
+#
+#   Step 1 — fine-tune (reads train.parquet / val.parquet):
+#     python -m pmf_tsfm.train model=chronos/bolt_small data=bpi2017 task=lora_tune
+#
+#   Step 2 — infer (reads full.parquet for expanding-window context):
+#     python -m pmf_tsfm.inference model=chronos/bolt_small data=bpi2017
+#
+#   Step 3 — evaluate:
+#     python -m pmf_tsfm.evaluate results_dir=outputs/zero_shot
+#
+# Output layout:
+#   {processed_dir}/{data.name}/
+#       full.parquet      — cleaned full series (same rows as raw, timestamps dropped)
+#       train.parquet     — rows [0, train_end)
+#       val.parquet       — rows [train_end, val_end)
+#       test.parquet      — rows [val_end, total)
+#       metadata.json     — shape, features, split indices, checksums
+
+defaults:
+  - _self_
+  - paths: default
+  - data: bpi2017
+
+# Directory where processed splits are saved.
+# Overrides paths.processed_dir if set explicitly here.
+processed_dir: ${paths.processed_dir}
+
+# Set to true to regenerate even if processed files already exist.
+force_overwrite: false
+
+print_config: false
+
+# ============== Hydra Settings ==============
+hydra:
+  run:
+    dir: ${paths.output_dir}/hydra/preprocess/${now:%Y-%m-%d}/${now:%H-%M-%S}
+  sweep:
+    dir: ${paths.output_dir}/hydra/preprocess/multirun/${now:%Y-%m-%d}/${now:%H-%M-%S}
+    subdir: ${hydra.job.num}
+  job:
+    chdir: false

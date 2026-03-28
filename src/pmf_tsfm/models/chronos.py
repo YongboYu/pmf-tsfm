@@ -537,24 +537,62 @@ class ChronosAdapter(BaseAdapter, LoRAMixin, FullTuneMixin):
     # ========================================================================
 
     def save_full_checkpoint(self, output_dir: str) -> None:
-        """Save full fine-tuning checkpoint.
+        """Save full fine-tuning checkpoint in HuggingFace format.
 
-        Chronos 2.0 uses the pipeline's save_pretrained method.
-        Chronos Bolt uses standard state_dict saving from the mixin.
+        Both Chronos Bolt and Chronos 2.0 are saved via pipeline.save_pretrained()
+        so they can be reloaded with BaseChronosPipeline.from_pretrained() and
+        published to the HuggingFace Hub.
+
+        Args:
+            output_dir: Directory to save the checkpoint
         """
-        if self._is_chronos2:
-            if self.pipeline is None:
-                raise RuntimeError("Model pipeline not loaded. Call load_model() first.")
+        if self.pipeline is None:
+            raise RuntimeError("Model pipeline not loaded. Call load_model() first.")
 
-            output_path = Path(output_dir)
-            output_path.mkdir(parents=True, exist_ok=True)
+        output_path = Path(output_dir)
+        output_path.mkdir(parents=True, exist_ok=True)
 
-            print(f"Saving Chronos 2.0 checkpoint to: {output_path}")
-            self.pipeline.save_pretrained(str(output_path))
-            print("  Checkpoint saved successfully")
-            return
+        model_type = "Chronos 2.0" if self._is_chronos2 else "Chronos Bolt"
+        print(f"Saving {model_type} checkpoint (HF format) to: {output_path}")
+        self.pipeline.save_pretrained(str(output_path))
+        print("  Checkpoint saved — reload with BaseChronosPipeline.from_pretrained()")
 
-        FullTuneMixin.save_full_checkpoint(self, output_dir)
+    def load_full_checkpoint(self, checkpoint_path: str, context_length: int = 48) -> None:
+        """Load a full fine-tune checkpoint saved by save_full_checkpoint().
+
+        For both Chronos Bolt and Chronos 2.0, reloads the pipeline from the
+        HuggingFace-format checkpoint directory so predict() uses the fine-tuned weights.
+
+        Args:
+            checkpoint_path: Path to checkpoint directory (saved by save_full_checkpoint)
+            context_length: Unused for Chronos (pipeline handles context internally)
+        """
+        from chronos import BaseChronosPipeline
+
+        print(f"Loading Chronos checkpoint from: {checkpoint_path}")
+
+        try:
+            if self._is_chronos2:
+                self.pipeline = BaseChronosPipeline.from_pretrained(
+                    checkpoint_path,
+                    device_map=self.device,
+                )
+            else:
+                self.pipeline = BaseChronosPipeline.from_pretrained(
+                    checkpoint_path,
+                    device_map=self.device,
+                    torch_dtype=self.torch_dtype,
+                )
+        except Exception as err:
+            raise RuntimeError(
+                f"Failed to load checkpoint from {checkpoint_path}: {err}. "
+                "Ensure the checkpoint was saved with save_full_checkpoint()."
+            ) from err
+
+        self._is_loaded = True
+        self._full_tune_enabled = True
+        model_type = "Chronos 2.0" if self._is_chronos2 else "Chronos Bolt"
+        print(f"  {model_type} checkpoint loaded — predict() uses fine-tuned weights")
 
     def _create_base_model_for_training(self, context_length: int):
         """Create Chronos Bolt model for full fine-tuning.
