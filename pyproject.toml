@@ -32,6 +32,8 @@ dependencies = [
     "uni2ts>=1.0.0",
     "gluonts>=0.14.0",
     "peft>=0.7.0",
+    # Process mining - Entropic Relevance evaluation
+    "pm4py>=2.7.0",
 ]
 
 [project.optional-dependencies]

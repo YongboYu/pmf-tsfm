@@ -17,3 +17,7 @@ output_dir: ${paths.root_dir}/outputs
 
 # Results directory (training checkpoints / LoRA adapters)
 results_dir: ${paths.root_dir}/results
+
+# Event log directory (XES files for Entropic Relevance evaluation)
+# Layout: {log_dir}/{dataset_name}.xes
+log_dir: ${paths.root_dir}/data/processed_logs
