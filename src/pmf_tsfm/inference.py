@@ -31,6 +31,7 @@ Usage:
 """
 
 import json
+import time
 from pathlib import Path
 from typing import Protocol, cast
 
@@ -41,6 +42,7 @@ from omegaconf import DictConfig, OmegaConf
 
 from pmf_tsfm.data import ZeroShotDataModule
 from pmf_tsfm.models import get_model_adapter
+from pmf_tsfm.utils.wandb_logger import init_run
 
 
 class LoRAInferenceAdapter(Protocol):
@@ -108,9 +110,24 @@ def run_inference(cfg: DictConfig) -> dict:
     Returns:
         Dictionary with predictions, targets, quantiles, output_path
     """
+    t_start = time.perf_counter()
+
     # Set seeds
     torch.manual_seed(cfg.seed)
     np.random.seed(cfg.seed)
+
+    dataset_name: str = cfg.data.name
+    model_name: str = cfg.model.name
+    task: str = cfg.get("task", "zero_shot")
+
+    # Init W&B run (no-op when logger.enabled=false)
+    run = init_run(
+        cfg,
+        job_type="inference",
+        name=f"{task}/{dataset_name}/{model_name}",
+        tags=[model_name, dataset_name, task, cfg.model.family],
+        group=f"{task}/{dataset_name}",
+    )
 
     # Resolve device with fallback
     device = cfg.device
@@ -224,10 +241,26 @@ def run_inference(cfg: DictConfig) -> dict:
         metadata=metadata,
     )
 
+    elapsed = time.perf_counter() - t_start
+
     print("\n" + "=" * 70)
     print(f"{mode} COMPLETE")
-    print(f"  Output: {output_path}")
+    print(f"  Output:  {output_path}")
+    print(f"  Elapsed: {elapsed:.1f}s")
     print("=" * 70)
+
+    run.log_summary(
+        {
+            "inference/elapsed_s": elapsed,
+            "inference/n_windows": int(predictions.shape[0]),
+            "inference/n_features": int(predictions.shape[2]),
+            "inference/model": model_name,
+            "inference/dataset": dataset_name,
+            "inference/task": task,
+            "inference/device": device,
+        }
+    )
+    run.finish()
 
     return {
         "predictions": predictions,

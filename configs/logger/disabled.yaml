@@ -1,0 +1,12 @@
+# @package _global_
+# Default logger — all W&B calls are no-ops.
+# Override from CLI: logger=wandb  or  logger=wandb_offline
+
+logger:
+  enabled: false
+  project: pmf-tsfm
+  entity: null
+  mode: disabled
+  tags: []
+  group: null
+  notes: null

@@ -1,0 +1,70 @@
+# @package _global_
+
+# Multi-model Entropic Relevance evaluation — one XES parse per dataset.
+#
+# Evaluates Truth, Training-baseline, and ALL model predictions for a dataset
+# in a single pass.  Use this instead of running evaluate_er.py once per model
+# to avoid repeated XES log loading (dominant I/O cost on large logs).
+#
+# Usage:
+#   # Evaluate all discovered models for BPI2017
+#   python -m pmf_tsfm.er.evaluate_er_all data=bpi2017
+#
+#   # All four datasets in one multirun (4 XES parses total)
+#   python -m pmf_tsfm.er.evaluate_er_all --multirun \
+#     data=bpi2017,bpi2019_1,sepsis,hospital_billing
+#
+#   # Restrict to the three paper zero-shot models
+#   python -m pmf_tsfm.er.evaluate_er_all data=bpi2017 \
+#     'model_names=[chronos2,moirai_2_0_small,timesfm_2_5_200m]'
+#
+#   # With W&B
+#   python -m pmf_tsfm.er.evaluate_er_all data=bpi2017 logger=wandb \
+#     logger.group=er_zero_shot
+#
+#   # Print resolved config
+#   python -m pmf_tsfm.er.evaluate_er_all print_config=true
+
+defaults:
+  - _self_
+  - paths: default
+  - data: bpi2017
+  - logger: disabled           # override: logger=wandb  or  logger=wandb_offline
+  - optional local: default    # machine-specific overrides in configs/local/default.yaml
+
+# Task that produced the predictions to evaluate.
+# One of: zero_shot | lora_tune | full_tune
+task: zero_shot
+
+# Prediction horizon in days (must match inference run).
+prediction_length: 7
+
+# Training / test split ratio used for the training-baseline DFG.
+train_ratio: 0.8
+
+# Models to evaluate.
+# Empty list (default) → auto-discover all subdirectories under
+#   outputs/{task}/{data.name}/ that contain *_predictions.npy files.
+# Explicit list → only those model names are evaluated, e.g.:
+#   model_names: [chronos2, moirai_2_0_small, timesfm_2_5_200m]
+model_names: []
+
+# Whether to save per-model and combined JSON results.
+save: true
+
+# Base output directory for ER results.
+# Per-model JSON: {output_base}/{model_name}/{dataset}_{model}_er.json
+# Combined summary: {output_base}/{dataset}_er_all_summary.json
+output_base: ${paths.output_dir}/er/${task}/${data.name}
+
+# Set to true to print the resolved Hydra configuration and exit.
+print_config: false
+
+hydra:
+  run:
+    dir: ${paths.root_dir}/.hydra_outputs/er_all/${now:%Y-%m-%d_%H-%M-%S}
+  sweep:
+    dir: ${paths.root_dir}/.hydra_outputs/er_all/multirun/${now:%Y-%m-%d_%H-%M-%S}
+    subdir: ${hydra.job.num}
+  job:
+    chdir: false

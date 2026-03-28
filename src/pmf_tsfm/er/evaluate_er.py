@@ -35,6 +35,7 @@ from __future__ import annotations
 
 import json
 import math
+import time
 from pathlib import Path
 
 import hydra
@@ -52,6 +53,7 @@ from pmf_tsfm.er.dfg import (
     load_event_log,
     prepare_log,
 )
+from pmf_tsfm.utils.wandb_logger import init_run
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -125,11 +127,21 @@ def run_er_evaluation(cfg: DictConfig) -> dict:
 
     Returns a dict with per-window results and summary statistics.
     """
+    t_start = time.perf_counter()
+
     dataset_name: str = cfg.data.name
     model_name: str = cfg.model.name
     task: str = cfg.get("task", "zero_shot")
     pred_len: int = cfg.prediction_length
     val_end: int = cfg.data.val_end
+
+    run = init_run(
+        cfg,
+        job_type="er",
+        name=f"er/{task}/{dataset_name}/{model_name}",
+        tags=[model_name, dataset_name, task, "er"],
+        group=f"er/{task}/{dataset_name}",
+    )
 
     print("=" * 70)
     print("ENTROPIC RELEVANCE EVALUATION")
@@ -262,13 +274,33 @@ def run_er_evaluation(cfg: DictConfig) -> dict:
 
     result = {"summary": summary, "windows": window_results}
 
+    elapsed = time.perf_counter() - t_start
+    print(f"\n  Elapsed: {elapsed:.1f}s")
+
     if cfg.get("save", True):
         out_dir = Path(cfg.output_dir)
         out_dir.mkdir(parents=True, exist_ok=True)
         out_path = out_dir / f"{dataset_name}_{model_name}_er.json"
         with open(out_path, "w") as f:
             json.dump(result, f, indent=2, default=str)
-        print(f"\n  ER results saved to {out_path}")
+        print(f"  ER results saved to {out_path}")
+
+    run.log_summary(
+        {
+            "er/truth_er_mean": truth_mean,
+            "er/truth_er_std": truth_std,
+            "er/truth_fitting_ratio": truth_fit_mean,
+            "er/pred_er_mean": pred_mean,
+            "er/pred_er_std": pred_std,
+            "er/pred_fitting_ratio": pred_fit_mean,
+            "er/training_er_mean": train_mean,
+            "er/training_er_std": train_std,
+            "er/elapsed_s": elapsed,
+            "er/n_windows": n_windows,
+            "er/n_valid_windows": len(valid),
+        }
+    )
+    run.finish()
 
     return result
 

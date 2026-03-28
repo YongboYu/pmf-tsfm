@@ -20,6 +20,8 @@
 defaults:
   - _self_
   - paths: default
+  - logger: disabled           # override: logger=wandb  or  logger=wandb_offline
+  - optional local: default    # machine-specific overrides in configs/local/default.yaml (git-ignored)
 
 # Task type: zero_shot | lora_tune | full_tune
 # Controls which subdirectory of output_dir is searched by default.

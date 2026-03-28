@@ -29,6 +29,8 @@ defaults:
   - paths: default
   - model: chronos/chronos2
   - data: bpi2017
+  - logger: disabled           # override: logger=wandb  or  logger=wandb_offline
+  - optional local: default    # machine-specific overrides in configs/local/default.yaml (git-ignored)
 
 # Task that produced the predictions to evaluate.
 # One of: zero_shot | lora_tune | full_tune

@@ -25,6 +25,8 @@ defaults:
   - data: bpi2017
   - task: lora_tune
   - lora: default
+  - logger: disabled           # override: logger=wandb  or  logger=wandb_offline
+  - optional local: default    # machine-specific overrides in configs/local/default.yaml (git-ignored)
 
 # ============== Global Settings ==============
 seed: 42
