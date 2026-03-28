@@ -28,6 +28,8 @@ defaults:
   - paths: default
   - model: chronos/bolt_small
   - data: bpi2017
+  - logger: disabled           # override: logger=wandb  or  logger=wandb_offline
+  - optional local: default    # machine-specific overrides in configs/local/default.yaml (git-ignored)
 
 # ============== Global Settings ==============
 seed: 42

@@ -27,6 +27,7 @@ Usage:
 """
 
 import json
+import time
 from pathlib import Path
 
 import hydra
@@ -39,6 +40,7 @@ from pmf_tsfm.utils.metrics import (
     print_metrics,
     save_metrics,
 )
+from pmf_tsfm.utils.wandb_logger import init_run
 
 
 def find_result_files(results_dir: Path) -> list[tuple[Path, str, str]]:
@@ -178,13 +180,51 @@ def evaluate_all(results_dir: Path, save: bool = True) -> dict[str, dict]:
 @hydra.main(version_base="1.3", config_path="../../configs", config_name="eval")
 def main(cfg: DictConfig):
     """Main entry point with Hydra configuration."""
-    results_dir = Path(cfg.results_dir)
+    t_start = time.perf_counter()
+    task: str = cfg.get("task", "zero_shot")
 
+    run = init_run(cfg, job_type="evaluate", name=f"eval/{task}", tags=[task])
+
+    results_dir = Path(cfg.results_dir)
     if not results_dir.exists():
         print(f"Results directory not found: {results_dir}")
+        run.finish()
         return None
 
-    return evaluate_all(results_dir, save=cfg.get("save", True))
+    all_metrics = evaluate_all(results_dir, save=cfg.get("save", True))
+
+    elapsed = time.perf_counter() - t_start
+
+    # Log each model-dataset pair as a W&B summary entry and a comparison table
+    if all_metrics:
+        rows = []
+        for key, m in all_metrics.items():
+            run.log(
+                {
+                    f"eval/{key}/mae_mean": m.get("mae_mean", float("nan")),
+                    f"eval/{key}/rmse_mean": m.get("rmse_mean", float("nan")),
+                }
+            )
+            rows.append(
+                [
+                    m.get("dataset_name", ""),
+                    m.get("model_name", ""),
+                    round(m.get("mae_mean", float("nan")), 4),
+                    round(m.get("mae_std", float("nan")), 4),
+                    round(m.get("rmse_mean", float("nan")), 4),
+                    round(m.get("rmse_std", float("nan")), 4),
+                ]
+            )
+        run.log_table(
+            key="eval/results_table",
+            columns=["dataset", "model", "mae_mean", "mae_std", "rmse_mean", "rmse_std"],
+            rows=rows,
+        )
+
+    run.log_summary({"eval/elapsed_s": elapsed, "eval/n_results": len(all_metrics or {})})
+    run.finish()
+
+    return all_metrics
 
 
 if __name__ == "__main__":

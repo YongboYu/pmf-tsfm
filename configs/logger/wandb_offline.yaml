@@ -1,0 +1,18 @@
+# @package _global_
+# Weights & Biases — offline mode for HPC nodes without internet access.
+#
+# Runs are saved locally. Sync after the job completes:
+#   wandb sync <run-dir>
+#   wandb sync outputs/wandb/offline-run-*/
+#
+# Usage:
+#   python -m pmf_tsfm.inference logger=wandb_offline
+
+logger:
+  enabled: true
+  project: pmf-tsfm
+  entity: ${oc.env:WANDB_ENTITY,null}
+  mode: offline
+  tags: []
+  group: null
+  notes: null

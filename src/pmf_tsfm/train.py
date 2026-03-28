@@ -20,6 +20,7 @@ Usage:
 """
 
 import sys
+import time
 from pathlib import Path
 from typing import Any, Protocol, cast
 
@@ -27,6 +28,8 @@ import hydra
 import numpy as np
 import torch
 from omegaconf import DictConfig, OmegaConf
+
+from pmf_tsfm.utils.wandb_logger import WandbRun, init_run
 
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 
@@ -164,7 +167,13 @@ def validate(
     return total_loss / num_batches
 
 
-def train_lora(cfg: DictConfig, adapter: LoRATrainAdapter, device: str, data_module) -> dict:
+def train_lora(
+    cfg: DictConfig,
+    adapter: LoRATrainAdapter,
+    device: str,
+    data_module,
+    run: WandbRun | None = None,
+) -> dict:
     """Train with LoRA fine-tuning."""
     # Apply LoRA
     lora_config = cast(dict[str, Any], OmegaConf.to_container(cfg.lora, resolve=True))
@@ -203,6 +212,7 @@ def train_lora(cfg: DictConfig, adapter: LoRATrainAdapter, device: str, data_mod
         save_fn=adapter.save_lora_adapter,
         save_dir_key="adapter_save_dir",
         mode_name="LoRA",
+        run=run,
     )
 
 
@@ -212,6 +222,7 @@ def train_full(
     device: str,
     data_module,
     context_length: int,
+    run: WandbRun | None = None,
 ) -> dict:
     """Train with full fine-tuning (all parameters)."""
     # Prepare for full fine-tuning
@@ -258,6 +269,7 @@ def train_full(
         save_fn=adapter.save_full_checkpoint,
         save_dir_key="checkpoint_save_dir",
         mode_name="Full",
+        run=run,
     )
 
 
@@ -271,6 +283,7 @@ def _training_loop(
     save_fn,
     save_dir_key: str,
     mode_name: str,
+    run: WandbRun | None = None,
 ) -> dict:
     """Common training loop for both LoRA and full fine-tuning."""
     print(f"\n[3/4] Training ({mode_name})...")
@@ -293,6 +306,8 @@ def _training_loop(
 
     # Get save directory from task config
     save_dir = getattr(cfg.task, save_dir_key, "checkpoints")
+
+    t_train_start = time.perf_counter()
 
     for epoch in range(cfg.training.epochs):
         print(f"\nEpoch {epoch + 1}/{cfg.training.epochs}")
@@ -320,6 +335,9 @@ def _training_loop(
         )
         print(f"  Val Loss: {val_loss:.4f}")
 
+        if run is not None:
+            run.log({"train/loss": train_loss, "val/loss": val_loss}, step=epoch + 1)
+
         # Early stopping check
         if val_loss < best_val_loss:
             best_val_loss = val_loss
@@ -343,12 +361,23 @@ def _training_loop(
     final_path = Path(cfg.output_dir) / save_dir / "final"
     save_fn(str(final_path))
 
+    elapsed = time.perf_counter() - t_train_start
+
     print("\n" + "=" * 70)
     print(f"{mode_name.upper()} FINE-TUNING COMPLETE")
     print("=" * 70)
     print(f"  Best validation loss: {best_val_loss:.4f}")
     print(f"  Best checkpoint: {Path(cfg.output_dir) / save_dir / 'best'}")
-    print(f"  Final checkpoint: {final_path}")
+    print(f"  Final checkpoint:     {final_path}")
+    print(f"  Elapsed:              {elapsed:.1f}s")
+
+    if run is not None:
+        run.log_summary(
+            {
+                "train/best_val_loss": best_val_loss,
+                "train/elapsed_s": elapsed,
+            }
+        )
 
     return {
         "best_val_loss": best_val_loss,
@@ -364,6 +393,15 @@ def train(cfg: DictConfig) -> dict:
     # Set seeds
     torch.manual_seed(cfg.seed)
     np.random.seed(cfg.seed)
+
+    task_name_str = cfg.task.name if hasattr(cfg.task, "name") else cfg.get("task", "lora_tune")
+    run = init_run(
+        cfg,
+        job_type="train",
+        name=f"{task_name_str}/{cfg.data.name}/{cfg.model.name}",
+        tags=[cfg.model.name, cfg.data.name, task_name_str, cfg.model.family],
+        group=f"{task_name_str}/{cfg.data.name}",
+    )
 
     # Resolve device with fallback
     device = cfg.device
@@ -479,23 +517,31 @@ def train(cfg: DictConfig) -> dict:
             final_path = Path(cfg.output_dir) / save_dir / "final"
             chronos2_adapter.save_full_checkpoint(str(final_path))
             print(f"  Final checkpoint: {final_path}")
+            run.finish()
             return {"status": "complete", "model": "chronos2", "final_path": str(final_path)}
 
         # Standard full fine-tuning for Chronos Bolt and Moirai
-        return train_full(
+        result = train_full(
             cfg=cfg,
             adapter=cast(FullTuneTrainAdapter, adapter),
             device=device,
             data_module=data_module,
             context_length=context_length,
+            run=run,
         )
+        run.finish()
+        return result
+
     # LoRA fine-tuning
-    return train_lora(
+    result = train_lora(
         cfg=cfg,
         adapter=cast(LoRATrainAdapter, adapter),
         device=device,
         data_module=data_module,
+        run=run,
     )
+    run.finish()
+    return result
 
 
 @hydra.main(version_base="1.3", config_path="../../configs", config_name="train")

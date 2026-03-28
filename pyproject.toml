@@ -34,6 +34,8 @@ dependencies = [
     "peft>=0.7.0",
     # Process mining - Entropic Relevance evaluation
     "pm4py>=2.7.0",
+    # Experiment tracking
+    "wandb>=0.18.0",
 ]
 
 [project.optional-dependencies]

@@ -1,3 +1,6 @@
+# Machine-specific Hydra local overrides (see configs/local/.gitkeep for template)
+configs/local/*.yaml
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]

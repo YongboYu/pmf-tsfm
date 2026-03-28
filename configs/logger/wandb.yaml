@@ -1,0 +1,22 @@
+# @package _global_
+# Weights & Biases — online logging (requires internet + WANDB_API_KEY).
+#
+# Usage:
+#   python -m pmf_tsfm.inference logger=wandb
+#   python -m pmf_tsfm.train     logger=wandb
+#   python -m pmf_tsfm.evaluate  logger=wandb
+#   python -m pmf_tsfm.er.evaluate_er      logger=wandb
+#   python -m pmf_tsfm.er.evaluate_er_all  logger=wandb
+#
+# Set WANDB_API_KEY in your .env file (see .env.example).
+# Set entity in configs/local/default.yaml or via CLI: logger.entity=yourname
+
+logger:
+  enabled: true
+  project: pmf-tsfm
+  # entity: read from WANDB_ENTITY env var or configs/local/default.yaml
+  entity: ${oc.env:WANDB_ENTITY,null}
+  mode: online
+  tags: []
+  group: null   # group related runs (e.g. a dataset sweep): logger.group=bpi2017_sweep
+  notes: null

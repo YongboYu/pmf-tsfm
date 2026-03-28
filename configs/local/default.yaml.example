@@ -1,0 +1,26 @@
+# @package _global_
+#
+# Machine-specific overrides — copy to configs/local/default.yaml
+# and fill in values for your machine.  This file is git-ignored.
+#
+# Hydra loads configs/local/default.yaml automatically (optional — silently
+# skipped when absent).  Put anything here that differs between your Mac,
+# Linux host, and HPC allocation.
+
+# --- Example: Linux host with RTX A6000 ---
+# device: cuda
+# training:
+#   num_workers: 4
+
+# --- Example: macOS Apple Silicon ---
+# device: mps
+# training:
+#   num_workers: 0
+
+# --- Example: W&B entity (so you don't have to type it each time) ---
+# logger:
+#   entity: your-wandb-username
+
+# --- Example: Redirect model cache to a fast scratch disk ---
+# paths:
+#   root_dir: /scratch/your_username/pmf-tsfm
