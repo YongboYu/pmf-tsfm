@@ -2073,8 +2073,6 @@ dependencies = [
     { name = "peft" },
     { name = "pyarrow" },
     { name = "rich" },
-    { name = "scikit-learn", version = "1.7.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
-    { name = "scikit-learn", version = "1.8.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
     { name = "torch" },
     { name = "uni2ts" },
 ]
@@ -2115,7 +2113,6 @@ requires-dist = [
     { name = "pyarrow", specifier = ">=14.0.0" },
     { name = "rich", specifier = ">=13.0.0" },
     { name = "safetensors", marker = "extra == 'timesfm-legacy'", specifier = ">=0.5.3" },
-    { name = "scikit-learn", specifier = ">=1.3.0" },
     { name = "timesfm", marker = "python_full_version >= '3.11' and extra == 'timesfm-v25'", url = "https://github.com/google-research/timesfm/archive/refs/heads/master.zip" },
     { name = "torch", specifier = ">=2.0.0" },
     { name = "uni2ts", specifier = ">=1.0.0" },

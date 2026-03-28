@@ -1,24 +1,35 @@
 # @package _global_
 
 # Evaluation configuration
-# Usage: python evaluate.py task=zero_shot
+#
+# Recursively discovers all *_predictions.npy files under results_dir and
+# computes paper-formula MAE / RMSE (mean +/- std across DF series).
+#
+# Usage:
+#   # Evaluate all zero-shot results
+#   python -m pmf_tsfm.evaluate
+#
+#   # Evaluate a specific task
+#   python -m pmf_tsfm.evaluate task=lora_tune
+#   python -m pmf_tsfm.evaluate task=full_tune
+#
+#   # Evaluate a single model+dataset directory directly
+#   python -m pmf_tsfm.evaluate \
+#     results_dir=outputs/zero_shot/BPI2017/chronos_bolt_small
 
 defaults:
   - _self_
   - paths: default
 
-# Task type (zero_shot, lora, full_tune)
+# Task type: zero_shot | lora_tune | full_tune
+# Controls which subdirectory of output_dir is searched by default.
 task: zero_shot
 
-# Optional filters (dataset name and model name as strings)
-# Set to evaluate specific subset, or leave null for all
-dataset: null
-model: null
-
-# Results directory to evaluate: outputs/{task}/
+# Root directory searched recursively for *_predictions.npy files.
+# Override to point at a specific model+dataset subdirectory when needed.
 results_dir: ${paths.output_dir}/${task}
 
-# Save metrics to disk
+# Write per-result metrics JSON files next to the prediction arrays
 save: true
 
 # ============== Hydra Settings ==============

@@ -1,24 +1,29 @@
 """
 Evaluation script for time series forecasting.
 
-Computes metrics from saved predictions:
-- MAE: Mean Absolute Error (overall)
-- Per-sequence RMSE: RMSE per sequence, then mean ± std
+Computes MAE and RMSE from saved predictions, following the paper's
+Eq. (1)-(2):
+  MAE  = mean_d( mean_{s,h} |error| )  +/-  std_d
+  RMSE = mean_d( mean_s( sqrt(mean_h(error^2)) ) )  +/-  std_d
 
-Future: Entropic Relevance for process model assessment.
+Predictions are stored at:
+    outputs/{task}/{dataset_name}/{model_name}/
+        {dataset_name}_{model_name}_predictions.npy
+        {dataset_name}_{model_name}_targets.npy
+        {dataset_name}_{model_name}_metadata.json
+
+This script discovers them recursively under the given results_dir.
 
 Usage:
-    # Evaluate single result
-    python -m pmf_tsfm.evaluate results_dir=results/zero_shot
+    # Evaluate all results under the zero_shot task directory
+    python -m pmf_tsfm.evaluate task=zero_shot
 
-    # Evaluate specific model-dataset pair
+    # Evaluate a specific subdirectory (single model + dataset)
     python -m pmf_tsfm.evaluate \\
-        results_dir=results/zero_shot \\
-        model_name=chronos_bolt_small \\
-        dataset_name=BPI2017
+        results_dir=outputs/zero_shot/BPI2017/chronos_bolt_small
 
-    # Evaluate all results in directory
-    python -m pmf_tsfm.evaluate results_dir=results/zero_shot --all
+    # Evaluate lora or full_tune results
+    python -m pmf_tsfm.evaluate task=lora_tune
 """
 
 import json
@@ -36,21 +41,32 @@ from pmf_tsfm.utils.metrics import (
 )
 
 
-def find_result_files(results_dir: Path) -> list[tuple[str, str]]:
+def find_result_files(results_dir: Path) -> list[tuple[Path, str, str]]:
     """
-    Find all prediction files in results directory.
+    Recursively find all prediction files under results_dir.
+
+    Predictions are saved as {dataset}_{model}_predictions.npy and may live
+    in subdirectories (outputs/{task}/{dataset}/{model}/).
 
     Returns:
-        List of (dataset_name, model_name) tuples
+        List of (file_dir, dataset_name, model_name) triples
     """
     results = []
-    for pred_file in results_dir.glob("*_predictions.npy"):
-        # Parse filename: {dataset}_{model}_predictions.npy
-        name = pred_file.stem.replace("_predictions", "")
-        parts = name.split("_", 1)
-        if len(parts) == 2:
-            dataset_name, model_name = parts
-            results.append((dataset_name, model_name))
+    for pred_file in sorted(results_dir.rglob("*_predictions.npy")):
+        # Filename: {dataset_name}_{model_name}_predictions.npy
+        stem = pred_file.stem.replace("_predictions", "")
+        # Split on first underscore: dataset names may contain underscores
+        # Prefer splitting using the parent directory names when available:
+        #   .../BPI2017/chronos_bolt_small/BPI2017_chronos_bolt_small_predictions.npy
+        parent_parts = pred_file.parent.parts
+        if len(parent_parts) >= 2:
+            model_name = parent_parts[-1]  # e.g. chronos_bolt_small
+            dataset_name = parent_parts[-2]  # e.g. BPI2017
+        else:
+            # Fallback: split filename on first underscore
+            parts = stem.split("_", 1)
+            dataset_name, model_name = (parts[0], parts[1]) if len(parts) == 2 else (stem, "")
+        results.append((pred_file.parent, dataset_name, model_name))
     return results
 
 
@@ -63,7 +79,7 @@ def load_predictions(
     Load predictions, targets, and metadata from disk.
 
     Args:
-        results_dir: Directory containing results
+        results_dir: Directory containing the .npy files
         dataset_name: Name of dataset
         model_name: Name of model
 
@@ -91,13 +107,13 @@ def evaluate_single(
     save: bool = True,
 ) -> dict:
     """
-    Evaluate a single model-dataset result.
+    Evaluate one model-dataset pair and optionally save metrics JSON.
 
     Args:
-        results_dir: Directory containing results
-        dataset_name: Name of dataset
-        model_name: Name of model
-        save: Whether to save metrics to disk
+        results_dir: Directory that contains the prediction .npy files
+        dataset_name: Name of dataset (e.g. BPI2017)
+        model_name:   Name of model   (e.g. chronos_bolt_small)
+        save:         Write metrics JSON next to the prediction files
 
     Returns:
         Metrics dictionary
@@ -106,14 +122,11 @@ def evaluate_single(
 
     predictions, targets, metadata = load_predictions(results_dir, dataset_name, model_name)
 
-    # Get feature names from metadata if available
-    feature_names = None
+    feature_names: list[str] | None = None
     if metadata and "feature_names" in metadata:
         feature_names = metadata["feature_names"]
 
     metrics = compute_metrics(predictions, targets, feature_names)
-
-    # Add metadata
     metrics["model_name"] = model_name
     metrics["dataset_name"] = dataset_name
     if metadata:
@@ -130,32 +143,31 @@ def evaluate_single(
 
 def evaluate_all(results_dir: Path, save: bool = True) -> dict[str, dict]:
     """
-    Evaluate all results in directory.
+    Evaluate all prediction files discovered recursively under results_dir.
 
     Args:
-        results_dir: Directory containing results
-        save: Whether to save metrics to disk
+        results_dir: Root directory to search (e.g. outputs/zero_shot/)
+        save:        Write per-result metrics JSON files
 
     Returns:
-        Dictionary mapping "{dataset}_{model}" to metrics
+        Dict mapping "{dataset}_{model}" to metrics dict
     """
-    result_pairs = find_result_files(results_dir)
+    result_triples = find_result_files(results_dir)
 
-    if not result_pairs:
-        print(f"No prediction files found in {results_dir}")
+    if not result_triples:
+        print(f"No prediction files found under {results_dir}")
         return {}
 
-    print(f"Found {len(result_pairs)} result files")
+    print(f"Found {len(result_triples)} result file(s) under {results_dir}")
 
-    all_metrics = {}
-    for dataset_name, model_name in result_pairs:
+    all_metrics: dict[str, dict] = {}
+    for file_dir, dataset_name, model_name in result_triples:
         key = f"{dataset_name}_{model_name}"
         try:
-            metrics = evaluate_single(results_dir, dataset_name, model_name, save)
+            metrics = evaluate_single(file_dir, dataset_name, model_name, save)
             all_metrics[key] = metrics
         except Exception as e:
             print(f"Error evaluating {key}: {e}")
-            continue
 
     if len(all_metrics) > 1:
         print_aggregate_summary(all_metrics)
@@ -172,20 +184,7 @@ def main(cfg: DictConfig):
         print(f"Results directory not found: {results_dir}")
         return None
 
-    if cfg.get("all", False):
-        # Evaluate all results
-        return evaluate_all(results_dir, save=cfg.get("save", True))
-    # Evaluate specific model-dataset pair
-    if not cfg.get("model_name") or not cfg.get("dataset_name"):
-        # If no specific pair, evaluate all
-        return evaluate_all(results_dir, save=cfg.get("save", True))
-
-    return evaluate_single(
-        results_dir,
-        cfg.dataset_name,
-        cfg.model_name,
-        save=cfg.get("save", True),
-    )
+    return evaluate_all(results_dir, save=cfg.get("save", True))
 
 
 if __name__ == "__main__":

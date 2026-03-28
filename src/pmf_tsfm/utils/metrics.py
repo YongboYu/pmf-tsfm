@@ -1,16 +1,21 @@
 """
 Metrics computation for time series forecasting evaluation.
 
-Core metrics (std computed across features/variables/dimensions):
-- MAE: mean ± std across features
-- RMSE: mean ± std across features
+Follows the paper's Eq. (1)-(2) exactly; std is across DF series (features).
 
-For predictions of shape (num_sequences, prediction_length, num_features):
-- Each feature's metric is computed over all sequences and timesteps
-- Then mean ± std is computed across the num_features dimensions
+Predictions shape: (num_sequences, prediction_length, num_features)
+  e.g. for BPI2017: (58, 7, 21)
 
-Future extension point:
-- Entropic Relevance for process model assessment
+MAE (Eq. 1):
+    MAE_d  = mean over (seq s, horizon h) of |y_{s,h,d} - yhat_{s,h,d}|
+    Report : mean_d(MAE_d) +/- std_d(MAE_d)
+
+RMSE (Eq. 2 + user clarification):
+    Per-sequence RMSE for each (series d, sequence s):
+        RMSE_{d,s} = sqrt(mean_h( (y_{s,h,d} - yhat_{s,h,d})^2 ))
+    Per-series RMSE averaged over sequences:
+        RMSE_d = mean_s( RMSE_{d,s} )
+    Report: mean_d(RMSE_d) +/- std_d(RMSE_d)
 """
 
 import json
@@ -18,7 +23,6 @@ from pathlib import Path
 from typing import Any
 
 import numpy as np
-from sklearn.metrics import mean_absolute_error, mean_squared_error
 
 
 def compute_metrics(
@@ -27,61 +31,50 @@ def compute_metrics(
     feature_names: list[str] | None = None,
 ) -> dict[str, Any]:
     """
-    Compute comprehensive forecasting metrics.
-
-    Std is computed across features/variables/dimensions (not sequences).
-
-    For predictions of shape (num_sequences, prediction_length, num_features):
-    - Each feature's MAE/RMSE is computed over all sequences × timesteps
-    - Then mean ± std is computed across the num_features
+    Compute MAE and RMSE following the paper's Eq. (1)-(2).
 
     Args:
         predictions: Shape (num_sequences, prediction_length, num_features)
-        targets: Same shape as predictions
-        feature_names: Optional feature names
+        targets:     Same shape as predictions
+        feature_names: Optional list of DF-series names
 
     Returns:
         Dictionary with:
-        - summary: MAE (mean±std), RMSE (mean±std) across features
-        - per_feature: MAE and RMSE for each feature
+        - summary: MAE_mean, MAE_std, RMSE_mean, RMSE_std (all across features)
+        - per_feature: per-series MAE and RMSE
     """
     num_sequences, pred_len, num_features = predictions.shape
 
     if feature_names is None:
         feature_names = [f"feature_{i}" for i in range(num_features)]
 
-    # Per-feature metrics
-    # For each feature, flatten across sequences and timesteps
-    feature_maes = []
-    feature_rmses = []
-    per_feature = {}
+    errors = predictions - targets  # (num_seq, pred_len, num_features)
+    abs_errors = np.abs(errors)
 
-    for feat_idx, feat_name in enumerate(feature_names):
-        # Shape: (num_sequences, prediction_length) -> flatten to (num_sequences * prediction_length,)
-        pred_feat = predictions[:, :, feat_idx].flatten()
-        tgt_feat = targets[:, :, feat_idx].flatten()
+    # --- MAE per feature: mean over all (seq, timestep) pairs ---
+    # shape (num_features,)
+    feature_maes: np.ndarray = np.mean(abs_errors, axis=(0, 1))
 
-        mae = mean_absolute_error(tgt_feat, pred_feat)
-        rmse = np.sqrt(mean_squared_error(tgt_feat, pred_feat))
+    # --- RMSE per feature: mean-of-per-sequence-RMSEs (paper Eq. 2) ---
+    # Per-sequence RMSE over horizon: (num_seq, num_features)
+    seq_feature_rmse = np.sqrt(np.mean(errors**2, axis=1))
+    # Average over sequences to get per-feature RMSE: (num_features,)
+    feature_rmses: np.ndarray = np.mean(seq_feature_rmse, axis=0)
 
-        feature_maes.append(mae)
-        feature_rmses.append(rmse)
-
-        per_feature[feat_name] = {
-            "MAE": float(mae),
-            "RMSE": float(rmse),
+    per_feature: dict[str, Any] = {
+        name: {
+            "MAE": float(feature_maes[i]),
+            "RMSE": float(feature_rmses[i]),
         }
+        for i, name in enumerate(feature_names)
+    }
 
-    # Mean ± std across features
     return {
         "summary": {
-            # MAE: mean ± std across features
             "MAE_mean": float(np.mean(feature_maes)),
             "MAE_std": float(np.std(feature_maes)),
-            # RMSE: mean ± std across features
             "RMSE_mean": float(np.mean(feature_rmses)),
             "RMSE_std": float(np.std(feature_rmses)),
-            # Metadata
             "num_sequences": num_sequences,
             "num_features": num_features,
             "prediction_length": pred_len,
@@ -91,21 +84,18 @@ def compute_metrics(
 
 
 def print_metrics(metrics: dict[str, Any], title: str = "") -> None:
-    """Print metrics summary."""
+    """Print metrics summary in paper format: mean +/- std across DF series."""
     s = metrics["summary"]
 
     print(f"\n{'=' * 60}")
     print(f"EVALUATION RESULTS{' - ' + title if title else ''}")
     print(f"{'=' * 60}")
     print(
-        f"\n📊 Metrics ({s['num_sequences']} sequences × {s['prediction_length']} steps × {s['num_features']} features):"
+        f"\n  {s['num_sequences']} sequences x {s['prediction_length']} horizon"
+        f" x {s['num_features']} DF series"
     )
-    print(
-        f"   MAE:  {s['MAE_mean']:.4f} ± {s['MAE_std']:.4f} (across {s['num_features']} features)"
-    )
-    print(
-        f"   RMSE: {s['RMSE_mean']:.4f} ± {s['RMSE_std']:.4f} (across {s['num_features']} features)"
-    )
+    print(f"  MAE:  {s['MAE_mean']:.4f} +/- {s['MAE_std']:.4f}")
+    print(f"  RMSE: {s['RMSE_mean']:.4f} +/- {s['RMSE_std']:.4f}")
     print(f"{'=' * 60}\n")
 
 
@@ -137,8 +127,8 @@ def print_aggregate_summary(all_metrics: dict[str, dict[str, Any]]) -> None:
     mae_values = []
     rmse_values = []
 
-    print(f"{'Name':<35} {'MAE (mean±std)':<20} {'RMSE (mean±std)':<20}")
-    print(f"{'-' * 75}")
+    print(f"{'Name':<35} {'MAE (mean+/-std)':<22} {'RMSE (mean+/-std)':<22}")
+    print(f"{'-' * 79}")
 
     for name, metrics in all_metrics.items():
         s = metrics["summary"]
@@ -150,8 +140,10 @@ def print_aggregate_summary(all_metrics: dict[str, dict[str, Any]]) -> None:
         mae_values.append(mae_mean)
         rmse_values.append(rmse_mean)
 
-        print(f"{name:<35} {mae_mean:.4f} ± {mae_std:.4f}       {rmse_mean:.4f} ± {rmse_std:.4f}")
+        print(
+            f"{name:<35} {mae_mean:.4f} +/- {mae_std:.4f}      {rmse_mean:.4f} +/- {rmse_std:.4f}"
+        )
 
-    print(f"{'-' * 75}")
-    print(f"{'AVERAGE':<35} {np.mean(mae_values):.4f}                {np.mean(rmse_values):.4f}")
-    print(f"{'=' * 75}\n")
+    print(f"{'-' * 79}")
+    print(f"{'AVERAGE':<35} {np.mean(mae_values):.4f}                  {np.mean(rmse_values):.4f}")
+    print(f"{'=' * 79}\n")
