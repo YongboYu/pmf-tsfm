@@ -26,10 +26,13 @@ dependencies = [
     "pyarrow>=14.0.0",
     # Logging
     "rich>=13.0.0",
-    # Models - Chronos
+    # Models - Chronos (Chronos 2 loads from s3:// — requires boto3 at runtime)
     "chronos-forecasting>=1.4.0",
+    "boto3>=1.28.0",
     # Models - Moirai (uni2ts)
-    "uni2ts>=1.0.0",
+    # uni2ts>=2.0.0 adds moirai_moe and moirai2 support. Its declared torch<2.5 constraint is
+    # overly conservative; the [tool.uv] override below keeps torch at our tested version.
+    "uni2ts>=2.0.0",
     "gluonts>=0.14.0",
     "peft>=0.7.0",
     # Process mining - Entropic Relevance evaluation
@@ -183,3 +186,14 @@ exclude_lines = [
 show_missing = true
 skip_empty = true
 precision = 2
+
+# =============================================================================
+# uv — dependency resolver overrides
+# =============================================================================
+# uni2ts declares torch<2.5 but works fine with newer torch at runtime.
+# This override keeps torch at the version we deliberately bumped to, rather
+# than letting uni2ts downgrade it.
+[tool.uv]
+override-dependencies = [
+    "torch>=2.8.0",
+]

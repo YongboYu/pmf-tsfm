@@ -185,59 +185,74 @@ class MoiraiAdapter(BaseAdapter, LoRAMixin, FullTuneMixin):
                 past_feat_dynamic_real_dim=0,
             )
 
-    def _forecast_single_variable(
+    def _forecast_sequence(
         self,
-        univariate_series: np.ndarray,
-        context_length: int | None = None,
-    ) -> dict[str, Any]:
-        """Forecast a single univariate time series."""
+        input_seq: np.ndarray,
+        context_len: int,
+        num_features: int,
+        pred_len: int,
+        predictions_out: np.ndarray,
+        quantiles_out: np.ndarray,
+    ) -> int:
+        """Forecast all features for one sequence in a single batched predictor call.
+
+        Creates the MoiraiForecast model once and runs predictor.predict() over all
+        features together (GluonTS batches internally at batch_size=16), avoiding the
+        per-feature model-creation overhead that caused GPU-memory accumulation.
+
+        Returns the number of features that fell back to the last-value heuristic.
+        """
         from gluonts.dataset.common import ListDataset
 
-        try:
-            if context_length is None:
-                context_length = len(univariate_series)
+        def _last_value_fallback(feat_idx: int) -> None:
+            last_val = float(input_seq[-1, feat_idx]) if input_seq.shape[0] > 0 else 0.0
+            fb = np.full(pred_len, last_val, dtype=np.float32)
+            predictions_out[:, feat_idx] = fb
+            quantiles_out[:, feat_idx, 0] = fb * 0.95
+            quantiles_out[:, feat_idx, 1] = fb
+            quantiles_out[:, feat_idx, 2] = fb * 1.05
 
-            model = self._create_sequence_model(context_length)
+        try:
+            model = self._create_sequence_model(context_len)
             predictor = model.create_predictor(batch_size=16)
 
-            data = ListDataset(
-                [{"target": univariate_series.tolist(), "start": "2020-01-01"}],
+            dataset = ListDataset(
+                [
+                    {"target": input_seq[:, i].tolist(), "start": "2020-01-01"}
+                    for i in range(num_features)
+                ],
                 freq="D",
             )
 
-            forecasts = list(predictor.predict(data))
-            forecast = forecasts[0]
+            forecasts = list(predictor.predict(dataset))
 
-            # Extract quantiles
-            if hasattr(forecast, "quantile"):
-                low = forecast.quantile(0.1)
-                median = forecast.quantile(0.5)
-                high = forecast.quantile(0.9)
-            elif hasattr(forecast, "mean"):
-                median = forecast.mean
-                low = median * 0.9
-                high = median * 1.1
-            else:
-                raise RuntimeError(f"Unexpected forecast type: {type(forecast)}")
-
-            # Ensure correct length
-            return {
-                "median": np.asarray(median)[: self.prediction_length],
-                "low": np.asarray(low)[: self.prediction_length],
-                "high": np.asarray(high)[: self.prediction_length],
-                "success": True,
-            }
+            failed = 0
+            for feat_idx, forecast in enumerate(forecasts):
+                try:
+                    if hasattr(forecast, "quantile"):
+                        median = np.asarray(forecast.quantile(0.5))[:pred_len]
+                        low = np.asarray(forecast.quantile(0.1))[:pred_len]
+                        high = np.asarray(forecast.quantile(0.9))[:pred_len]
+                    elif hasattr(forecast, "mean"):
+                        median = np.asarray(forecast.mean)[:pred_len]
+                        low = median * 0.9
+                        high = median * 1.1
+                    else:
+                        raise RuntimeError(f"Unexpected forecast type: {type(forecast)}")
+                    predictions_out[:, feat_idx] = median
+                    quantiles_out[:, feat_idx, 0] = low
+                    quantiles_out[:, feat_idx, 1] = median
+                    quantiles_out[:, feat_idx, 2] = high
+                except Exception:
+                    _last_value_fallback(feat_idx)
+                    failed += 1
+            return failed
 
         except Exception:
-            # Fallback to last value
-            last_val = float(univariate_series[-1]) if len(univariate_series) > 0 else 0.0
-            median = np.full(self.prediction_length, last_val)
-            return {
-                "median": median,
-                "low": median * 0.95,
-                "high": median * 1.05,
-                "success": False,
-            }
+            # Entire batch failed (e.g. OOM for extreme context length) — fall back per feature
+            for feat_idx in range(num_features):
+                _last_value_fallback(feat_idx)
+            return num_features
 
     def predict(
         self,
@@ -285,19 +300,29 @@ class MoiraiAdapter(BaseAdapter, LoRAMixin, FullTuneMixin):
             input_seq = inputs[seq_idx]
             context_len = input_seq.shape[0]
 
-            for feat_idx in range(num_features):
-                univariate = input_seq[:, feat_idx]
+            # Batch all features for this sequence into one predictor call.
+            # Old code: one model + predictor per feature (num_features instantiations/seq)
+            # New code: one model + predictor per sequence, GluonTS batches internally.
+            seq_failed = self._forecast_sequence(
+                input_seq,
+                context_len,
+                num_features,
+                pred_len,
+                predictions[seq_idx],
+                quantiles_out[seq_idx],
+            )
+            total += num_features
+            failed += seq_failed
 
-                result = self._forecast_single_variable(univariate, context_len)
+            # Release GPU memory after each sequence to prevent accumulation across
+            # many sequences (the root cause of the OOM crash on BPI2019_1/moirai_1_1_small).
+            try:
+                import torch
 
-                predictions[seq_idx, :, feat_idx] = result["median"]
-                quantiles_out[seq_idx, :, feat_idx, 0] = result["low"]
-                quantiles_out[seq_idx, :, feat_idx, 1] = result["median"]
-                quantiles_out[seq_idx, :, feat_idx, 2] = result["high"]
-
-                total += 1
-                if not result["success"]:
-                    failed += 1
+                if torch.cuda.is_available():
+                    torch.cuda.empty_cache()
+            except Exception:  # noqa: S110
+                pass
 
         total_time = time.time() - start_time
         success_rate = ((total - failed) / total * 100) if total > 0 else 0

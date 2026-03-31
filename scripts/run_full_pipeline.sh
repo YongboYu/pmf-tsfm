@@ -80,7 +80,8 @@ fi
 if [[ "${SKIP_ZERO_SHOT}" == "0" ]]; then
     echo "=== Step 2/6: Zero-shot Inference (13 × 4 = 52 runs) ==="
     S=$(date +%s)
-    bash "$(dirname "$0")/run_inference_all.sh"
+    bash "$(dirname "$0")/run_inference_all.sh" \
+        || echo "  [WARNING] Zero-shot stage exited with errors (continuing to next stage)"
     step_elapsed "$S"
 else
     echo "=== Step 2/6: Zero-shot Inference — SKIPPED ==="; echo ""
@@ -92,7 +93,8 @@ fi
 if [[ "${SKIP_LORA}" == "0" ]]; then
     echo "=== Step 3/6: LoRA Fine-tuning + Inference (4 × 4 runs) ==="
     S=$(date +%s)
-    bash "$(dirname "$0")/run_lora_all.sh"
+    bash "$(dirname "$0")/run_lora_all.sh" \
+        || echo "  [WARNING] LoRA stage exited with errors (continuing to next stage)"
     step_elapsed "$S"
 else
     echo "=== Step 3/6: LoRA — SKIPPED ==="; echo ""
@@ -104,7 +106,8 @@ fi
 if [[ "${SKIP_FULL_TUNE}" == "0" ]]; then
     echo "=== Step 4/6: Full Fine-tuning + Inference (5 × 4 runs) ==="
     S=$(date +%s)
-    bash "$(dirname "$0")/run_full_tune_all.sh"
+    bash "$(dirname "$0")/run_full_tune_all.sh" \
+        || echo "  [WARNING] Full fine-tune stage exited with errors (continuing to next stage)"
     step_elapsed "$S"
 else
     echo "=== Step 4/6: Full Fine-tune — SKIPPED ==="; echo ""
