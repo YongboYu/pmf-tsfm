@@ -177,7 +177,25 @@ class TimesFMAdapter(BaseAdapter):
             ) from exc
 
         logger.info("Loading TimesFM 2.5 checkpoint '%s' (%s)", self.model_id, class_name)
-        self.model = model_cls.from_pretrained(self.model_id)
+
+        # Workaround: huggingface_hub >= 0.24 passes 'proxies' as an explicit kwarg to
+        # _from_pretrained, but timesfm's _from_pretrained doesn't list it in its signature,
+        # so it lands in **model_kwargs and gets forwarded to __init__, causing a TypeError.
+        # Patch _from_pretrained to capture and discard 'proxies' before it reaches __init__.
+        _orig_descriptor = model_cls.__dict__.get("_from_pretrained")
+        if _orig_descriptor is not None:
+            _orig_fn = _orig_descriptor.__func__
+
+            @classmethod  # type: ignore[misc]
+            def _patched_from_pretrained(cls, *, proxies=None, **kwargs):
+                return _orig_fn(cls, **kwargs)
+
+            model_cls._from_pretrained = _patched_from_pretrained
+        try:
+            self.model = model_cls.from_pretrained(self.model_id)
+        finally:
+            if _orig_descriptor is not None:
+                model_cls._from_pretrained = _orig_descriptor
 
         forecast_config = timesfm.ForecastConfig(**self.forecast_kwargs)
         assert self.model is not None
@@ -267,8 +285,11 @@ class TimesFMAdapter(BaseAdapter):
                 raise ImportError(
                     "Imported legacy TimesFM module does not expose the expected API "
                     f"(missing: {', '.join(missing)}). "
-                    "Ensure `legacy_src_path`/TIMESFM_V1_PATH points to the v1/src directory "
-                    "or install timesfm==1.3.0."
+                    "TIMESFM_V1_PATH must point to the v1.x source tree (NOT master/v2). "
+                    "Clone the correct tag: "
+                    "git clone --depth 1 --branch v1.2.6 "
+                    "https://github.com/google-research/timesfm.git ~/timesfm-v1-repo "
+                    "then set TIMESFM_V1_PATH=~/timesfm-v1-repo/src in .env"
                 )
         except ImportError:
             raise

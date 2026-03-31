@@ -8,6 +8,9 @@ resolution-markers = [
     "python_full_version < '3.11'",
 ]
 
+[manifest]
+overrides = [{ name = "torch", specifier = ">=2.8.0" }]
+
 [[package]]
 name = "absl-py"
 version = "2.4.0"
@@ -208,6 +211,34 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/9a/8e/82a0fe20a541c03148528be8cac2408564a6c9a0cc7e9171802bc1d26985/attrs-26.1.0.tar.gz", hash = "sha256:d03ceb89cb322a8fd706d4fb91940737b6642aa36998fe130a9bc96c985eff32", size = 952055, upload-time = "2026-03-19T14:22:25.026Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/64/b4/17d4b0b2a2dc85a6df63d1157e028ed19f90d4cd97c36717afef2bc2f395/attrs-26.1.0-py3-none-any.whl", hash = "sha256:c647aa4a12dfbad9333ca4e71fe62ddc36f4e63b2d260a37a8b83d2f043ac309", size = 67548, upload-time = "2026-03-19T14:22:23.645Z" },
+]
+
+[[package]]
+name = "boto3"
+version = "1.42.79"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "botocore" },
+    { name = "jmespath" },
+    { name = "s3transfer" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/72/56/3909516140653c389214d01f15660fa76514a9a9e30da1cb9e894f01051e/boto3-1.42.79.tar.gz", hash = "sha256:286c4220785e4fbe46aaea04d005b0dcdd8aaf5b885d92b2609c934d794ec5d9", size = 112818, upload-time = "2026-03-30T19:44:40.497Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/ce/c0/d018824c2859976753cc4b78c48e1be641cf734b7d84e455b0f7f9b9d66d/boto3-1.42.79-py3-none-any.whl", hash = "sha256:2336d744dfe9017d6b96b8e40fdd445295ca6a67f02f1c8c488edeb92c4b7918", size = 140555, upload-time = "2026-03-30T19:44:37.326Z" },
+]
+
+[[package]]
+name = "botocore"
+version = "1.42.79"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "jmespath" },
+    { name = "python-dateutil" },
+    { name = "urllib3" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/f3/4b/ec7b3a9acc47a27a3e279d6532f8fcaf16e44c840895718129ca339a0719/botocore-1.42.79.tar.gz", hash = "sha256:1ea98f505a1a65c4b6eed4a6b7452f27613c9aa24532aa71650ec3f3e05fa32c", size = 15064434, upload-time = "2026-03-30T19:44:28.49Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/68/d9/289f94219c2ee4b2a38642bb4a6b8c71cf136c0983e25c0c8fe6b29b1c0a/botocore-1.42.79-py3-none-any.whl", hash = "sha256:edea07bb255e812908e783a9da6ee63ba97baa0cc6612adabbad54466281e330", size = 14741875, upload-time = "2026-03-30T19:44:23.959Z" },
 ]
 
 [[package]]
@@ -1338,6 +1369,15 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/df/bf/f7da0350254c0ed7c72f3e33cef02e048281fec7ecec5f032d4aac52226b/jinja2-3.1.6.tar.gz", hash = "sha256:0137fb05990d35f1275a587e9aee6d56da821fc83491a0fb838183be43f66d6d", size = 245115, upload-time = "2025-03-05T20:05:02.478Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/62/a1/3d680cbfd5f4b8f15abc1d571870c5fc3e594bb582bc3b64ea099db13e56/jinja2-3.1.6-py3-none-any.whl", hash = "sha256:85ece4451f492d0c13c5dd7c13a64681a86afae63a5f347908daf103ce6d2f67", size = 134899, upload-time = "2025-03-05T20:05:00.369Z" },
+]
+
+[[package]]
+name = "jmespath"
+version = "1.1.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/d3/59/322338183ecda247fb5d1763a6cbe46eff7222eaeebafd9fa65d4bf5cb11/jmespath-1.1.0.tar.gz", hash = "sha256:472c87d80f36026ae83c6ddd0f1d05d4e510134ed462851fd5f754c8c3cbb88d", size = 27377, upload-time = "2026-01-22T16:35:26.279Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/14/2f/967ba146e6d58cf6a652da73885f52fc68001525b4197effc174321d70b4/jmespath-1.1.0-py3-none-any.whl", hash = "sha256:a5663118de4908c91729bea0acadca56526eb2698e83de10cd116ae0f4e97c64", size = 20419, upload-time = "2026-01-22T16:35:24.919Z" },
 ]
 
 [[package]]
@@ -2730,6 +2770,7 @@ name = "pmf-tsfm"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
+    { name = "boto3" },
     { name = "chronos-forecasting" },
     { name = "gluonts" },
     { name = "hydra-core" },
@@ -2769,6 +2810,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "absl-py", marker = "extra == 'timesfm-legacy'", specifier = ">=1.4.0" },
+    { name = "boto3", specifier = ">=1.28.0" },
     { name = "chronos-forecasting", specifier = ">=1.4.0" },
     { name = "einshape", marker = "extra == 'timesfm-legacy'", specifier = ">=1.0.0" },
     { name = "gluonts", specifier = ">=0.14.0" },
@@ -2784,7 +2826,7 @@ requires-dist = [
     { name = "safetensors", marker = "extra == 'timesfm-legacy'", specifier = ">=0.5.3" },
     { name = "timesfm", marker = "python_full_version >= '3.11' and extra == 'timesfm-v25'", url = "https://github.com/google-research/timesfm/archive/refs/heads/master.zip" },
     { name = "torch", specifier = ">=2.0.0" },
-    { name = "uni2ts", specifier = ">=1.0.0" },
+    { name = "uni2ts", specifier = ">=2.0.0" },
     { name = "utilsforecast", marker = "extra == 'timesfm-legacy'", specifier = ">=0.1.10" },
     { name = "wandb", specifier = ">=0.18.0" },
 ]
@@ -3534,6 +3576,18 @@ wheels = [
 ]
 
 [[package]]
+name = "s3transfer"
+version = "0.16.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "botocore" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/05/04/74127fc843314818edfa81b5540e26dd537353b123a4edc563109d8f17dd/s3transfer-0.16.0.tar.gz", hash = "sha256:8e990f13268025792229cd52fa10cb7163744bf56e719e0b9cb925ab79abf920", size = 153827, upload-time = "2025-12-01T02:30:59.114Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/fc/51/727abb13f44c1fcf6d145979e1535a35794db0f6e450a0cb46aa24732fe2/s3transfer-0.16.0-py3-none-any.whl", hash = "sha256:18e25d66fed509e3868dc1572b3f427ff947dd2c56f844a5bf09481ad3f3b2fe", size = 86830, upload-time = "2025-12-01T02:30:57.729Z" },
+]
+
+[[package]]
 name = "safetensors"
 version = "0.7.0"
 source = { registry = "https://pypi.org/simple" }
@@ -4049,7 +4103,7 @@ wheels = [
 
 [[package]]
 name = "uni2ts"
-version = "1.1.1"
+version = "2.0.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "datasets" },
@@ -4070,9 +4124,9 @@ dependencies = [
     { name = "tensorboard" },
     { name = "torch" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/27/40/f646eb585189b38c8a2c3728543e8aceed8331869d9374146d73b321bea7/uni2ts-1.1.1.tar.gz", hash = "sha256:f71fa016ed432af783f0e04f83ece288cea332c748b87a1afc7ae16af89606c1", size = 79917, upload-time = "2024-08-30T08:55:50.365Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/04/5f/0691394ea8700f9d23348dc7f8a10d5e2872f0aa5c559628479f6adab12d/uni2ts-2.0.0.tar.gz", hash = "sha256:184b386db71a92f94a8961c1010fbcc126814b873faabc6a76ed680579c8d4be", size = 102633, upload-time = "2025-11-04T04:30:23.205Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/cb/5a/ad377f753685090eaa43cd10a9e31bbc717843973bd953dc9dbe7f4b759a/uni2ts-1.1.1-py3-none-any.whl", hash = "sha256:4530b3b74ab2362885411928a52b117fd9347dde922b67d9847389d25cc5af21", size = 147151, upload-time = "2024-08-30T08:55:47.477Z" },
+    { url = "https://files.pythonhosted.org/packages/c7/63/88496b93cdf9f8dad1b984a0f9d3c3df3e4c25e0e16a68bce93214ac0a1b/uni2ts-2.0.0-py3-none-any.whl", hash = "sha256:7bb185392885e3f0cb53773a5fb0b922d99bf56e93790332d23abb3a4fa01612", size = 170631, upload-time = "2025-11-04T04:30:22.168Z" },
 ]
 
 [[package]]

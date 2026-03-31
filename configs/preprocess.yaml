@@ -44,11 +44,15 @@ force_overwrite: false
 print_config: false
 
 # ============== Hydra Settings ==============
+# Multirun: `hydra.sweep.dir` must NOT chain through `paths.*` (that uses
+# `root_dir: ${oc.env:PROJECT_ROOT,${hydra:runtime.cwd}}` — the `hydra:runtime`
+# fallback needs HydraConfig before the sweeper exists).  Use `PROJECT_ROOT`
+# only (set by scripts/env.sh + .env).  Do not set `subdir` here; Hydra applies
+# `${hydra.job.num}` at runtime after jobs start.
 hydra:
   run:
     dir: ${paths.output_dir}/hydra/preprocess/${now:%Y-%m-%d}/${now:%H-%M-%S}
   sweep:
-    dir: ${paths.output_dir}/hydra/preprocess/multirun/${now:%Y-%m-%d}/${now:%H-%M-%S}
-    subdir: ${hydra.job.num}
+    dir: ${oc.env:PROJECT_ROOT}/outputs/hydra/preprocess/multirun
   job:
     chdir: false
