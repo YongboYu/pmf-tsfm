@@ -118,7 +118,7 @@ def run_inference(cfg: DictConfig) -> dict:
 
     dataset_name: str = cfg.data.name
     model_name: str = cfg.model.name
-    task: str = cfg.task.name
+    task: str = cfg.task.name if hasattr(cfg.task, "name") else cfg.task
 
     # Init W&B run (no-op when logger.enabled=false)
     run = init_run(
