@@ -554,9 +554,14 @@ class ChronosAdapter(BaseAdapter, LoRAMixin, FullTuneMixin):
 
         model_type = "Chronos 2.0" if self._is_chronos2 else "Chronos Bolt"
         print(f"Saving {model_type} checkpoint (HF format) to: {output_path}")
-        # pipeline.save_pretrained() does not exist on ChronosBoltPipeline —
-        # save the inner HuggingFace model directly instead.
-        self.pipeline.model.save_pretrained(str(output_path))
+        if self._is_chronos2:
+            # Chronos2Pipeline has save_pretrained() — saves full pipeline format
+            # (config.json + weights) so from_pretrained() can reload it directly.
+            self.pipeline.save_pretrained(str(output_path))
+        else:
+            # ChronosBoltPipeline has no save_pretrained(); save the inner
+            # HuggingFace model (T5PreTrainedModel) directly instead.
+            self.pipeline.model.save_pretrained(str(output_path))
         print("  Checkpoint saved — reload with BaseChronosPipeline.from_pretrained()")
 
     def load_full_checkpoint(self, checkpoint_path: str, context_length: int = 48) -> None:
