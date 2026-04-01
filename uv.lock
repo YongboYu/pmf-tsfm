@@ -2824,7 +2824,7 @@ requires-dist = [
     { name = "pyarrow", specifier = ">=14.0.0" },
     { name = "rich", specifier = ">=13.0.0" },
     { name = "safetensors", marker = "extra == 'timesfm-legacy'", specifier = ">=0.5.3" },
-    { name = "timesfm", marker = "python_full_version >= '3.11' and extra == 'timesfm-v25'", url = "https://github.com/google-research/timesfm/archive/refs/heads/master.zip" },
+    { name = "timesfm", marker = "python_full_version >= '3.11' and extra == 'timesfm-v25'", url = "https://github.com/google-research/timesfm/archive/ed29ec5ef7e2d86c48b632859de3b63856ef9cad.zip" },
     { name = "torch", specifier = ">=2.0.0" },
     { name = "uni2ts", specifier = ">=2.0.0" },
     { name = "utilsforecast", marker = "extra == 'timesfm-legacy'", specifier = ">=0.1.10" },
@@ -3838,13 +3838,13 @@ wheels = [
 [[package]]
 name = "timesfm"
 version = "2.0.0"
-source = { url = "https://github.com/google-research/timesfm/archive/refs/heads/master.zip" }
+source = { url = "https://github.com/google-research/timesfm/archive/ed29ec5ef7e2d86c48b632859de3b63856ef9cad.zip" }
 dependencies = [
     { name = "huggingface-hub", extra = ["cli"], marker = "python_full_version >= '3.11'" },
     { name = "numpy", marker = "python_full_version >= '3.11'" },
     { name = "safetensors", marker = "python_full_version >= '3.11'" },
 ]
-sdist = { hash = "sha256:17d4f753e0a0909215dd8280952668c089549733fa3a99ea07b0631d10f79cb0" }
+sdist = { hash = "sha256:88222cc3ba179917d644a9592829297efb37b2dc3e36ad09da40553f481c7fa7" }
 
 [package.metadata]
 requires-dist = [
