@@ -42,7 +42,7 @@ for DATASET in $DATASETS; do
 
     python -m pmf_tsfm.er.evaluate_er_all \
         data="${DATASET}" \
-        task="${TASK}" \
+        ++task="${TASK}" \
         logger="${LOGGER}" \
         && RUN_STATUS=OK || RUN_STATUS=FAILED
 
