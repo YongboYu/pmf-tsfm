@@ -554,8 +554,10 @@ class ChronosAdapter(BaseAdapter, LoRAMixin, FullTuneMixin):
 
         model_type = "Chronos 2.0" if self._is_chronos2 else "Chronos Bolt"
         print(f"Saving {model_type} checkpoint (HF format) to: {output_path}")
-        # pipeline.save_pretrained() does not exist on ChronosBoltPipeline —
-        # save the inner HuggingFace model directly instead.
+        # pipeline.model.save_pretrained() works for both Chronos Bolt and Chronos 2:
+        # - Bolt: inner T5PreTrainedModel writes config.json + weights
+        # - Chronos 2: Chronos2Model writes config.json (includes chronos_config) + weights
+        # ChronosBoltPipeline has no pipeline-level save_pretrained().
         self.pipeline.model.save_pretrained(str(output_path))
         print("  Checkpoint saved — reload with BaseChronosPipeline.from_pretrained()")
 
@@ -575,10 +577,21 @@ class ChronosAdapter(BaseAdapter, LoRAMixin, FullTuneMixin):
 
         try:
             if self._is_chronos2:
-                self.pipeline = BaseChronosPipeline.from_pretrained(
+                import chronos.chronos2
+                from chronos.chronos2.pipeline import Chronos2Pipeline
+                from transformers import AutoConfig
+
+                # Chronos2Pipeline.from_pretrained() calls find_adapter_config_file()
+                # which validates the path as a HF repo ID and rejects absolute local
+                # paths. Load manually: read config → instantiate model class → wrap.
+                config = AutoConfig.from_pretrained(checkpoint_path)
+                architecture = config.architectures[0]
+                model_cls = getattr(chronos.chronos2, architecture)
+                model = model_cls.from_pretrained(
                     checkpoint_path,
                     device_map=self.device,
                 )
+                self.pipeline = Chronos2Pipeline(model=model)
             else:
                 self.pipeline = BaseChronosPipeline.from_pretrained(
                     checkpoint_path,

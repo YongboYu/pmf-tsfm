@@ -118,13 +118,13 @@ def run_inference(cfg: DictConfig) -> dict:
 
     dataset_name: str = cfg.data.name
     model_name: str = cfg.model.name
-    task: str = cfg.get("task", "zero_shot")
+    task: str = cfg.task.name if hasattr(cfg.task, "name") else cfg.task
 
     # Init W&B run (no-op when logger.enabled=false)
     run = init_run(
         cfg,
         job_type="inference",
-        name=f"{task}/{dataset_name}/{model_name}",
+        name=f"infer/{task}/{dataset_name}/{model_name}",
         tags=[model_name, dataset_name, task, cfg.model.family],
         group=f"{task}/{dataset_name}",
     )
@@ -141,7 +141,7 @@ def run_inference(cfg: DictConfig) -> dict:
         device = fallback
 
     # Determine run mode
-    task = cfg.get("task", "zero_shot")
+    task = cfg.task.name if hasattr(cfg.task, "name") else cfg.task
     lora_adapter_path = cfg.get("lora_adapter_path")
     checkpoint_path = cfg.get("checkpoint_path")
     context_length = int(cfg.get("context_length", 48))

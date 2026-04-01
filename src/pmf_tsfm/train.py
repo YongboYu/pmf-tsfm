@@ -398,7 +398,7 @@ def train(cfg: DictConfig) -> dict:
     run = init_run(
         cfg,
         job_type="train",
-        name=f"{task_name_str}/{cfg.data.name}/{cfg.model.name}",
+        name=f"train/{task_name_str}/{cfg.data.name}/{cfg.model.name}",
         tags=[cfg.model.name, cfg.data.name, task_name_str, cfg.model.family],
         group=f"{task_name_str}/{cfg.data.name}",
     )
@@ -515,8 +515,11 @@ def train(cfg: DictConfig) -> dict:
             print("=" * 70)
             save_dir = getattr(cfg.task, "checkpoint_save_dir", "checkpoints")
             final_path = Path(cfg.output_dir) / save_dir / "final"
+            best_path = Path(cfg.output_dir) / save_dir / "best"
             chronos2_adapter.save_full_checkpoint(str(final_path))
-            print(f"  Final checkpoint: {final_path}")
+            chronos2_adapter.save_full_checkpoint(str(best_path))
+            print(f"  Final checkpoint : {final_path}")
+            print(f"  Best checkpoint  : {best_path}")
             run.finish()
             return {"status": "complete", "model": "chronos2", "final_path": str(final_path)}
 

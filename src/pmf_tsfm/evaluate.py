@@ -181,7 +181,13 @@ def evaluate_all(results_dir: Path, save: bool = True) -> dict[str, dict]:
 def main(cfg: DictConfig):
     """Main entry point with Hydra configuration."""
     t_start = time.perf_counter()
-    task: str = cfg.get("task", "zero_shot")
+    # Infer task from results_dir path (e.g. outputs/lora_tune/... → lora_tune)
+    results_dir_path = Path(cfg.results_dir)
+    task: str = (
+        results_dir_path.name
+        if results_dir_path.name in {"zero_shot", "lora_tune", "full_tune"}
+        else cfg.get("task", "zero_shot")
+    )
 
     run = init_run(cfg, job_type="evaluate", name=f"eval/{task}", tags=[task])
 
