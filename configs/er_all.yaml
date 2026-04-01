@@ -29,12 +29,13 @@ defaults:
   - _self_
   - paths: default
   - data: bpi2017
+  - task_cfg: zero_shot        # override: task_cfg=lora_tune  or  task_cfg=full_tune
   - logger: disabled           # override: logger=wandb  or  logger=wandb_offline
   - optional local: default    # machine-specific overrides in configs/local/default.yaml
 
 # Task that produced the predictions to evaluate.
-# One of: zero_shot | lora_tune | full_tune
-task: zero_shot
+# Resolved from task_cfg group; use task_cfg=lora_tune etc on the CLI.
+task: ${task_cfg.name}
 
 # Prediction horizon in days (must match inference run).
 prediction_length: 7
