@@ -128,7 +128,8 @@ if [[ "${SKIP_EVAL}" == "0" ]]; then
             python -m pmf_tsfm.evaluate \
                 results_dir="${RESULTS_PATH}" \
                 logger="${LOGGER}" \
-                logger.group="eval_${TASK}"
+                logger.group="eval_${TASK}" \
+                || echo "  [WARNING] eval ${TASK} failed (continuing...)"
         else
             echo "  Skipping ${TASK} (no outputs found at ${RESULTS_PATH})"
         fi
@@ -139,12 +140,22 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-# Step 6: Entropic Relevance (zero-shot only, one XES parse per dataset)
+# Step 6: Entropic Relevance (all three task types, 4 datasets each)
 # ---------------------------------------------------------------------------
 if [[ "${SKIP_ER}" == "0" ]]; then
-    echo "=== Step 6/6: Entropic Relevance (zero-shot, 4 datasets) ==="
+    echo "=== Step 6/6: Entropic Relevance (zero_shot + lora_tune + full_tune, 4 datasets) ==="
     S=$(date +%s)
-    bash "$(dirname "$0")/run_er_all.sh"
+
+    for TASK in zero_shot lora_tune full_tune; do
+        ER_RESULTS_PATH="${PROJECT_ROOT}/outputs/${TASK}"
+        if [[ -d "${ER_RESULTS_PATH}" ]]; then
+            echo "  ER: ${TASK} ..."
+            TASK="${TASK}" bash "$(dirname "$0")/run_er_all.sh" \
+                || echo "  [WARNING] ER ${TASK} failed (continuing...)"
+        else
+            echo "  Skipping ER for ${TASK} (no outputs found at ${ER_RESULTS_PATH})"
+        fi
+    done
     step_elapsed "$S"
 else
     echo "=== Step 6/6: ER — SKIPPED ==="; echo ""

@@ -50,7 +50,9 @@ timesfm_legacy = [
     "safetensors>=0.5.3",
 ]
 timesfm_v25 = [
-    "timesfm @ https://github.com/google-research/timesfm/archive/refs/heads/master.zip ; python_version >= '3.11'",
+    # Pinned to a specific commit (no release tags exist for 2.x).
+    # Update by fetching the latest master SHA and replacing the hash below.
+    "timesfm @ https://github.com/google-research/timesfm/archive/ed29ec5ef7e2d86c48b632859de3b63856ef9cad.zip ; python_version >= '3.11'",
 ]
 
 [project.scripts]
