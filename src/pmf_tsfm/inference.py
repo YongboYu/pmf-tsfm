@@ -118,7 +118,7 @@ def run_inference(cfg: DictConfig) -> dict:
 
     dataset_name: str = cfg.data.name
     model_name: str = cfg.model.name
-    task: str = cfg.get("task", "zero_shot")
+    task: str = cfg.task.name
 
     # Init W&B run (no-op when logger.enabled=false)
     run = init_run(
