@@ -141,7 +141,7 @@ def run_inference(cfg: DictConfig) -> dict:
         device = fallback
 
     # Determine run mode
-    task = cfg.get("task", "zero_shot")
+    task = cfg.task.name
     lora_adapter_path = cfg.get("lora_adapter_path")
     checkpoint_path = cfg.get("checkpoint_path")
     context_length = int(cfg.get("context_length", 48))
