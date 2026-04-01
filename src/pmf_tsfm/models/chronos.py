@@ -554,14 +554,11 @@ class ChronosAdapter(BaseAdapter, LoRAMixin, FullTuneMixin):
 
         model_type = "Chronos 2.0" if self._is_chronos2 else "Chronos Bolt"
         print(f"Saving {model_type} checkpoint (HF format) to: {output_path}")
-        if self._is_chronos2:
-            # Chronos2Pipeline has save_pretrained() — saves full pipeline format
-            # (config.json + weights) so from_pretrained() can reload it directly.
-            self.pipeline.save_pretrained(str(output_path))
-        else:
-            # ChronosBoltPipeline has no save_pretrained(); save the inner
-            # HuggingFace model (T5PreTrainedModel) directly instead.
-            self.pipeline.model.save_pretrained(str(output_path))
+        # pipeline.model.save_pretrained() works for both Chronos Bolt and Chronos 2:
+        # - Bolt: inner T5PreTrainedModel writes config.json + weights
+        # - Chronos 2: Chronos2Model writes config.json (includes chronos_config) + weights
+        # ChronosBoltPipeline has no pipeline-level save_pretrained().
+        self.pipeline.model.save_pretrained(str(output_path))
         print("  Checkpoint saved — reload with BaseChronosPipeline.from_pretrained()")
 
     def load_full_checkpoint(self, checkpoint_path: str, context_length: int = 48) -> None:
@@ -580,7 +577,13 @@ class ChronosAdapter(BaseAdapter, LoRAMixin, FullTuneMixin):
 
         try:
             if self._is_chronos2:
-                self.pipeline = BaseChronosPipeline.from_pretrained(
+                from chronos.chronos2.pipeline import Chronos2Pipeline
+
+                # Use Chronos2Pipeline directly: BaseChronosPipeline.from_pretrained
+                # routes S3 paths to Chronos2Pipeline but for local paths it calls
+                # AutoConfig which requires a registered model type. Chronos2Pipeline
+                # handles local paths correctly when config.json has chronos_config.
+                self.pipeline = Chronos2Pipeline.from_pretrained(
                     checkpoint_path,
                     device_map=self.device,
                 )
