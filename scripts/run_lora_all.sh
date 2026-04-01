@@ -33,6 +33,14 @@ declare -A LORA_CONFIGS=(
 
 MODELS=("chronos/bolt_small" "chronos/bolt_base" "moirai/1_1_small" "moirai/1_1_large")
 
+# Dataset config name → canonical data.name used in output paths (must match data config)
+declare -A DATASET_NAMES=(
+    ["bpi2017"]="BPI2017"
+    ["bpi2019_1"]="BPI2019_1"
+    ["sepsis"]="Sepsis"
+    ["hospital_billing"]="Hospital_Billing"
+)
+
 echo ""
 echo "============================================================"
 echo "  LoRA Fine-tuning + Inference — All Variants × All Datasets"
@@ -48,6 +56,8 @@ TRAIN_OK=0; TRAIN_FAIL=0
 INFER_OK=0; INFER_FAIL=0
 
 for DATASET in $DATASETS; do
+    DATA_NAME="${DATASET_NAMES[$DATASET]}"
+
     for MODEL in "${MODELS[@]}"; do
         LORA_CFG="${LORA_CONFIGS[$MODEL]}"
         MODEL_LABEL="${MODEL//\//_}"
@@ -76,10 +86,9 @@ for DATASET in $DATASETS; do
         fi
 
         # ---- Inference with best LoRA adapter ----
-        DATASET_CAP="${DATASET^}"   # bpi2017 → Bpi2017 (used in path)
         # Path must match output_dir in train.yaml:
         # results/lora_tune/{data.name}/{model.name}/lora_adapter/best
-        ADAPTER_PATH="results/lora_tune/${DATASET_CAP}/${MODEL_LABEL}/lora_adapter/best"
+        ADAPTER_PATH="${PROJECT_ROOT}/results/lora_tune/${DATA_NAME}/${MODEL_LABEL}/lora_adapter/best"
 
         echo "--- [$(date +%H:%M:%S)] INFER lora | ${DATASET} / ${MODEL_LABEL} ---"
         RUN_START=$(date +%s)
