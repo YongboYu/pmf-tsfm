@@ -14,7 +14,7 @@
 #   LOGGER      - logger config name (default: disabled)
 #   TASK        - task type (default: zero_shot)
 # =============================================================================
-set -euo pipefail
+set -uo pipefail
 source "$(dirname "$0")/env.sh"
 
 LOGGER="${LOGGER:-disabled}"

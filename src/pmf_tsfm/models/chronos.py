@@ -539,9 +539,9 @@ class ChronosAdapter(BaseAdapter, LoRAMixin, FullTuneMixin):
     def save_full_checkpoint(self, output_dir: str) -> None:
         """Save full fine-tuning checkpoint in HuggingFace format.
 
-        Both Chronos Bolt and Chronos 2.0 are saved via pipeline.save_pretrained()
-        so they can be reloaded with BaseChronosPipeline.from_pretrained() and
-        published to the HuggingFace Hub.
+        ChronosBoltPipeline has no save_pretrained(); the underlying HuggingFace
+        model (pipeline.model) does. We save that directly so it can be reloaded
+        with BaseChronosPipeline.from_pretrained() via load_full_checkpoint().
 
         Args:
             output_dir: Directory to save the checkpoint
@@ -554,7 +554,9 @@ class ChronosAdapter(BaseAdapter, LoRAMixin, FullTuneMixin):
 
         model_type = "Chronos 2.0" if self._is_chronos2 else "Chronos Bolt"
         print(f"Saving {model_type} checkpoint (HF format) to: {output_path}")
-        self.pipeline.save_pretrained(str(output_path))
+        # pipeline.save_pretrained() does not exist on ChronosBoltPipeline —
+        # save the inner HuggingFace model directly instead.
+        self.pipeline.model.save_pretrained(str(output_path))
         print("  Checkpoint saved — reload with BaseChronosPipeline.from_pretrained()")
 
     def load_full_checkpoint(self, checkpoint_path: str, context_length: int = 48) -> None:

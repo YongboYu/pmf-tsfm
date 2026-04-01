@@ -179,15 +179,17 @@ class TimesFMAdapter(BaseAdapter):
         logger.info("Loading TimesFM 2.5 checkpoint '%s' (%s)", self.model_id, class_name)
 
         # Workaround: huggingface_hub >= 0.24 passes 'proxies' as an explicit kwarg to
-        # _from_pretrained, but timesfm's _from_pretrained doesn't list it in its signature,
-        # so it lands in **model_kwargs and gets forwarded to __init__, causing a TypeError.
-        # Patch _from_pretrained to capture and discard 'proxies' before it reaches __init__.
+        # _from_pretrained, but timesfm's _from_pretrained doesn't declare them in its
+        # signature, so they land in **model_kwargs and get forwarded to __init__.
+        # Capture all standard huggingface_hub transport kwargs and discard them so only
+        # genuine model kwargs reach __init__. (proxies, resume_download confirmed so far;
+        # the full set is captured defensively to handle future hub upgrades.)
         _orig_descriptor = model_cls.__dict__.get("_from_pretrained")
         if _orig_descriptor is not None:
             _orig_fn = _orig_descriptor.__func__
 
             @classmethod  # type: ignore[misc]
-            def _patched_from_pretrained(cls, *, proxies=None, **kwargs):
+            def _patched_from_pretrained(cls, *, proxies=None, resume_download=None, **kwargs):
                 return _orig_fn(cls, **kwargs)
 
             model_cls._from_pretrained = _patched_from_pretrained
