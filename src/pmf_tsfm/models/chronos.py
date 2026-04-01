@@ -577,16 +577,21 @@ class ChronosAdapter(BaseAdapter, LoRAMixin, FullTuneMixin):
 
         try:
             if self._is_chronos2:
+                import chronos.chronos2
                 from chronos.chronos2.pipeline import Chronos2Pipeline
+                from transformers import AutoConfig
 
-                # Use Chronos2Pipeline directly: BaseChronosPipeline.from_pretrained
-                # routes S3 paths to Chronos2Pipeline but for local paths it calls
-                # AutoConfig which requires a registered model type. Chronos2Pipeline
-                # handles local paths correctly when config.json has chronos_config.
-                self.pipeline = Chronos2Pipeline.from_pretrained(
+                # Chronos2Pipeline.from_pretrained() calls find_adapter_config_file()
+                # which validates the path as a HF repo ID and rejects absolute local
+                # paths. Load manually: read config → instantiate model class → wrap.
+                config = AutoConfig.from_pretrained(checkpoint_path)
+                architecture = config.architectures[0]
+                model_cls = getattr(chronos.chronos2, architecture)
+                model = model_cls.from_pretrained(
                     checkpoint_path,
                     device_map=self.device,
                 )
+                self.pipeline = Chronos2Pipeline(model=model)
             else:
                 self.pipeline = BaseChronosPipeline.from_pretrained(
                     checkpoint_path,
