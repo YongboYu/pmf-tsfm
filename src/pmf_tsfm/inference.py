@@ -124,7 +124,7 @@ def run_inference(cfg: DictConfig) -> dict:
     run = init_run(
         cfg,
         job_type="inference",
-        name=f"{task}/{dataset_name}/{model_name}",
+        name=f"infer/{task}/{dataset_name}/{model_name}",
         tags=[model_name, dataset_name, task, cfg.model.family],
         group=f"{task}/{dataset_name}",
     )

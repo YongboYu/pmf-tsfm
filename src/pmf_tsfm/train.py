@@ -398,7 +398,7 @@ def train(cfg: DictConfig) -> dict:
     run = init_run(
         cfg,
         job_type="train",
-        name=f"{task_name_str}/{cfg.data.name}/{cfg.model.name}",
+        name=f"train/{task_name_str}/{cfg.data.name}/{cfg.model.name}",
         tags=[cfg.model.name, cfg.data.name, task_name_str, cfg.model.family],
         group=f"{task_name_str}/{cfg.data.name}",
     )
