@@ -28,18 +28,13 @@ defaults:
   - paths: default
   - model: chronos/bolt_small
   - data: bpi2017
+  - task: zero_shot            # override: task=lora_tune  or  task=full_tune
   - logger: disabled           # override: logger=wandb  or  logger=wandb_offline
   - optional local: default    # machine-specific overrides in configs/local/default.yaml (git-ignored)
 
 # ============== Global Settings ==============
 seed: 42
 print_config: false
-
-# Task type controls output directory: zero_shot | lora_tune | full_tune
-# Override when running inference with fine-tuned models:
-#   task=lora_tune  (when lora_adapter_path is set)
-#   task=full_tune  (when checkpoint_path is set)
-task: zero_shot
 
 # Device: cuda (cluster), mps (macOS Apple Silicon), cpu (fallback)
 device: cuda
@@ -61,14 +56,14 @@ checkpoint_path: null
 context_length: 48
 
 # Output directory: outputs/{task}/{dataset}/{model}/
-output_dir: ${paths.output_dir}/${task}/${data.name}/${model.name}
+output_dir: ${paths.output_dir}/${task.name}/${data.name}/${model.name}
 
 # ============== Hydra Settings ==============
 hydra:
   run:
-    dir: ${paths.output_dir}/hydra/${task}/${now:%Y-%m-%d}/${now:%H-%M-%S}
+    dir: ${paths.output_dir}/hydra/${task.name}/${now:%Y-%m-%d}/${now:%H-%M-%S}
   sweep:
-    dir: ${paths.output_dir}/hydra/${task}/multirun/${now:%Y-%m-%d}/${now:%H-%M-%S}
+    dir: ${paths.output_dir}/hydra/${task.name}/multirun/${now:%Y-%m-%d}/${now:%H-%M-%S}
     subdir: ${hydra.job.num}
   job:
     chdir: false
