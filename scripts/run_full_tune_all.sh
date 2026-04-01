@@ -62,9 +62,16 @@ for DATASET in $DATASETS; do
 
     for MODEL in "${MODELS[@]}"; do
         MODEL_LABEL="${MODEL//\//_}"
-        # model.name from config (e.g. chronos_bolt_small, chronos_2, moirai_1_1_large)
-        # must match output path: results/full_tune/{data.name}/{model.name}/checkpoints/best
-        MODEL_NAME_IN_PATH="${MODEL_LABEL}"  # Hydra resolves model.name at runtime
+        # model.name from config — must match what Hydra writes to the checkpoint path.
+        # chronos/chronos2 has name: chronos_2 (not chronos_chronos2), so we need an explicit map.
+        declare -A MODEL_NAME_MAP=(
+            ["chronos_bolt_small"]="chronos_bolt_small"
+            ["chronos_bolt_base"]="chronos_bolt_base"
+            ["chronos_chronos2"]="chronos_2"
+            ["moirai_1_1_small"]="moirai_1_1_small"
+            ["moirai_1_1_large"]="moirai_1_1_large"
+        )
+        MODEL_NAME_IN_PATH="${MODEL_NAME_MAP[$MODEL_LABEL]:-$MODEL_LABEL}"
 
         # ---- Train ----
         echo "--- [$(date +%H:%M:%S)] TRAIN full | ${DATASET} / ${MODEL_LABEL} ---"
@@ -93,7 +100,7 @@ for DATASET in $DATASETS; do
         # Path: results/full_tune/{DATA_NAME}/{model.name}/checkpoints/best
         # model.name is resolved by Hydra (e.g. chronos_2 for chronos/chronos2)
         # We rely on Hydra's inference config to build the correct output path.
-        CKPT_PATH="results/full_tune/${DATA_NAME}/${MODEL_NAME_IN_PATH}/checkpoints/best"
+        CKPT_PATH="${PROJECT_ROOT}/results/full_tune/${DATA_NAME}/${MODEL_NAME_IN_PATH}/checkpoints/best"
 
         echo "--- [$(date +%H:%M:%S)] INFER full | ${DATASET} / ${MODEL_LABEL} ---"
         RUN_START=$(date +%s)
