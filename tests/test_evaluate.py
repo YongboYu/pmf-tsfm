@@ -9,7 +9,10 @@ import json
 from pathlib import Path
 
 import numpy as np
+import pytest
+from omegaconf import OmegaConf
 
+import pmf_tsfm.evaluate as evaluate_module
 from pmf_tsfm.evaluate import (
     evaluate_all,
     evaluate_single,
@@ -20,6 +23,28 @@ from pmf_tsfm.evaluate import (
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
+
+class DummyRun:
+    """Minimal W&B-like run object for evaluate.main tests."""
+
+    def __init__(self) -> None:
+        self.logged: list[tuple[dict, int | None]] = []
+        self.tables: list[tuple[str, list[str], list[list]]] = []
+        self.summary: dict = {}
+        self.finished = False
+
+    def log(self, metrics: dict, step: int | None = None) -> None:
+        self.logged.append((metrics, step))
+
+    def log_table(self, key: str, columns: list[str], rows: list[list]) -> None:
+        self.tables.append((key, columns, rows))
+
+    def log_summary(self, summary: dict) -> None:
+        self.summary.update(summary)
+
+    def finish(self) -> None:
+        self.finished = True
 
 
 def _write_prediction_files(
@@ -217,3 +242,120 @@ class TestEvaluateAll:
         result = evaluate_all(tmp_path, save=False)
         for metrics in result.values():
             assert "summary" in metrics
+
+
+class TestEvaluateMain:
+    def test_returns_none_and_finishes_run_when_results_dir_is_missing(self, tmp_path, monkeypatch):
+        run = DummyRun()
+        monkeypatch.setattr(evaluate_module, "init_run", lambda *args, **kwargs: run)
+
+        cfg = OmegaConf.create(
+            {
+                "results_dir": str(tmp_path / "missing"),
+                "task": "zero_shot",
+                "save": True,
+            }
+        )
+
+        result = evaluate_module.main.__wrapped__(cfg)
+
+        assert result is None
+        assert run.finished
+
+    @pytest.mark.parametrize("task_name", ["zero_shot", "lora_tune", "full_tune"])
+    def test_infers_task_from_results_dir_name(self, tmp_path, monkeypatch, task_name):
+        run = DummyRun()
+        captured: dict[str, object] = {}
+
+        def fake_init_run(cfg, *, job_type, name=None, tags=None, group=None):
+            captured.update({"job_type": job_type, "name": name, "tags": tags, "group": group})
+            return run
+
+        results_dir = tmp_path / "outputs" / task_name
+        results_dir.mkdir(parents=True)
+
+        monkeypatch.setattr(evaluate_module, "init_run", fake_init_run)
+        monkeypatch.setattr(evaluate_module, "evaluate_all", lambda *args, **kwargs: {})
+
+        cfg = OmegaConf.create({"results_dir": str(results_dir), "task": "ignored", "save": True})
+        evaluate_module.main.__wrapped__(cfg)
+
+        assert captured["job_type"] == "evaluate"
+        assert captured["name"] == f"eval/{task_name}"
+        assert captured["tags"] == [task_name]
+        assert run.finished
+
+    def test_falls_back_to_cfg_task_for_model_specific_directory(self, tmp_path, monkeypatch):
+        run = DummyRun()
+        captured: dict[str, object] = {}
+
+        def fake_init_run(cfg, *, job_type, name=None, tags=None, group=None):
+            captured.update({"job_type": job_type, "name": name, "tags": tags})
+            return run
+
+        results_dir = tmp_path / "outputs" / "zero_shot" / "BPI2017" / "chronos_bolt_small"
+        results_dir.mkdir(parents=True)
+
+        monkeypatch.setattr(evaluate_module, "init_run", fake_init_run)
+        monkeypatch.setattr(evaluate_module, "evaluate_all", lambda *args, **kwargs: {})
+
+        cfg = OmegaConf.create(
+            {
+                "results_dir": str(results_dir),
+                "task": "lora_tune",
+                "save": True,
+            }
+        )
+        evaluate_module.main.__wrapped__(cfg)
+
+        assert captured["name"] == "eval/lora_tune"
+        assert captured["tags"] == ["lora_tune"]
+        assert run.finished
+
+    def test_logs_summary_results_table_and_per_feature_table(self, tmp_path, monkeypatch):
+        run = DummyRun()
+        monkeypatch.setattr(evaluate_module, "init_run", lambda *args, **kwargs: run)
+
+        results_dir = tmp_path / "outputs" / "zero_shot"
+        results_dir.mkdir(parents=True)
+        metrics = {
+            "BPI2017_model_a": {
+                "dataset_name": "BPI2017",
+                "model_name": "model_a",
+                "summary": {
+                    "MAE_mean": 1.1,
+                    "MAE_std": 0.1,
+                    "RMSE_mean": 2.2,
+                    "RMSE_std": 0.2,
+                },
+                "per_feature": {
+                    "feat_0": {"MAE": 1.0, "RMSE": 2.0},
+                    "feat_1": {"MAE": 1.2, "RMSE": 2.4},
+                },
+            },
+            "Sepsis_model_b": {
+                "dataset_name": "Sepsis",
+                "model_name": "model_b",
+                "summary": {
+                    "MAE_mean": 0.9,
+                    "MAE_std": 0.05,
+                    "RMSE_mean": 1.8,
+                    "RMSE_std": 0.15,
+                },
+                "per_feature": {
+                    "feat_0": {"MAE": 0.8, "RMSE": 1.6},
+                },
+            },
+        }
+        monkeypatch.setattr(evaluate_module, "evaluate_all", lambda *args, **kwargs: metrics)
+
+        cfg = OmegaConf.create({"results_dir": str(results_dir), "task": "zero_shot", "save": True})
+        evaluate_module.main.__wrapped__(cfg)
+
+        table_keys = {key for key, _, _ in run.tables}
+        assert "eval/results_table" in table_keys
+        assert "eval/per_feature_table" in table_keys
+        assert any("eval/BPI2017_model_a/mae_mean" in logged for logged, _ in run.logged)
+        assert run.summary["eval/n_results"] == 2
+        assert "eval/elapsed_s" in run.summary
+        assert run.finished

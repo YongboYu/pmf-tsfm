@@ -38,6 +38,7 @@ from pathlib import Path
 from typing import Any
 
 import numpy as np
+import pytest
 import torch
 import torch.nn as nn
 from omegaconf import OmegaConf
@@ -681,3 +682,123 @@ class TestTrainingLoop:
         # Should not raise even without a GPU
         result = train(cfg)
         assert "best_val_loss" in result
+
+    def test_device_fallback_mps(self, tiny_parquet, tmp_path, monkeypatch):
+        """Requesting MPS on a non-MPS machine falls back to CPU."""
+        from pmf_tsfm.train import train
+
+        path, _ = tiny_parquet
+        mock = MockAdapter()
+        monkeypatch.setattr("pmf_tsfm.models.get_model_adapter", lambda **kw: mock)
+        monkeypatch.setattr(torch.backends.mps, "is_available", lambda: False)
+
+        output_dir = tmp_path / "mps_fallback_out"
+        cfg = _make_train_cfg(path, output_dir, task_name="lora_tune", epochs=1)
+        cfg = OmegaConf.merge(cfg, {"device": "mps", "model": {"fallback_device": "cpu"}})
+
+        result = train(cfg)
+        assert "best_val_loss" in result
+
+    def test_unsupported_training_family_raises(self, tiny_parquet, tmp_path):
+        """Training rejects unsupported families before model construction."""
+        from pmf_tsfm.train import train
+
+        path, _ = tiny_parquet
+        cfg = _make_train_cfg(path, tmp_path / "unsupported_out", task_name="lora_tune", epochs=1)
+        cfg = OmegaConf.merge(cfg, {"model": {"family": "timesfm"}})
+
+        with pytest.raises(ValueError, match="Training supports"):
+            train(cfg)
+
+    def test_moirai_task_patch_size_override_is_applied(self, tiny_parquet, tmp_path, monkeypatch):
+        """Task-level patch_size should be merged into the model config for Moirai."""
+        from pmf_tsfm.train import train
+
+        path, _ = tiny_parquet
+        mock = MockAdapter()
+        mock.model_family = "moirai"
+        captured: dict[str, Any] = {}
+
+        def fake_get_model_adapter(*, model_cfg, device, prediction_length):
+            captured["patch_size"] = model_cfg.patch_size
+            captured["family"] = model_cfg.family
+            return mock
+
+        monkeypatch.setattr("pmf_tsfm.models.get_model_adapter", fake_get_model_adapter)
+
+        output_dir = tmp_path / "moirai_out"
+        cfg = _make_train_cfg(path, output_dir, task_name="lora_tune", epochs=1)
+        cfg = OmegaConf.merge(
+            cfg,
+            {
+                "model": {"family": "moirai"},
+                "task": {"patch_size": 16},
+            },
+        )
+
+        result = train(cfg)
+
+        assert "best_val_loss" in result
+        assert captured["family"] == "moirai"
+        assert captured["patch_size"] == 16
+
+    def test_full_tune_uses_chronos2_native_fit_branch(self, tiny_parquet, tmp_path, monkeypatch):
+        """Chronos2 full tuning should call fit_chronos2() and save best/final checkpoints."""
+        from pmf_tsfm.train import train
+
+        class MockChronos2Adapter(MockAdapter):
+            def __init__(self):
+                super().__init__()
+                self.is_chronos2 = True
+                self.fit_calls: list[dict[str, Any]] = []
+
+            def fit_chronos2(
+                self,
+                *,
+                train_inputs,
+                validation_inputs,
+                num_steps,
+                learning_rate,
+                batch_size,
+            ) -> None:
+                self.fit_calls.append(
+                    {
+                        "train_inputs": train_inputs,
+                        "validation_inputs": validation_inputs,
+                        "num_steps": num_steps,
+                        "learning_rate": learning_rate,
+                        "batch_size": batch_size,
+                    }
+                )
+
+        path, _ = tiny_parquet
+        mock = MockChronos2Adapter()
+        monkeypatch.setattr("pmf_tsfm.models.get_model_adapter", lambda **kw: mock)
+
+        output_dir = tmp_path / "chronos2_out"
+        cfg = _make_train_cfg(path, output_dir, task_name="full_tune", epochs=2)
+
+        result = train(cfg)
+
+        assert result["status"] == "complete"
+        assert result["model"] == "chronos2"
+        assert len(mock.fit_calls) == 1
+        assert len(mock.fit_calls[0]["train_inputs"]) == 3
+        assert len(mock.fit_calls[0]["validation_inputs"]) == 3
+        assert (output_dir / "checkpoints" / "best" / "model.pt").exists()
+        assert (output_dir / "checkpoints" / "final" / "model.pt").exists()
+
+
+class TestTrainMainWrapper:
+    def test_main_print_config_smoke(self, monkeypatch, capsys):
+        """Hydra wrapper should print the config and delegate to train()."""
+        import pmf_tsfm.train as train_module
+
+        sentinel = {"ok": True}
+        cfg = OmegaConf.create({"print_config": True, "task": {"name": "lora_tune"}})
+        monkeypatch.setattr(train_module, "train", lambda passed_cfg: sentinel)
+
+        result = train_module.main.__wrapped__(cfg)
+
+        assert result is sentinel
+        assert "print_config: true" in capsys.readouterr().out.lower()
