@@ -104,6 +104,7 @@ cd "\${PROJECT_ROOT}"
     data="\${DATASET}" \\
     logger="${LOGGER}" \\
     'logger.tags=[${WANDB_HOST_TAG}]' \\
+    paths.data_dir="\${DATA_DIR}/time_series" \\
     paths.output_dir="\${OUTPUTS_DIR}" \\
     paths.processed_dir="\${DATA_DIR}/processed"
 

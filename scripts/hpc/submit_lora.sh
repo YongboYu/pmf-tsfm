@@ -86,6 +86,7 @@ cd "\${PROJECT_ROOT}"
     task=lora_tune \\
     logger="${LOGGER}" \\
     'logger.tags=[${WANDB_HOST_TAG}]' \\
+    paths.data_dir="\${DATA_DIR}/time_series" \\
     paths.output_dir="\${OUTPUTS_DIR}" \\
     paths.results_dir="\${RESULTS_DIR}" \\
     paths.processed_dir="\${DATA_DIR}/processed"
@@ -170,6 +171,7 @@ cd "\${PROJECT_ROOT}"
     lora_adapter_path="\${ADAPTER_PATH}" \\
     logger="${LOGGER}" \\
     'logger.tags=[${WANDB_HOST_TAG}]' \\
+    paths.data_dir="\${DATA_DIR}/time_series" \\
     paths.output_dir="\${OUTPUTS_DIR}" \\
     paths.processed_dir="\${DATA_DIR}/processed"
 
