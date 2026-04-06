@@ -118,11 +118,6 @@ models = [
     "amazon/chronos-bolt-mini",
     "amazon/chronos-bolt-small",
     "amazon/chronos-bolt-base",
-    "amazon/chronos-t5-tiny",
-    "amazon/chronos-t5-mini",
-    "amazon/chronos-t5-small",
-    "amazon/chronos-t5-base",
-    "amazon/chronos-t5-large",
 ]
 for model_id in models:
     print(f"  {model_id}...", flush=True)
