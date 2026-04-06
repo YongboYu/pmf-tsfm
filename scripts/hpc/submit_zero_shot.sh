@@ -20,9 +20,9 @@ source "${DIR}/hpc_env.sh"
 
 LOGGER="${LOGGER:-wandb}"
 ARRAY_RANGE="${1:-0-51}"        # override to run a subset, e.g. "0-12"
-TIME_LIMIT="01:00:00"           # Linux runs finish in <14min; 1h covers H100 + data sync overhead
-MEM="64G"
-CPUS=8
+TIME_LIMIT="00:20:00"           # debug: short walltime for faster scheduling; restore to 01:00:00 for full runs
+MEM="40G"                       # debug: reduced memory; restore to 64G for full runs
+CPUS=4                          # debug: reduced CPUs; restore to 8 for full runs
 
 # ── Model × dataset mapping ───────────────────────────────────────────────────
 # 13 models × 4 datasets; index = MODEL_IDX * 4 + DATASET_IDX
@@ -98,12 +98,15 @@ sync_data_to_scratch
 
 # ── Run inference ────────────────────────────────────────────────────────────
 cd "\${PROJECT_ROOT}"
-"\${UV}" run --no-sync python -m pmf_tsfm.inference \\
+echo "Running inference command:"
+echo "  model=\${MODEL} data=\${DATASET} logger=${LOGGER}"
+echo "  DATA_DIR=\${DATA_DIR}"
+HYDRA_FULL_ERROR=1 "\${UV}" run --no-sync python -m pmf_tsfm.inference \\
     device=cuda \\
     model="\${MODEL}" \\
     data="\${DATASET}" \\
     logger="${LOGGER}" \\
-    'logger.tags=[${WANDB_HOST_TAG}]' \\
+    "logger.tags=[${WANDB_HOST_TAG}]" \\
     paths.data_dir="\${DATA_DIR}/time_series" \\
     paths.output_dir="\${OUTPUTS_DIR}" \\
     paths.processed_dir="\${DATA_DIR}/processed"
