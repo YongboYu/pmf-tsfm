@@ -52,6 +52,9 @@ export WANDB_DIR="${SCRATCH_ROOT}/wandb"
 # Suppress HF tokenizer parallelism warnings
 export TOKENIZERS_PARALLELISM="false"
 
+# Validate Hydra overrides before the real run unless explicitly disabled.
+export HPC_HYDRA_VALIDATE="${HPC_HYDRA_VALIDATE:-1}"
+
 # ── RUNTIME PATHS (derived, do not edit) ─────────────────────────────────────
 export OUTPUTS_DIR="${SCRATCH_ROOT}/outputs"   # inference + eval outputs
 export RESULTS_DIR="${SCRATCH_ROOT}/results"   # training checkpoints / adapters
@@ -62,6 +65,9 @@ export LOGS_DIR="${SCRATCH_ROOT}/logs"         # Slurm stdout/stderr
 # uv binary (installed to DATA so it survives scratch cleanup)
 export PATH="${VSC_DATA}/.local/bin:${PATH}"
 export UV="${VSC_DATA}/.local/bin/uv"
+
+# Limit OpenMP threads to allocated CPUs (prevents libgomp thread creation errors)
+export OMP_NUM_THREADS="${SLURM_CPUS_PER_TASK:-8}"
 
 # ── CUDA MODULES ─────────────────────────────────────────────────────────────
 # wICE/gpu: H100 cards require CUDA 12.x (compute 9.0).
@@ -130,6 +136,30 @@ uv_run() {
         cd "${PROJECT_ROOT}" && \
         "${UV}" run --no-sync python "$@"
     )
+}
+
+# ── HELPER: run a Hydra entrypoint with logged argv + optional preflight ─────
+run_hydra_module() {
+    local module="$1"
+    shift
+
+    local base_cmd=("${UV}" run --no-sync python -m "${module}")
+    local preflight_cmd=("${base_cmd[@]}" --cfg job "$@")
+    local run_cmd=("${base_cmd[@]}" "$@")
+
+    echo "[hydra] Module: ${module}"
+    printf '[hydra] Argv:'
+    printf ' %q' "${run_cmd[@]}"
+    printf '\n'
+
+    if [[ "${HPC_HYDRA_VALIDATE}" != "0" ]]; then
+        echo "[hydra] Preflight: validating overrides with --cfg job"
+        HYDRA_FULL_ERROR=1 "${preflight_cmd[@]}" >/dev/null
+    else
+        echo "[hydra] Preflight: skipped (HPC_HYDRA_VALIDATE=0)"
+    fi
+
+    HYDRA_FULL_ERROR=1 "${run_cmd[@]}"
 }
 
 # ── HELPER: print job environment summary ────────────────────────────────────

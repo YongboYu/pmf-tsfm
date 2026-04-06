@@ -101,15 +101,17 @@ cd "\${PROJECT_ROOT}"
 echo "Running inference command:"
 echo "  model=\${MODEL} data=\${DATASET} logger=${LOGGER}"
 echo "  DATA_DIR=\${DATA_DIR}"
-HYDRA_FULL_ERROR=1 "\${UV}" run --no-sync python -m pmf_tsfm.inference \\
-    device=cuda \\
-    model="\${MODEL}" \\
-    data="\${DATASET}" \\
-    logger="${LOGGER}" \\
-    "logger.tags=[${WANDB_HOST_TAG}]" \\
-    paths.data_dir="\${DATA_DIR}/time_series" \\
-    paths.output_dir="\${OUTPUTS_DIR}" \\
-    paths.processed_dir="\${DATA_DIR}/processed"
+INFER_ARGS=(
+    "device=cuda"
+    "model=\${MODEL}"
+    "data=\${DATASET}"
+    "logger=${LOGGER}"
+    "logger.tags=[${WANDB_HOST_TAG}]"
+    "paths.data_dir=\${DATA_DIR}/time_series"
+    "paths.output_dir=\${OUTPUTS_DIR}"
+    "paths.processed_dir=\${DATA_DIR}/processed"
+)
+run_hydra_module pmf_tsfm.inference "\${INFER_ARGS[@]}"
 
 INFER_EXIT=\$?
 

@@ -79,17 +79,19 @@ echo "Task \${SLURM_ARRAY_TASK_ID}: LoRA train model=\${MODEL} data=\${DATASET}"
 sync_data_to_scratch
 
 cd "\${PROJECT_ROOT}"
-"\${UV}" run --no-sync python -m pmf_tsfm.train \\
-    device=cuda \\
-    model="\${MODEL}" \\
-    data="\${DATASET}" \\
-    task=lora_tune \\
-    logger="${LOGGER}" \\
-    'logger.tags=[${WANDB_HOST_TAG}]' \\
-    paths.data_dir="\${DATA_DIR}/time_series" \\
-    paths.output_dir="\${OUTPUTS_DIR}" \\
-    paths.results_dir="\${RESULTS_DIR}" \\
-    paths.processed_dir="\${DATA_DIR}/processed"
+TRAIN_ARGS=(
+    "device=cuda"
+    "model=\${MODEL}"
+    "data=\${DATASET}"
+    "task=lora_tune"
+    "logger=${LOGGER}"
+    "logger.tags=[${WANDB_HOST_TAG}]"
+    "paths.data_dir=\${DATA_DIR}/time_series"
+    "paths.output_dir=\${OUTPUTS_DIR}"
+    "paths.results_dir=\${RESULTS_DIR}"
+    "paths.processed_dir=\${DATA_DIR}/processed"
+)
+run_hydra_module pmf_tsfm.train "\${TRAIN_ARGS[@]}"
 
 EXIT=\$?
 sync_results_to_data
@@ -163,17 +165,19 @@ if [[ ! -d "\${ADAPTER_PATH}" ]]; then
 fi
 
 cd "\${PROJECT_ROOT}"
-"\${UV}" run --no-sync python -m pmf_tsfm.inference \\
-    device=cuda \\
-    model="\${MODEL}" \\
-    data="\${DATASET}" \\
-    task=lora_tune \\
-    lora_adapter_path="\${ADAPTER_PATH}" \\
-    logger="${LOGGER}" \\
-    'logger.tags=[${WANDB_HOST_TAG}]' \\
-    paths.data_dir="\${DATA_DIR}/time_series" \\
-    paths.output_dir="\${OUTPUTS_DIR}" \\
-    paths.processed_dir="\${DATA_DIR}/processed"
+INFER_ARGS=(
+    "device=cuda"
+    "model=\${MODEL}"
+    "data=\${DATASET}"
+    "task=lora_tune"
+    "lora_adapter_path=\${ADAPTER_PATH}"
+    "logger=${LOGGER}"
+    "logger.tags=[${WANDB_HOST_TAG}]"
+    "paths.data_dir=\${DATA_DIR}/time_series"
+    "paths.output_dir=\${OUTPUTS_DIR}"
+    "paths.processed_dir=\${DATA_DIR}/processed"
+)
+run_hydra_module pmf_tsfm.inference "\${INFER_ARGS[@]}"
 
 EXIT=\$?
 sync_results_to_data

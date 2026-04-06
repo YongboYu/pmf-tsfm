@@ -54,16 +54,25 @@ echo "Running ER computation for all zero-shot models × datasets..."
 
 cd "\${PROJECT_ROOT}"
 
-# Use evaluate_er_all.py if available; otherwise call run_er_all.sh
-if [[ -f "src/pmf_tsfm/evaluate_er_all.py" ]]; then
-    "\${UV}" run --no-sync python -m pmf_tsfm.evaluate_er_all \\
-        task=zero_shot \\
-        results_dir="\${OUTPUTS_DIR}/zero_shot" \\
-        logger="${LOGGER}" \\
-        paths.output_dir="\${OUTPUTS_DIR}" \\
-        paths.processed_dir="\${DATA_DIR}/processed"
+# Use evaluate_er_all.py if available; otherwise call per-model ER via Hydra
+EXIT=0
+if [[ -f "src/pmf_tsfm/er/evaluate_er_all.py" ]]; then
+    for DATASET in bpi2017 bpi2019_1 sepsis hospital_billing; do
+        echo "  ER all: \${DATASET}"
+        ER_ALL_ARGS=(
+            "data=\${DATASET}"
+            "task_cfg=zero_shot"
+            "logger=${LOGGER}"
+            "paths.data_dir=\${DATA_DIR}/time_series"
+            "paths.log_dir=\${DATA_DIR}/processed_logs"
+            "paths.output_dir=\${OUTPUTS_DIR}"
+        )
+        if ! run_hydra_module pmf_tsfm.er.evaluate_er_all "\${ER_ALL_ARGS[@]}"; then
+            EXIT=1
+            echo "  FAILED: \${DATASET} (continuing)"
+        fi
+    done
 else
-    # Fallback: run per-model ER via Hydra
     for DATASET in bpi2017 bpi2019_1 sepsis hospital_billing; do
         for MODEL in \\
             chronos/bolt_tiny chronos/bolt_mini chronos/bolt_small \\
@@ -74,19 +83,21 @@ else
             MODEL_LABEL="\${MODEL//\//_}"
             PRED_DIR="\${OUTPUTS_DIR}/zero_shot/\${DATASET}/\${MODEL_LABEL}"  # placeholder path
             echo "  ER: \${DATASET}/\${MODEL_LABEL}"
-            "\${UV}" run --no-sync python -m pmf_tsfm.evaluate_er \\
-                ++task=zero_shot \\
-                ++model="\${MODEL}" \\
-                ++data="\${DATASET}" \\
-                logger="${LOGGER}" \\
-                paths.output_dir="\${OUTPUTS_DIR}" \\
-                paths.processed_dir="\${DATA_DIR}/processed" \\
-            || echo "  FAILED: \${DATASET}/\${MODEL_LABEL} (continuing)"
+            ER_ARGS=(
+                "model=\${MODEL}"
+                "data=\${DATASET}"
+                "logger=${LOGGER}"
+                "paths.data_dir=\${DATA_DIR}/time_series"
+                "paths.log_dir=\${DATA_DIR}/processed_logs"
+                "paths.output_dir=\${OUTPUTS_DIR}"
+            )
+            if ! run_hydra_module pmf_tsfm.er.evaluate_er "\${ER_ARGS[@]}"; then
+                EXIT=1
+                echo "  FAILED: \${DATASET}/\${MODEL_LABEL} (continuing)"
+            fi
         done
     done
 fi
-
-EXIT=\$?
 sync_results_to_data
 echo "ER computation done. Exit: \${EXIT}"
 exit \${EXIT}

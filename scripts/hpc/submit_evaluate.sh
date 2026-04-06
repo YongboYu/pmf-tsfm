@@ -58,11 +58,12 @@ echo "Evaluating task: ${task}"
 rsync -av "\${DATA_ROOT}/outputs/${task}/" "\${OUTPUTS_DIR}/${task}/" 2>/dev/null || true
 
 cd "\${PROJECT_ROOT}"
-"\${UV}" run --no-sync python -m pmf_tsfm.evaluate \\
-    task=${task} \\
-    results_dir="\${OUTPUTS_DIR}/${task}" \\
-    logger="${LOGGER}" \\
-    paths.output_dir="\${OUTPUTS_DIR}"
+EVAL_ARGS=(
+    "results_dir=\${OUTPUTS_DIR}/${task}"
+    "logger=${LOGGER}"
+    "paths.output_dir=\${OUTPUTS_DIR}"
+)
+run_hydra_module pmf_tsfm.evaluate "\${EVAL_ARGS[@]}"
 
 EXIT=\$?
 sync_results_to_data
