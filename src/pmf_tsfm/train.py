@@ -421,6 +421,8 @@ def train(cfg: DictConfig) -> dict:
     context_length = cfg.context_length
     if is_full_tune:
         context_length = int(cfg.task.get("train_context_length", context_length))
+    # Log training context length to W&B summary (inference always uses expanding windows)
+    run.log_summary({"training/context_length": context_length})
 
     # Apply task-level patch_size override to model config (paper: 16 for all fine-tuning)
     model_cfg = cfg.model

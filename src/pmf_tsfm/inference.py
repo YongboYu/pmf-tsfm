@@ -249,6 +249,12 @@ def run_inference(cfg: DictConfig) -> dict:
     print(f"  Elapsed: {elapsed:.1f}s")
     print("=" * 70)
 
+    # All inference modes use expanding windows (all prior data as context).
+    # context_length=48 is only the training context for LoRA/full-tune adapters.
+    context_summary: dict = {"inference/context_window": "expanding"}
+    if lora_adapter_path or checkpoint_path:
+        context_summary["inference/adapter_trained_context_length"] = context_length
+
     run.log_summary(
         {
             "inference/elapsed_s": elapsed,
@@ -258,6 +264,7 @@ def run_inference(cfg: DictConfig) -> dict:
             "inference/dataset": dataset_name,
             "inference/task": task,
             "inference/device": device,
+            **context_summary,
         }
     )
     run.finish()
