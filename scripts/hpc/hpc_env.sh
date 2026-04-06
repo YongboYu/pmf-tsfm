@@ -65,12 +65,26 @@ export UV="${VSC_DATA}/.local/bin/uv"
 
 # ── CUDA MODULES ─────────────────────────────────────────────────────────────
 # wICE/gpu: H100 cards require CUDA 12.x (compute 9.0).
-# Run `module spider CUDA` on the wICE login node to verify available versions.
+# Run `module spider CUDA` on the wICE login node to see available versions.
+# PyTorch wheels bundle their own cuDNN — only the CUDA driver module is needed.
 _load_modules() {
     module purge 2>/dev/null || true
+    module load CUDA/12.6.0 2>/dev/null || \
+    module load CUDA/12.4.0 2>/dev/null || \
+    module load CUDA/12.3.0 2>/dev/null || \
     module load CUDA/12.1.1 2>/dev/null || \
     module load CUDA/12.0.0 2>/dev/null || \
     module load CUDA 2>/dev/null || true
+}
+
+# ── HELPER: enable HF/Transformers offline mode (opt-in) ─────────────────────
+# VSC compute nodes have internet access, so this is NOT called by default.
+# Call it explicitly if you need fully air-gapped, cache-only execution
+# (e.g. debugging, reproducibility audits, or bypassing HF rate limits).
+_set_offline_mode() {
+    export HF_HUB_OFFLINE=1
+    export TRANSFORMERS_OFFLINE=1
+    echo "[env] HF offline mode enabled (using pre-cached models in ${HF_HOME})"
 }
 
 # ── HELPER: ensure scratch directories exist ──────────────────────────────────

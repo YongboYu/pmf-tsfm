@@ -32,8 +32,14 @@ echo ""
 echo "[1/6] Installing uv..."
 mkdir -p "${VSC_DATA}/.local/bin"
 if [[ ! -x "${UV}" ]]; then
-    curl -LsSf https://astral.sh/uv/install.sh | \
-        INSTALLER_NO_MODIFY_PATH=1 UV_INSTALL_DIR="${VSC_DATA}/.local/bin" sh
+    echo "  Downloading uv binary via wget (curl may be broken on some HPC nodes)..."
+    _UV_TMP=$(mktemp -d)
+    wget -q "https://github.com/astral-sh/uv/releases/latest/download/uv-x86_64-unknown-linux-gnu.tar.gz" \
+        -O "${_UV_TMP}/uv.tar.gz"
+    tar -xzf "${_UV_TMP}/uv.tar.gz" -C "${_UV_TMP}/"
+    cp "${_UV_TMP}/uv-x86_64-unknown-linux-gnu/uv" "${VSC_DATA}/.local/bin/uv"
+    chmod +x "${UV}"
+    rm -rf "${_UV_TMP}"
     echo "  uv installed at ${UV}"
 else
     echo "  uv already installed: $(${UV} --version)"
@@ -60,12 +66,9 @@ echo "[3/6] Installing dependencies via uv sync..."
 _load_modules
 (
     cd "${PROJECT_ROOT}"
-    # Core dependencies
-    "${UV}" sync --frozen
-    # TimesFM legacy extras (for 1.0 and 2.0 models)
-    "${UV}" sync --frozen --extra timesfm_legacy
-    # TimesFM 2.5 extras
-    "${UV}" sync --frozen --extra timesfm_v25
+    # Install all extras in one pass — sequential syncs would remove each
+    # other's packages since uv prunes the venv to match the requested set.
+    "${UV}" sync --frozen --extra timesfm_legacy --extra timesfm_v25
 )
 echo "  Dependencies installed."
 
