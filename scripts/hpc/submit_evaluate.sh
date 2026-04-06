@@ -18,6 +18,9 @@ source "${DIR}/hpc_env.sh"
 LOGGER="${LOGGER:-wandb}"
 TASK="${1:-all}"          # zero_shot | lora_tune | full_tune | all
 DEP_JOBID="${2:-}"        # upstream JOBID to depend on (optional)
+if [[ -n "${DEP_JOBID}" ]]; then
+    DEP_JOBID=$(normalize_slurm_jobid "${DEP_JOBID}")
+fi
 
 TIME_LIMIT="01:00:00"
 MEM="32G"
@@ -71,6 +74,7 @@ echo "Evaluation done. Exit: \${EXIT}"
 exit \${EXIT}
 SLURM_SCRIPT
 )
+    EVAL_JOBID=$(normalize_slurm_jobid "${EVAL_JOBID}")
     echo "Submitted eval/${task} JOBID: ${EVAL_JOBID}"
     echo "${EVAL_JOBID}"
 }

@@ -10,10 +10,10 @@
 
 # ── USER CONFIG ───────────────────────────────────────────────────────────────
 # Slurm account and partition (KU Leuven genius / wICE)
-export SLURM_ACCOUNT="lp_lirisnlp"
-export SLURM_PARTITION="gpu"                    # wICE: gpu (H100) | genius: gpu_p100 (P100)
-export SLURM_CLUSTER="wice"                     # wice | genius
-export SLURM_MAIL_USER="yongbo.yu@student.kuleuven.be"
+export SLURM_ACCOUNT="${SLURM_ACCOUNT:-lp_lirisnlp}"
+export SLURM_PARTITION="${SLURM_PARTITION:-gpu}"  # wICE: gpu/gpu_a100 | gpu_h100 | genius: gpu_p100
+export SLURM_CLUSTER="${SLURM_CLUSTER:-wice}"     # wice | genius
+export SLURM_MAIL_USER="${SLURM_MAIL_USER:-yongbo.yu@student.kuleuven.be}"
 
 # W&B project — one project for all devices; runs tagged by host for filtering
 export WANDB_PROJECT="pmf-tsfm"
@@ -136,6 +136,12 @@ uv_run() {
         cd "${PROJECT_ROOT}" && \
         "${UV}" run --no-sync python "$@"
     )
+}
+
+# ── HELPER: normalize Slurm parsable job IDs for dependency reuse ────────────
+normalize_slurm_jobid() {
+    local raw_jobid="$1"
+    printf '%s\n' "${raw_jobid%%;*}"
 }
 
 # ── HELPER: run a Hydra entrypoint with logged argv + optional preflight ─────

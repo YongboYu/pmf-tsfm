@@ -96,6 +96,7 @@ echo "Task \${SLURM_ARRAY_TASK_ID} done. Exit: \${EXIT}"
 exit \${EXIT}
 SLURM_SCRIPT
 )
+TRAIN_JOBID=$(normalize_slurm_jobid "${TRAIN_JOBID}")
 
 echo "Submitted full-tune train array JOBID: ${TRAIN_JOBID}"
 
@@ -187,6 +188,7 @@ echo "Task \${SLURM_ARRAY_TASK_ID} done. Exit: \${EXIT}"
 exit \${EXIT}
 SLURM_SCRIPT
 )
+INFER_JOBID=$(normalize_slurm_jobid "${INFER_JOBID}")
 
 echo "Submitted full-tune infer array JOBID: ${INFER_JOBID} (depends on ${TRAIN_JOBID})"
 echo "${TRAIN_JOBID} ${INFER_JOBID}"

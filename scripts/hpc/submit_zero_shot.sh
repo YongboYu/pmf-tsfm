@@ -123,6 +123,7 @@ echo "Task \${SLURM_ARRAY_TASK_ID} done. Exit: \${INFER_EXIT}"
 exit \${INFER_EXIT}
 SLURM_SCRIPT
 )
+JOBID=$(normalize_slurm_jobid "${JOBID}")
 
 echo "Submitted zero-shot array JOBID: ${JOBID}"
 echo "${JOBID}"  # last line → captured by submit_pipeline.sh

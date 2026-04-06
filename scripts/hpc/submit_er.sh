@@ -16,6 +16,9 @@ source "${DIR}/hpc_env.sh"
 
 LOGGER="${LOGGER:-wandb}"
 DEP_JOBID="${1:-}"
+if [[ -n "${DEP_JOBID}" ]]; then
+    DEP_JOBID=$(normalize_slurm_jobid "${DEP_JOBID}")
+fi
 
 TIME_LIMIT="00:30:00"   # ER is CPU-bound; observed <15s per run, 30min covers all models
 MEM="64G"               # pm4py can be memory-hungry for large datasets
@@ -103,6 +106,7 @@ echo "ER computation done. Exit: \${EXIT}"
 exit \${EXIT}
 SLURM_SCRIPT
 )
+ER_JOBID=$(normalize_slurm_jobid "${ER_JOBID}")
 
 echo "Submitted ER job JOBID: ${ER_JOBID}"
 echo "${ER_JOBID}"
