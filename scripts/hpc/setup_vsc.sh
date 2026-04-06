@@ -19,7 +19,7 @@ set -euo pipefail
 source "$(dirname "$0")/hpc_env.sh"
 
 GITHUB_REPO="https://github.com/YongboYu/pmf-tsfm.git"
-GITHUB_BRANCH="main"
+GITHUB_BRANCH="${GITHUB_BRANCH:-main}"   # override: GITHUB_BRANCH=feat/my-branch bash setup_vsc.sh
 
 echo "================================================================"
 echo "  PMF-TSFM VSC Setup"
@@ -135,19 +135,9 @@ PYEOF
 )
 
 echo ""
-echo "  Downloading Chronos-2..."
-(
-    cd "${PROJECT_ROOT}"
-    "${UV}" run --no-sync python - << 'PYEOF'
-from huggingface_hub import snapshot_download
-print("  amazon/chronos-2-base...", flush=True)
-try:
-    snapshot_download("amazon/chronos-2-base")
-    print("    OK")
-except Exception as e:
-    print(f"    FAILED: {e}")
-PYEOF
-)
+echo "  NOTE: Chronos-2 (amazon/chronos-2-base) loads weights from S3 via boto3"
+echo "  at runtime — no HF Hub pre-download needed. S3 access uses compute node"
+echo "  internet. Skipping HF snapshot for this model."
 
 echo ""
 echo "  Downloading MOIRAI models..."
