@@ -150,7 +150,7 @@ models = [
     "Salesforce/moirai-1.1-R-small",
     "Salesforce/moirai-1.1-R-base",
     "Salesforce/moirai-1.1-R-large",
-    "Salesforce/moirai-moe-base",
+    "Salesforce/moirai-moe-1.0-R-base",
     "Salesforce/moirai-2.0-R-small",
 ]
 for model_id in models:
