@@ -11,7 +11,7 @@
 # ── USER CONFIG ───────────────────────────────────────────────────────────────
 # Slurm account and partition (KU Leuven genius / wICE)
 export SLURM_ACCOUNT="${SLURM_ACCOUNT:-lp_lirisnlp}"
-export SLURM_PARTITION="${SLURM_PARTITION:-gpu}"  # wICE: gpu/gpu_a100 | gpu_h100 | genius: gpu_p100
+export SLURM_PARTITION="${SLURM_PARTITION:-gpu_h100}"  # wICE GPU default: H100. Override to gpu/gpu_a100 if needed.
 export SLURM_CLUSTER="${SLURM_CLUSTER:-wice}"     # wice | genius
 export SLURM_MAIL_USER="${SLURM_MAIL_USER:-yongbo.yu@student.kuleuven.be}"
 
