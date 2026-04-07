@@ -58,7 +58,7 @@ print_job_info
 echo "Evaluating task: ${task}"
 
 # Sync outputs from DATA → SCRATCH (in case inference ran in a previous session)
-rsync -av "\${DATA_ROOT}/outputs/${task}/" "\${OUTPUTS_DIR}/${task}/" 2>/dev/null || true
+rsync -av "\${DATA_OUTPUTS_DIR}/${task}/" "\${OUTPUTS_DIR}/${task}/" 2>/dev/null || true
 
 cd "\${PROJECT_ROOT}"
 EVAL_ARGS=(

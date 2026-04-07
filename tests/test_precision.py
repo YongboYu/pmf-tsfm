@@ -54,6 +54,51 @@ class TestResolveTrainingPrecision:
         assert policy.amp_dtype == torch.bfloat16
         assert policy.tf32_enabled is True
 
+    def test_moirai_override_can_force_tf32(self, monkeypatch) -> None:
+        monkeypatch.setattr(torch.cuda, "is_available", lambda: True)
+
+        policy = resolve_training_precision(
+            "moirai",
+            requested_amp=True,
+            device="cuda",
+            moirai_override="tf32",
+        )
+
+        assert policy.mode == "tf32"
+        assert policy.use_amp is False
+        assert policy.amp_dtype is None
+        assert policy.tf32_enabled is True
+
+    def test_moirai_override_can_force_bf16_amp(self, monkeypatch) -> None:
+        monkeypatch.setattr(torch.cuda, "is_available", lambda: True)
+
+        policy = resolve_training_precision(
+            "moirai",
+            requested_amp=False,
+            device="cuda",
+            moirai_override="bf16_amp",
+        )
+
+        assert policy.mode == "bf16_amp"
+        assert policy.use_amp is True
+        assert policy.amp_dtype == torch.bfloat16
+        assert policy.tf32_enabled is True
+
+    def test_invalid_moirai_override_raises(self, monkeypatch) -> None:
+        monkeypatch.setattr(torch.cuda, "is_available", lambda: True)
+
+        try:
+            resolve_training_precision(
+                "moirai",
+                requested_amp=True,
+                device="cuda",
+                moirai_override="fp64",
+            )
+        except ValueError as exc:
+            assert "Unsupported Moirai training precision override" in str(exc)
+        else:
+            raise AssertionError("Expected invalid Moirai precision override to raise ValueError")
+
     def test_non_moirai_cuda_prefers_tf32_even_when_amp_requested(self, monkeypatch) -> None:
         monkeypatch.setattr(torch.cuda, "is_available", lambda: True)
 

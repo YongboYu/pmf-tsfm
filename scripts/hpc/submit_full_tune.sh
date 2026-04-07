@@ -159,7 +159,7 @@ echo "Task \${SLURM_ARRAY_TASK_ID}: Full tune infer model=\${MODEL} data=\${DATA
 echo "  Checkpoint: \${CKPT_PATH}"
 
 # Sync checkpoint from DATA if scratch was cleaned
-rsync -av "\${DATA_ROOT}/results/full_tune/" "\${RESULTS_DIR}/full_tune/" 2>/dev/null || true
+rsync -av "\${DATA_RESULTS_DIR}/full_tune/" "\${RESULTS_DIR}/full_tune/" 2>/dev/null || true
 sync_data_to_scratch
 
 if [[ ! -d "\${CKPT_PATH}" ]]; then

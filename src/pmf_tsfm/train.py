@@ -19,6 +19,7 @@ Usage:
     python -m pmf_tsfm.train task=full_tune model=chronos/bolt_small data=bpi2017
 """
 
+import os
 import sys
 import time
 from pathlib import Path
@@ -418,10 +419,12 @@ def train(cfg: DictConfig) -> dict:
         print(f"Warning: MPS not available, falling back to {fallback_device}")
         device = fallback_device
 
+    moirai_precision_override = os.getenv("MOIRAI_TRAIN_PRECISION")
     precision_policy = resolve_training_precision(
         model_family=cfg.model.family,
         requested_amp=bool(cfg.task.get("use_amp", False)),
         device=device,
+        moirai_override=moirai_precision_override,
     )
 
     # Determine training mode
@@ -432,7 +435,12 @@ def train(cfg: DictConfig) -> dict:
     if is_full_tune:
         context_length = int(cfg.task.get("train_context_length", context_length))
     # Log training context length to W&B summary (inference always uses expanding windows)
-    run.log_summary({"training/context_length": context_length})
+    run.log_summary(
+        {
+            "training/context_length": context_length,
+            "train/precision_override": moirai_precision_override or "paper",
+        }
+    )
 
     # Apply task-level patch_size override to model config (paper: 16 for all fine-tuning)
     model_cfg = cfg.model
@@ -447,6 +455,7 @@ def train(cfg: DictConfig) -> dict:
     print(f"  Data:    {cfg.data.name}")
     print(f"  Device:  {device}")
     print(f"  Precision: {precision_policy.mode}")
+    print(f"  Precision override: {moirai_precision_override or 'paper'}")
     print(f"  Context: {context_length}  |  Horizon: {cfg.prediction_length}")
     if task_patch_size is not None:
         print(f"  Patch size: {task_patch_size}")

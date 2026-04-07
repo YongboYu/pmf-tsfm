@@ -50,7 +50,7 @@ _ensure_scratch_dirs
 print_job_info
 
 # Sync inference outputs and processed data
-rsync -av "\${DATA_ROOT}/outputs/zero_shot/" "\${OUTPUTS_DIR}/zero_shot/" 2>/dev/null || true
+rsync -av "\${DATA_OUTPUTS_DIR}/zero_shot/" "\${OUTPUTS_DIR}/zero_shot/" 2>/dev/null || true
 sync_data_to_scratch
 
 echo "Running ER computation for all zero-shot models × datasets..."

@@ -157,7 +157,7 @@ echo "Task \${SLURM_ARRAY_TASK_ID}: LoRA infer model=\${MODEL} data=\${DATASET}"
 echo "  Adapter: \${ADAPTER_PATH}"
 
 # Sync refreshed data + results (adapter may be in DATA if scratch was cleaned)
-rsync -av --progress "\${DATA_ROOT}/results/lora_tune/" "\${RESULTS_DIR}/lora_tune/" 2>/dev/null || true
+rsync -av --progress "\${DATA_RESULTS_DIR}/lora_tune/" "\${RESULTS_DIR}/lora_tune/" 2>/dev/null || true
 sync_data_to_scratch
 
 if [[ ! -d "\${ADAPTER_PATH}" ]]; then

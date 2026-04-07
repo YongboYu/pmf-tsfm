@@ -17,6 +17,24 @@ class PrecisionPolicy:
     tf32_enabled: bool = False
 
 
+def _normalize_moirai_override(raw_override: str | None) -> str | None:
+    """Normalize optional Moirai precision overrides from the environment."""
+    if raw_override is None:
+        return None
+
+    normalized = raw_override.strip().lower()
+    if normalized in {"", "default", "paper"}:
+        return None
+    if normalized in {"bf16", "bf16_amp"}:
+        return "bf16_amp"
+    if normalized == "tf32":
+        return "tf32"
+
+    raise ValueError(
+        "Unsupported Moirai training precision override. Use one of: bf16_amp, tf32, paper."
+    )
+
+
 def enable_cuda_tf32(device: str) -> bool:
     """Enable TF32 math on CUDA backends when available."""
     if not device.startswith("cuda") or not torch.cuda.is_available():
@@ -37,6 +55,7 @@ def resolve_training_precision(
     model_family: str,
     requested_amp: bool,
     device: str,
+    moirai_override: str | None = None,
 ) -> PrecisionPolicy:
     """Resolve the training precision policy for a model family.
 
@@ -44,8 +63,22 @@ def resolve_training_precision(
     - Moirai fine-tuning used BF16 AMP on CUDA.
     - Other model families ran on the float32/TF32 path on H100.
     """
+    normalized_override = _normalize_moirai_override(moirai_override)
     tf32_enabled = enable_cuda_tf32(device)
     use_cuda = device.startswith("cuda") and torch.cuda.is_available()
+
+    if model_family == "moirai" and use_cuda and normalized_override == "bf16_amp":
+        return PrecisionPolicy(
+            mode="bf16_amp",
+            use_amp=True,
+            amp_dtype=torch.bfloat16,
+            tf32_enabled=tf32_enabled,
+        )
+
+    if model_family == "moirai" and normalized_override == "tf32":
+        if tf32_enabled:
+            return PrecisionPolicy(mode="tf32", tf32_enabled=True)
+        return PrecisionPolicy(mode="float32")
 
     if use_cuda and requested_amp and model_family == "moirai":
         return PrecisionPolicy(
