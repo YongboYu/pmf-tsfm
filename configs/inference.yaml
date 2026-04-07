@@ -51,9 +51,12 @@ lora_adapter_path: null
 # For Chronos-2: path to directory saved by pipeline.save_pretrained()
 checkpoint_path: null
 
-# Context length used during fine-tuning (must match training context_length)
-# Used when loading LoRA adapters or full checkpoints that need a fixed context
-context_length: 48
+# Optional adapter/checkpoint training context length override.
+# Inference itself always uses expanding windows; this is only needed when
+# loading LoRA adapters or full checkpoints whose base model architecture must
+# match the fixed context length used during fine-tuning.
+# If null, inference falls back to task.train_context_length when available.
+context_length: null
 
 # Output directory: outputs/{task}/{dataset}/{model}/
 output_dir: ${paths.output_dir}/${task.name}/${data.name}/${model.name}

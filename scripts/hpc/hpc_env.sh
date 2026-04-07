@@ -10,10 +10,10 @@
 
 # ── USER CONFIG ───────────────────────────────────────────────────────────────
 # Slurm account and partition (KU Leuven genius / wICE)
-export SLURM_ACCOUNT="lp_lirisnlp"
-export SLURM_PARTITION="gpu"                    # wICE: gpu (H100) | genius: gpu_p100 (P100)
-export SLURM_CLUSTER="wice"                     # wice | genius
-export SLURM_MAIL_USER="yongbo.yu@student.kuleuven.be"
+export SLURM_ACCOUNT="${SLURM_ACCOUNT:-lp_lirisnlp}"
+export SLURM_PARTITION="${SLURM_PARTITION:-gpu_h100}"  # wICE GPU default: H100. Override to gpu/gpu_a100 if needed.
+export SLURM_CLUSTER="${SLURM_CLUSTER:-wice}"     # wice | genius
+export SLURM_MAIL_USER="${SLURM_MAIL_USER:-yongbo.yu@student.kuleuven.be}"
 
 # W&B project — one project for all devices; runs tagged by host for filtering
 export WANDB_PROJECT="pmf-tsfm"
@@ -52,6 +52,9 @@ export WANDB_DIR="${SCRATCH_ROOT}/wandb"
 # Suppress HF tokenizer parallelism warnings
 export TOKENIZERS_PARALLELISM="false"
 
+# Validate Hydra overrides before the real run unless explicitly disabled.
+export HPC_HYDRA_VALIDATE="${HPC_HYDRA_VALIDATE:-1}"
+
 # ── RUNTIME PATHS (derived, do not edit) ─────────────────────────────────────
 export OUTPUTS_DIR="${SCRATCH_ROOT}/outputs"   # inference + eval outputs
 export RESULTS_DIR="${SCRATCH_ROOT}/results"   # training checkpoints / adapters
@@ -63,14 +66,31 @@ export LOGS_DIR="${SCRATCH_ROOT}/logs"         # Slurm stdout/stderr
 export PATH="${VSC_DATA}/.local/bin:${PATH}"
 export UV="${VSC_DATA}/.local/bin/uv"
 
+# Limit OpenMP threads to allocated CPUs (prevents libgomp thread creation errors)
+export OMP_NUM_THREADS="${SLURM_CPUS_PER_TASK:-8}"
+
 # ── CUDA MODULES ─────────────────────────────────────────────────────────────
 # wICE/gpu: H100 cards require CUDA 12.x (compute 9.0).
-# Run `module spider CUDA` on the wICE login node to verify available versions.
+# Run `module spider CUDA` on the wICE login node to see available versions.
+# PyTorch wheels bundle their own cuDNN — only the CUDA driver module is needed.
 _load_modules() {
     module purge 2>/dev/null || true
+    module load CUDA/12.6.0 2>/dev/null || \
+    module load CUDA/12.4.0 2>/dev/null || \
+    module load CUDA/12.3.0 2>/dev/null || \
     module load CUDA/12.1.1 2>/dev/null || \
     module load CUDA/12.0.0 2>/dev/null || \
     module load CUDA 2>/dev/null || true
+}
+
+# ── HELPER: enable HF/Transformers offline mode (opt-in) ─────────────────────
+# VSC compute nodes have internet access, so this is NOT called by default.
+# Call it explicitly if you need fully air-gapped, cache-only execution
+# (e.g. debugging, reproducibility audits, or bypassing HF rate limits).
+_set_offline_mode() {
+    export HF_HUB_OFFLINE=1
+    export TRANSFORMERS_OFFLINE=1
+    echo "[env] HF offline mode enabled (using pre-cached models in ${HF_HOME})"
 }
 
 # ── HELPER: ensure scratch directories exist ──────────────────────────────────
@@ -116,6 +136,36 @@ uv_run() {
         cd "${PROJECT_ROOT}" && \
         "${UV}" run --no-sync python "$@"
     )
+}
+
+# ── HELPER: normalize Slurm parsable job IDs for dependency reuse ────────────
+normalize_slurm_jobid() {
+    local raw_jobid="$1"
+    printf '%s\n' "${raw_jobid%%;*}"
+}
+
+# ── HELPER: run a Hydra entrypoint with logged argv + optional preflight ─────
+run_hydra_module() {
+    local module="$1"
+    shift
+
+    local base_cmd=("${UV}" run --no-sync python -m "${module}")
+    local preflight_cmd=("${base_cmd[@]}" --cfg job "$@")
+    local run_cmd=("${base_cmd[@]}" "$@")
+
+    echo "[hydra] Module: ${module}"
+    printf '[hydra] Argv:'
+    printf ' %q' "${run_cmd[@]}"
+    printf '\n'
+
+    if [[ "${HPC_HYDRA_VALIDATE}" != "0" ]]; then
+        echo "[hydra] Preflight: validating overrides with --cfg job"
+        HYDRA_FULL_ERROR=1 "${preflight_cmd[@]}" >/dev/null
+    else
+        echo "[hydra] Preflight: skipped (HPC_HYDRA_VALIDATE=0)"
+    fi
+
+    HYDRA_FULL_ERROR=1 "${run_cmd[@]}"
 }
 
 # ── HELPER: print job environment summary ────────────────────────────────────

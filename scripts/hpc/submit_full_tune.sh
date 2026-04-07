@@ -76,16 +76,19 @@ echo "Task \${SLURM_ARRAY_TASK_ID}: Full tune train model=\${MODEL} data=\${DATA
 sync_data_to_scratch
 
 cd "\${PROJECT_ROOT}"
-"\${UV}" run --no-sync python -m pmf_tsfm.train \\
-    device=cuda \\
-    model="\${MODEL}" \\
-    data="\${DATASET}" \\
-    task=full_tune \\
-    logger="${LOGGER}" \\
-    'logger.tags=[${WANDB_HOST_TAG}]' \\
-    paths.output_dir="\${OUTPUTS_DIR}" \\
-    paths.results_dir="\${RESULTS_DIR}" \\
-    paths.processed_dir="\${DATA_DIR}/processed"
+TRAIN_ARGS=(
+    "device=cuda"
+    "model=\${MODEL}"
+    "data=\${DATASET}"
+    "task=full_tune"
+    "logger=${LOGGER}"
+    "logger.tags=[${WANDB_HOST_TAG}]"
+    "paths.data_dir=\${DATA_DIR}/time_series"
+    "paths.output_dir=\${OUTPUTS_DIR}"
+    "paths.results_dir=\${RESULTS_DIR}"
+    "paths.processed_dir=\${DATA_DIR}/processed"
+)
+run_hydra_module pmf_tsfm.train "\${TRAIN_ARGS[@]}"
 
 EXIT=\$?
 sync_results_to_data
@@ -93,6 +96,7 @@ echo "Task \${SLURM_ARRAY_TASK_ID} done. Exit: \${EXIT}"
 exit \${EXIT}
 SLURM_SCRIPT
 )
+TRAIN_JOBID=$(normalize_slurm_jobid "${TRAIN_JOBID}")
 
 echo "Submitted full-tune train array JOBID: ${TRAIN_JOBID}"
 
@@ -164,16 +168,19 @@ if [[ ! -d "\${CKPT_PATH}" ]]; then
 fi
 
 cd "\${PROJECT_ROOT}"
-"\${UV}" run --no-sync python -m pmf_tsfm.inference \\
-    device=cuda \\
-    model="\${MODEL}" \\
-    data="\${DATASET}" \\
-    task=full_tune \\
-    checkpoint_path="\${CKPT_PATH}" \\
-    logger="${LOGGER}" \\
-    'logger.tags=[${WANDB_HOST_TAG}]' \\
-    paths.output_dir="\${OUTPUTS_DIR}" \\
-    paths.processed_dir="\${DATA_DIR}/processed"
+INFER_ARGS=(
+    "device=cuda"
+    "model=\${MODEL}"
+    "data=\${DATASET}"
+    "task=full_tune"
+    "checkpoint_path=\${CKPT_PATH}"
+    "logger=${LOGGER}"
+    "logger.tags=[${WANDB_HOST_TAG}]"
+    "paths.data_dir=\${DATA_DIR}/time_series"
+    "paths.output_dir=\${OUTPUTS_DIR}"
+    "paths.processed_dir=\${DATA_DIR}/processed"
+)
+run_hydra_module pmf_tsfm.inference "\${INFER_ARGS[@]}"
 
 EXIT=\$?
 sync_results_to_data
@@ -181,6 +188,7 @@ echo "Task \${SLURM_ARRAY_TASK_ID} done. Exit: \${EXIT}"
 exit \${EXIT}
 SLURM_SCRIPT
 )
+INFER_JOBID=$(normalize_slurm_jobid "${INFER_JOBID}")
 
 echo "Submitted full-tune infer array JOBID: ${INFER_JOBID} (depends on ${TRAIN_JOBID})"
 echo "${TRAIN_JOBID} ${INFER_JOBID}"

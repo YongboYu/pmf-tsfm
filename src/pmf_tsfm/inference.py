@@ -144,7 +144,12 @@ def run_inference(cfg: DictConfig) -> dict:
     task = cfg.task.name if hasattr(cfg.task, "name") else cfg.task
     lora_adapter_path = cfg.get("lora_adapter_path")
     checkpoint_path = cfg.get("checkpoint_path")
-    context_length = int(cfg.get("context_length", 48))
+    adapter_context_length_cfg = cfg.get("context_length")
+    if adapter_context_length_cfg is None and hasattr(cfg.task, "get"):
+        adapter_context_length_cfg = cfg.task.get("train_context_length")
+    adapter_context_length = (
+        int(adapter_context_length_cfg) if adapter_context_length_cfg is not None else 48
+    )
 
     if checkpoint_path:
         mode = "FULL FINE-TUNE INFERENCE"
@@ -192,7 +197,10 @@ def run_inference(cfg: DictConfig) -> dict:
     if lora_adapter_path:
         if cfg.model.family in {"moirai", "chronos"}:
             lora_adapter = cast(LoRAInferenceAdapter, adapter)
-            lora_adapter.load_lora_adapter(lora_adapter_path, context_length=context_length)
+            lora_adapter.load_lora_adapter(
+                lora_adapter_path,
+                context_length=adapter_context_length,
+            )
         else:
             print(
                 f"  Warning: LoRA not supported for {cfg.model.family}, ignoring lora_adapter_path"
@@ -202,7 +210,10 @@ def run_inference(cfg: DictConfig) -> dict:
     if checkpoint_path:
         if cfg.model.family in {"moirai", "chronos"}:
             full_adapter = cast(FullTuneInferenceAdapter, adapter)
-            full_adapter.load_full_checkpoint(checkpoint_path, context_length=context_length)
+            full_adapter.load_full_checkpoint(
+                checkpoint_path,
+                context_length=adapter_context_length,
+            )
         else:
             print(
                 f"  Warning: Full checkpoint loading not supported for {cfg.model.family}, "
@@ -253,7 +264,7 @@ def run_inference(cfg: DictConfig) -> dict:
     # context_length=48 is only the training context for LoRA/full-tune adapters.
     context_summary: dict = {"inference/context_window": "expanding"}
     if lora_adapter_path or checkpoint_path:
-        context_summary["inference/adapter_trained_context_length"] = context_length
+        context_summary["inference/adapter_trained_context_length"] = adapter_context_length
 
     run.log_summary(
         {

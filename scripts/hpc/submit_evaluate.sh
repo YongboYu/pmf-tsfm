@@ -18,6 +18,9 @@ source "${DIR}/hpc_env.sh"
 LOGGER="${LOGGER:-wandb}"
 TASK="${1:-all}"          # zero_shot | lora_tune | full_tune | all
 DEP_JOBID="${2:-}"        # upstream JOBID to depend on (optional)
+if [[ -n "${DEP_JOBID}" ]]; then
+    DEP_JOBID=$(normalize_slurm_jobid "${DEP_JOBID}")
+fi
 
 TIME_LIMIT="01:00:00"
 MEM="32G"
@@ -58,11 +61,12 @@ echo "Evaluating task: ${task}"
 rsync -av "\${DATA_ROOT}/outputs/${task}/" "\${OUTPUTS_DIR}/${task}/" 2>/dev/null || true
 
 cd "\${PROJECT_ROOT}"
-"\${UV}" run --no-sync python -m pmf_tsfm.evaluate \\
-    task=${task} \\
-    results_dir="\${OUTPUTS_DIR}/${task}" \\
-    logger="${LOGGER}" \\
-    paths.output_dir="\${OUTPUTS_DIR}"
+EVAL_ARGS=(
+    "results_dir=\${OUTPUTS_DIR}/${task}"
+    "logger=${LOGGER}"
+    "paths.output_dir=\${OUTPUTS_DIR}"
+)
+run_hydra_module pmf_tsfm.evaluate "\${EVAL_ARGS[@]}"
 
 EXIT=\$?
 sync_results_to_data
@@ -70,6 +74,7 @@ echo "Evaluation done. Exit: \${EXIT}"
 exit \${EXIT}
 SLURM_SCRIPT
 )
+    EVAL_JOBID=$(normalize_slurm_jobid "${EVAL_JOBID}")
     echo "Submitted eval/${task} JOBID: ${EVAL_JOBID}"
     echo "${EVAL_JOBID}"
 }

@@ -19,7 +19,7 @@ set -euo pipefail
 source "$(dirname "$0")/hpc_env.sh"
 
 GITHUB_REPO="https://github.com/YongboYu/pmf-tsfm.git"
-GITHUB_BRANCH="main"
+GITHUB_BRANCH="${GITHUB_BRANCH:-main}"   # override: GITHUB_BRANCH=feat/my-branch bash setup_vsc.sh
 
 echo "================================================================"
 echo "  PMF-TSFM VSC Setup"
@@ -32,8 +32,14 @@ echo ""
 echo "[1/6] Installing uv..."
 mkdir -p "${VSC_DATA}/.local/bin"
 if [[ ! -x "${UV}" ]]; then
-    curl -LsSf https://astral.sh/uv/install.sh | \
-        INSTALLER_NO_MODIFY_PATH=1 UV_INSTALL_DIR="${VSC_DATA}/.local/bin" sh
+    echo "  Downloading uv binary via wget (curl may be broken on some HPC nodes)..."
+    _UV_TMP=$(mktemp -d)
+    wget -q "https://github.com/astral-sh/uv/releases/latest/download/uv-x86_64-unknown-linux-gnu.tar.gz" \
+        -O "${_UV_TMP}/uv.tar.gz"
+    tar -xzf "${_UV_TMP}/uv.tar.gz" -C "${_UV_TMP}/"
+    cp "${_UV_TMP}/uv-x86_64-unknown-linux-gnu/uv" "${VSC_DATA}/.local/bin/uv"
+    chmod +x "${UV}"
+    rm -rf "${_UV_TMP}"
     echo "  uv installed at ${UV}"
 else
     echo "  uv already installed: $(${UV} --version)"
@@ -60,12 +66,9 @@ echo "[3/6] Installing dependencies via uv sync..."
 _load_modules
 (
     cd "${PROJECT_ROOT}"
-    # Core dependencies
-    "${UV}" sync --frozen
-    # TimesFM legacy extras (for 1.0 and 2.0 models)
-    "${UV}" sync --frozen --extra timesfm_legacy
-    # TimesFM 2.5 extras
-    "${UV}" sync --frozen --extra timesfm_v25
+    # Install all extras in one pass — sequential syncs would remove each
+    # other's packages since uv prunes the venv to match the requested set.
+    "${UV}" sync --frozen --extra timesfm_legacy --extra timesfm_v25
 )
 echo "  Dependencies installed."
 
@@ -115,11 +118,6 @@ models = [
     "amazon/chronos-bolt-mini",
     "amazon/chronos-bolt-small",
     "amazon/chronos-bolt-base",
-    "amazon/chronos-t5-tiny",
-    "amazon/chronos-t5-mini",
-    "amazon/chronos-t5-small",
-    "amazon/chronos-t5-base",
-    "amazon/chronos-t5-large",
 ]
 for model_id in models:
     print(f"  {model_id}...", flush=True)
@@ -132,19 +130,9 @@ PYEOF
 )
 
 echo ""
-echo "  Downloading Chronos-2..."
-(
-    cd "${PROJECT_ROOT}"
-    "${UV}" run --no-sync python - << 'PYEOF'
-from huggingface_hub import snapshot_download
-print("  amazon/chronos-2-base...", flush=True)
-try:
-    snapshot_download("amazon/chronos-2-base")
-    print("    OK")
-except Exception as e:
-    print(f"    FAILED: {e}")
-PYEOF
-)
+echo "  NOTE: Chronos-2 (amazon/chronos-2-base) loads weights from S3 via boto3"
+echo "  at runtime — no HF Hub pre-download needed. S3 access uses compute node"
+echo "  internet. Skipping HF snapshot for this model."
 
 echo ""
 echo "  Downloading MOIRAI models..."
@@ -157,7 +145,7 @@ models = [
     "Salesforce/moirai-1.1-R-small",
     "Salesforce/moirai-1.1-R-base",
     "Salesforce/moirai-1.1-R-large",
-    "Salesforce/moirai-moe-base",
+    "Salesforce/moirai-moe-1.0-R-base",
     "Salesforce/moirai-2.0-R-small",
 ]
 for model_id in models:
