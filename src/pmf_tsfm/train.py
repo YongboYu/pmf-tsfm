@@ -29,6 +29,7 @@ import numpy as np
 import torch
 from omegaconf import DictConfig, OmegaConf
 
+from pmf_tsfm.utils.precision import PrecisionPolicy, resolve_training_precision
 from pmf_tsfm.utils.wandb_logger import WandbRun, init_run
 
 sys.path.insert(0, str(Path(__file__).parent / "src"))
@@ -81,11 +82,6 @@ class Chronos2TrainAdapter(Protocol):
     def save_full_checkpoint(self, output_dir: str) -> None: ...
 
 
-def _effective_use_amp(use_amp: bool, device: str) -> bool:
-    """AMP (mixed precision) is only supported on CUDA devices."""
-    return use_amp and device.startswith("cuda")
-
-
 def train_epoch(
     model: LoRATrainAdapter | FullTuneTrainAdapter,
     train_loader,
@@ -93,6 +89,7 @@ def train_epoch(
     device: str,
     forward_fn,
     use_amp: bool = True,
+    amp_dtype: torch.dtype | None = None,
     gradient_clip: float = 1.0,
 ) -> float:
     """Run one training epoch."""
@@ -102,7 +99,6 @@ def train_epoch(
     total_loss = 0.0
     num_batches = 0
 
-    use_amp = _effective_use_amp(use_amp, device)
     scaler: torch.cuda.amp.GradScaler | None = None
     if use_amp:
         scaler = torch.cuda.amp.GradScaler()
@@ -112,7 +108,7 @@ def train_epoch(
 
         if use_amp:
             assert scaler is not None
-            with torch.cuda.amp.autocast(dtype=torch.bfloat16):
+            with torch.cuda.amp.autocast(dtype=amp_dtype or torch.bfloat16):
                 _, loss = forward_fn(batch)
             scaler.scale(loss).backward()
             scaler.unscale_(optimizer)
@@ -140,6 +136,7 @@ def validate(
     device: str,
     forward_fn,
     use_amp: bool = True,
+    amp_dtype: torch.dtype | None = None,
 ) -> float:
     """Run validation."""
     trainable_model = model.model
@@ -148,11 +145,10 @@ def validate(
     total_loss = 0.0
     num_batches = 0
 
-    use_amp = _effective_use_amp(use_amp, device)
     with torch.no_grad():
         for batch in val_loader:
             if use_amp:
-                with torch.cuda.amp.autocast(dtype=torch.bfloat16):
+                with torch.cuda.amp.autocast(dtype=amp_dtype or torch.bfloat16):
                     _, loss = forward_fn(batch)
             else:
                 _, loss = forward_fn(batch)
@@ -172,6 +168,7 @@ def train_lora(
     adapter: LoRATrainAdapter,
     device: str,
     data_module,
+    precision_policy: PrecisionPolicy,
     run: WandbRun | None = None,
 ) -> dict:
     """Train with LoRA fine-tuning."""
@@ -212,6 +209,7 @@ def train_lora(
         save_fn=adapter.save_lora_adapter,
         save_dir_key="adapter_save_dir",
         mode_name="LoRA",
+        precision_policy=precision_policy,
         run=run,
     )
 
@@ -222,6 +220,7 @@ def train_full(
     device: str,
     data_module,
     context_length: int,
+    precision_policy: PrecisionPolicy,
     run: WandbRun | None = None,
 ) -> dict:
     """Train with full fine-tuning (all parameters)."""
@@ -269,6 +268,7 @@ def train_full(
         save_fn=adapter.save_full_checkpoint,
         save_dir_key="checkpoint_save_dir",
         mode_name="Full",
+        precision_policy=precision_policy,
         run=run,
     )
 
@@ -283,6 +283,7 @@ def _training_loop(
     save_fn,
     save_dir_key: str,
     mode_name: str,
+    precision_policy: PrecisionPolicy,
     run: WandbRun | None = None,
 ) -> dict:
     """Common training loop for both LoRA and full fine-tuning."""
@@ -290,7 +291,7 @@ def _training_loop(
     print(f"  Epochs: {cfg.training.epochs}")
     print(f"  Batch size: {cfg.training.batch_size}")
     print(f"  Learning rate: {cfg.training.learning_rate}")
-    print(f"  Mixed precision: {cfg.task.use_amp}")
+    print(f"  Precision mode: {precision_policy.mode}")
 
     trainable_model = adapter.model
     assert trainable_model is not None
@@ -320,7 +321,8 @@ def _training_loop(
             optimizer=optimizer,
             device=device,
             forward_fn=forward_fn,
-            use_amp=cfg.task.use_amp,
+            use_amp=precision_policy.use_amp,
+            amp_dtype=precision_policy.amp_dtype,
             gradient_clip=cfg.training.gradient_clip,
         )
         print(f"  Train Loss: {train_loss:.4f}")
@@ -331,7 +333,8 @@ def _training_loop(
             val_loader=val_loader,
             device=device,
             forward_fn=forward_fn,
-            use_amp=cfg.task.use_amp,
+            use_amp=precision_policy.use_amp,
+            amp_dtype=precision_policy.amp_dtype,
         )
         print(f"  Val Loss: {val_loss:.4f}")
 
@@ -376,6 +379,7 @@ def _training_loop(
             {
                 "train/best_val_loss": best_val_loss,
                 "train/elapsed_s": elapsed,
+                "train/precision_mode": precision_policy.mode,
             }
         )
 
@@ -414,6 +418,12 @@ def train(cfg: DictConfig) -> dict:
         print(f"Warning: MPS not available, falling back to {fallback_device}")
         device = fallback_device
 
+    precision_policy = resolve_training_precision(
+        model_family=cfg.model.family,
+        requested_amp=bool(cfg.task.get("use_amp", False)),
+        device=device,
+    )
+
     # Determine training mode
     task_name = cfg.task.name
     is_full_tune = task_name == "full_tune"
@@ -436,6 +446,7 @@ def train(cfg: DictConfig) -> dict:
     print(f"  Model:   {cfg.model.name}")
     print(f"  Data:    {cfg.data.name}")
     print(f"  Device:  {device}")
+    print(f"  Precision: {precision_policy.mode}")
     print(f"  Context: {context_length}  |  Horizon: {cfg.prediction_length}")
     if task_patch_size is not None:
         print(f"  Patch size: {task_patch_size}")
@@ -522,6 +533,7 @@ def train(cfg: DictConfig) -> dict:
             chronos2_adapter.save_full_checkpoint(str(best_path))
             print(f"  Final checkpoint : {final_path}")
             print(f"  Best checkpoint  : {best_path}")
+            run.log_summary({"train/precision_mode": precision_policy.mode})
             run.finish()
             return {"status": "complete", "model": "chronos2", "final_path": str(final_path)}
 
@@ -532,6 +544,7 @@ def train(cfg: DictConfig) -> dict:
             device=device,
             data_module=data_module,
             context_length=context_length,
+            precision_policy=precision_policy,
             run=run,
         )
         run.finish()
@@ -543,6 +556,7 @@ def train(cfg: DictConfig) -> dict:
         adapter=cast(LoRATrainAdapter, adapter),
         device=device,
         data_module=data_module,
+        precision_policy=precision_policy,
         run=run,
     )
     run.finish()
