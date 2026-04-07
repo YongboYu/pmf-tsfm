@@ -68,6 +68,10 @@ JOBID=$(sbatch --parsable << SLURM_SCRIPT
 #SBATCH --mail-type=FAIL,ARRAY_TASKS
 #SBATCH --mail-user=${SLURM_MAIL_USER}
 
+export HPC_RUN_SUFFIX="${HPC_RUN_SUFFIX}"
+export MOIRAI_TRAIN_PRECISION="${MOIRAI_TRAIN_PRECISION}"
+export HPC_HYDRA_VALIDATE="${HPC_HYDRA_VALIDATE}"
+
 # ── Source environment ────────────────────────────────────────────────────────
 source "${DIR}/hpc_env.sh"
 _load_modules
