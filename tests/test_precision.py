@@ -44,14 +44,14 @@ class TestEnableCudaTf32:
 
 
 class TestResolveTrainingPrecision:
-    def test_moirai_cuda_amp_uses_bf16(self, monkeypatch) -> None:
+    def test_moirai_defaults_to_tf32_on_cuda(self, monkeypatch) -> None:
         monkeypatch.setattr(torch.cuda, "is_available", lambda: True)
 
         policy = resolve_training_precision("moirai", requested_amp=True, device="cuda")
 
-        assert policy.mode == "bf16_amp"
-        assert policy.use_amp is True
-        assert policy.amp_dtype == torch.bfloat16
+        assert policy.mode == "tf32"
+        assert policy.use_amp is False
+        assert policy.amp_dtype is None
         assert policy.tf32_enabled is True
 
     def test_moirai_override_can_force_tf32(self, monkeypatch) -> None:

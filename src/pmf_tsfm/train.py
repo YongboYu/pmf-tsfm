@@ -438,7 +438,7 @@ def train(cfg: DictConfig) -> dict:
     run.log_summary(
         {
             "training/context_length": context_length,
-            "train/precision_override": moirai_precision_override or "paper",
+            "train/precision_override": moirai_precision_override or "default",
         }
     )
 
@@ -455,7 +455,7 @@ def train(cfg: DictConfig) -> dict:
     print(f"  Data:    {cfg.data.name}")
     print(f"  Device:  {device}")
     print(f"  Precision: {precision_policy.mode}")
-    print(f"  Precision override: {moirai_precision_override or 'paper'}")
+    print(f"  Precision override: {moirai_precision_override or 'default'}")
     print(f"  Context: {context_length}  |  Horizon: {cfg.prediction_length}")
     if task_patch_size is not None:
         print(f"  Patch size: {task_patch_size}")

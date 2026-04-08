@@ -1,4 +1,4 @@
-"""Precision helpers for paper-aligned GPU execution."""
+"""Precision helpers for GPU execution."""
 
 from __future__ import annotations
 
@@ -23,7 +23,7 @@ def _normalize_moirai_override(raw_override: str | None) -> str | None:
         return None
 
     normalized = raw_override.strip().lower()
-    if normalized in {"", "default", "paper"}:
+    if normalized in {"", "default"}:
         return None
     if normalized in {"bf16", "bf16_amp"}:
         return "bf16_amp"
@@ -31,7 +31,7 @@ def _normalize_moirai_override(raw_override: str | None) -> str | None:
         return "tf32"
 
     raise ValueError(
-        "Unsupported Moirai training precision override. Use one of: bf16_amp, tf32, paper."
+        "Unsupported Moirai training precision override. Use one of: bf16_amp, tf32, default."
     )
 
 
@@ -59,9 +59,8 @@ def resolve_training_precision(
 ) -> PrecisionPolicy:
     """Resolve the training precision policy for a model family.
 
-    Paper-era reference behavior was mixed:
-    - Moirai fine-tuning used BF16 AMP on CUDA.
-    - Other model families ran on the float32/TF32 path on H100.
+    Current default behavior keeps all CUDA fine-tuning on the TF32 path.
+    Moirai can still be explicitly overridden to BF16 AMP for comparison runs.
     """
     normalized_override = _normalize_moirai_override(moirai_override)
     tf32_enabled = enable_cuda_tf32(device)
@@ -80,14 +79,6 @@ def resolve_training_precision(
             return PrecisionPolicy(mode="tf32", tf32_enabled=True)
         return PrecisionPolicy(mode="float32")
 
-    if use_cuda and requested_amp and model_family == "moirai":
-        return PrecisionPolicy(
-            mode="bf16_amp",
-            use_amp=True,
-            amp_dtype=torch.bfloat16,
-            tf32_enabled=tf32_enabled,
-        )
-
     if tf32_enabled:
         return PrecisionPolicy(mode="tf32", tf32_enabled=True)
 
@@ -98,7 +89,7 @@ def resolve_inference_precision(device: str) -> PrecisionPolicy:
     """Resolve inference precision.
 
     Inference stays on the float32 execution path; on CUDA/H100 we explicitly
-    enable TF32 kernels to mirror the paper-era setup more closely.
+    enable TF32 kernels for the default GPU path.
     """
     tf32_enabled = enable_cuda_tf32(device)
     if tf32_enabled:

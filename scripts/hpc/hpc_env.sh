@@ -62,7 +62,7 @@ else
 fi
 
 # Optional Moirai fine-tuning precision override for comparison runs.
-#   paper / default / ""  -> paper-aligned behavior
+#   default / ""          -> current default TF32 behavior
 #   bf16_amp              -> force Moirai fine-tuning AMP on CUDA
 #   tf32                  -> force Moirai fine-tuning onto the TF32 path
 export MOIRAI_TRAIN_PRECISION="${MOIRAI_TRAIN_PRECISION:-}"
@@ -197,7 +197,7 @@ print_job_info() {
     echo "  Outputs:    ${OUTPUTS_DIR}"
     echo "  Results:    ${RESULTS_DIR}"
     echo "  Persisted:  ${DATA_OUTPUTS_DIR} | ${DATA_RESULTS_DIR}"
-    echo "  Moirai precision override: ${MOIRAI_TRAIN_PRECISION:-paper}"
+    echo "  Moirai precision override: ${MOIRAI_TRAIN_PRECISION:-default}"
     echo "  HF cache:   ${HF_HOME}"
     echo "  GPU:        $(nvidia-smi --query-gpu=name --format=csv,noheader 2>/dev/null | head -1 || echo 'N/A')"
     echo "  Started:    $(date)"
