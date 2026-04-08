@@ -42,6 +42,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
+from pmf_tsfm.data.assets import resolve_dataset_asset_path
 from pmf_tsfm.er.automaton import BackgroundModel, compute_er, dfg_to_transitions
 from pmf_tsfm.er.dfg import (
     _clean,
@@ -79,6 +80,34 @@ SIMPLE_LOG = [
     ("c2", "A", "2024-01-02T08:00:00+00:00"),
     ("c2", "C", "2024-01-02T09:00:00+00:00"),
 ]
+
+
+class TestERAssetResolution:
+    def test_resolves_lowercase_processed_log_name(self, tmp_path: Path):
+        lowercase = tmp_path / "processed_logs" / "sepsis.xes"
+        lowercase.parent.mkdir(parents=True, exist_ok=True)
+        lowercase.write_text("<log />")
+
+        resolved = resolve_dataset_asset_path(
+            tmp_path / "processed_logs" / "Sepsis.xes",
+            dataset_name="Sepsis",
+            asset_label="processed event log",
+        )
+
+        assert resolved == lowercase
+
+    def test_prefers_existing_canonical_processed_log_name(self, tmp_path: Path):
+        canonical = tmp_path / "processed_logs" / "Sepsis.xes"
+        canonical.parent.mkdir(parents=True, exist_ok=True)
+        canonical.write_text("<log />")
+
+        resolved = resolve_dataset_asset_path(
+            canonical,
+            dataset_name="Sepsis",
+            asset_label="processed event log",
+        )
+
+        assert resolved == canonical
 
 
 # ---------------------------------------------------------------------------
@@ -669,6 +698,7 @@ class TestRunERPipelineMock:
 
         parquet = self._make_parquet(tmp_path, n=21)
         xes_df = self._make_xes_df()
+        (tmp_path / "BPI2017.xes").write_text("<log />")
 
         # parquet has 21 rows, val_end=13, pred_len=7 → n_windows = 21-13-7+1 = 2
         n_windows = 21 - 13 - 7 + 1
@@ -714,6 +744,7 @@ class TestRunERPipelineMock:
 
         parquet = self._make_parquet(tmp_path, n=21)
         xes_df = self._make_xes_df()
+        (tmp_path / "BPI2017.xes").write_text("<log />")
 
         out_dir = tmp_path / "outputs" / "zero_shot" / "BPI2017" / "chronos_2"
         out_dir.mkdir(parents=True)

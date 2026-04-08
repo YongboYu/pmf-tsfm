@@ -109,6 +109,8 @@ class TestRunERAll:
         outputs_dir = tmp_path / "outputs"
         _touch_prediction_file(outputs_dir, "BPI2017", "model_a")
         _touch_prediction_file(outputs_dir, "BPI2017", "model_b")
+        pd.DataFrame({"value": [1.0, 2.0, 3.0]}).to_parquet(tmp_path / "BPI2017.parquet")
+        (tmp_path / "BPI2017.xes").write_text("<log />")
 
         cfg = _make_cfg(tmp_path, save=True)
         run = DummyRun()

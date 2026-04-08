@@ -184,6 +184,26 @@ class TestZeroShotDataModule:
         assert mod.train_end == 90
         assert mod.val_end == 120
 
+    def test_resolves_lowercase_zenodo_named_parquet(self, synthetic_parquet, tmp_path):
+        """Canonical config paths still load Zenodo-style lowercase parquet assets."""
+        from pmf_tsfm.data.zero_shot import ZeroShotDataModule
+
+        raw_path, _ = synthetic_parquet
+        lowercase_path = tmp_path / "bpi2017.parquet"
+        lowercase_path.write_bytes(raw_path.read_bytes())
+
+        mod = ZeroShotDataModule(
+            dataset_name="BPI2017",
+            data_path=str(tmp_path / "BPI2017.parquet"),
+            prediction_length=7,
+            train_end=90,
+            val_end=120,
+        )
+        mod.setup()
+
+        assert mod.data_path == lowercase_path
+        assert mod.data is not None
+
 
 # ===========================================================================
 # TrainingDataModule
@@ -233,6 +253,28 @@ class TestTrainingDataModule:
         assert len(mod.train_data) == 30
         assert len(mod.val_data) == 10
         assert len(mod.test_data) == 10
+
+    def test_resolves_lowercase_zenodo_named_parquet(self, tiny_parquet, tmp_path):
+        """Runtime training split accepts lowercase parquet names from Zenodo bundles."""
+        from pmf_tsfm.data.training import TrainingDataModule
+
+        raw_path, _ = tiny_parquet
+        lowercase_path = tmp_path / "hospital_billing.parquet"
+        lowercase_path.write_bytes(raw_path.read_bytes())
+
+        mod = TrainingDataModule(
+            dataset_name="Hospital_Billing",
+            data_path=str(tmp_path / "Hospital_Billing.parquet"),
+            context_length=5,
+            prediction_length=3,
+            train_end=30,
+            val_end=40,
+            model_family="chronos",
+        )
+        mod.setup()
+
+        assert mod.data_path == lowercase_path
+        assert len(mod.train_data) == 30
 
     def test_chronos_dataset_shapes(self, tiny_parquet):
         """ChronosTrainingDataset returns tensors with the expected shapes."""

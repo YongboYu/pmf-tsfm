@@ -66,6 +66,8 @@ import numpy as np
 import pandas as pd
 from omegaconf import DictConfig, OmegaConf
 
+from pmf_tsfm.data.assets import resolve_dataset_asset_path
+
 
 def _sha256(path: Path) -> str:
     """Compute SHA-256 hash of a file for data integrity verification."""
@@ -226,17 +228,18 @@ def main(cfg: DictConfig) -> dict[str, Any]:
         print(OmegaConf.to_yaml(cfg))
 
     processed_dir = Path(cfg.processed_dir)
-    raw_path = Path(cfg.data.path)
     dataset_name = cfg.data.name
+    raw_path = resolve_dataset_asset_path(
+        Path(cfg.data.path),
+        dataset_name=dataset_name,
+        asset_label="raw data file",
+    )
 
     print("=" * 60)
     print(f"PREPROCESSING: {dataset_name}")
     print(f"  Source : {raw_path}")
     print(f"  Output : {processed_dir / dataset_name}")
     print("=" * 60)
-
-    if not raw_path.exists():
-        raise FileNotFoundError(f"Raw data file not found: {raw_path}")
 
     split_ratio = list(cfg.data.get("split_ratio", [0.6, 0.2, 0.2]))
 

@@ -5,49 +5,56 @@
 # SOURCE this file at the top of every Slurm script:
 #   source "$(dirname "$0")/hpc_env.sh"
 #
-# Edit the USER CONFIG section below for your account/paths.
+# Shared cluster defaults live in this file. User-specific overrides belong in
+# ${PROJECT_ROOT}/.env so tracked scripts stay reusable.
 # =============================================================================
-
-# ── USER CONFIG ───────────────────────────────────────────────────────────────
-# Slurm account and partition (KU Leuven genius / wICE)
-export SLURM_ACCOUNT="${SLURM_ACCOUNT:-lp_lirisnlp}"
-export SLURM_PARTITION="${SLURM_PARTITION:-gpu_h100}"  # wICE GPU default: H100. Override to gpu/gpu_a100 if needed.
-export SLURM_CLUSTER="${SLURM_CLUSTER:-wice}"     # wice | genius
-export SLURM_MAIL_USER="${SLURM_MAIL_USER:-yongbo.yu@student.kuleuven.be}"
-
-# W&B project — one project for all devices; runs tagged by host for filtering
-export WANDB_PROJECT="pmf-tsfm"
-export WANDB_ENTITY=""                          # leave empty to use default
-export WANDB_HOST_TAG="${SLURM_CLUSTER}"        # "genius" or "wice" — passed as logger.tags
-
-# TimesFM v1 source (needed for timesfm/1_0_200m and timesfm/2_0_500m)
-# Clone once to VSC_DATA and point here:
-#   git clone --depth 1 --branch v1.2.6 \
-#       https://github.com/google-research/timesfm.git $VSC_DATA/timesfm-v1-repo
-export TIMESFM_V1_PATH="${VSC_DATA}/timesfm-v1-repo/src"
 
 # ── PROJECT PATHS ─────────────────────────────────────────────────────────────
 # VSC_DATA  = permanent storage (slow); persists between sessions
 # VSC_SCRATCH = fast parallel filesystem; files >21 days old may be deleted
 
-export PROJECT_NAME="pmf-tsfm"
-export DATA_ROOT="${VSC_DATA}/${PROJECT_NAME}"       # permanent storage root
-export SCRATCH_ROOT="${VSC_SCRATCH}/${PROJECT_NAME}" # fast working directory
+export PROJECT_NAME="${PROJECT_NAME:-pmf-tsfm}"
+export DATA_ROOT="${DATA_ROOT:-${VSC_DATA}/${PROJECT_NAME}}"       # permanent storage root
+export SCRATCH_ROOT="${SCRATCH_ROOT:-${VSC_SCRATCH}/${PROJECT_NAME}}" # fast working directory
+export PROJECT_ROOT="${PROJECT_ROOT:-${SCRATCH_ROOT}/repo}"
 
-# Repo location on scratch (cloned/pulled by setup_vsc.sh)
-export PROJECT_ROOT="${SCRATCH_ROOT}/repo"
+# Load repo-local user overrides when present.
+if [[ -f "${PROJECT_ROOT}/.env" ]]; then
+    set -a
+    # shellcheck source=/dev/null
+    source "${PROJECT_ROOT}/.env"
+    set +a
+fi
+
+# ── SHARED DEFAULTS + USER OVERRIDES ─────────────────────────────────────────
+# Slurm account and partition (KU Leuven genius / wICE)
+export SLURM_ACCOUNT="${SLURM_ACCOUNT:-lp_lirisnlp}"
+export SLURM_PARTITION="${SLURM_PARTITION:-gpu_h100}"  # wICE GPU default: H100. Override to gpu/gpu_a100 if needed.
+export SLURM_CLUSTER="${SLURM_CLUSTER:-wice}"     # wice | genius
+export SLURM_MAIL_USER="${SLURM_MAIL_USER:-}"
+
+# W&B project — one project for all devices; runs tagged by host for filtering
+export WANDB_PROJECT="${WANDB_PROJECT:-pmf-tsfm}"
+export WANDB_ENTITY="${WANDB_ENTITY:-}"               # leave empty to use default
+export WANDB_HOST_TAG="${WANDB_HOST_TAG:-${SLURM_CLUSTER}}"  # passed as logger.tags
+
+# TimesFM v1 source (needed for timesfm/1_0_200m and timesfm/2_0_500m)
+# Clone once to VSC_DATA and point here:
+#   git clone --depth 1 --branch v1.2.6 \
+#       https://github.com/google-research/timesfm.git $VSC_DATA/timesfm-v1-repo
+export TIMESFM_V1_PATH="${TIMESFM_V1_PATH:-${VSC_DATA}/timesfm-v1-repo/src}"
 
 # ── CACHE DIRS — CRITICAL: ALL caches must point to SCRATCH, not DATA ────────
 # Putting caches in DATA is slow (GPFS metadata overhead) and wastes quota.
-export HF_HOME="${VSC_SCRATCH}/.cache/huggingface"
-export HF_HUB_CACHE="${VSC_SCRATCH}/.cache/huggingface/hub"
-export HF_DATASETS_CACHE="${VSC_SCRATCH}/.cache/huggingface/datasets"
-export TRANSFORMERS_CACHE="${VSC_SCRATCH}/.cache/huggingface/transformers"
-export TORCH_HOME="${VSC_SCRATCH}/.cache/torch"
-export UV_CACHE_DIR="${VSC_SCRATCH}/.cache/uv"
+export HF_HOME="${HF_HOME:-${VSC_SCRATCH}/.cache/huggingface}"
+export HF_HUB_CACHE="${HF_HUB_CACHE:-${VSC_SCRATCH}/.cache/huggingface/hub}"
+export HF_DATASETS_CACHE="${HF_DATASETS_CACHE:-${VSC_SCRATCH}/.cache/huggingface/datasets}"
+export TRANSFORMERS_CACHE="${TRANSFORMERS_CACHE:-${VSC_SCRATCH}/.cache/huggingface/transformers}"
+export TORCH_HOME="${TORCH_HOME:-${VSC_SCRATCH}/.cache/torch}"
+export UV_CACHE_DIR="${UV_CACHE_DIR:-${VSC_SCRATCH}/.cache/uv}"
 
 # Suppress HF tokenizer parallelism warnings
-export TOKENIZERS_PARALLELISM="false"
+export TOKENIZERS_PARALLELISM="${TOKENIZERS_PARALLELISM:-false}"
 
 # Validate Hydra overrides before the real run unless explicitly disabled.
 export HPC_HYDRA_VALIDATE="${HPC_HYDRA_VALIDATE:-1}"
@@ -81,7 +88,7 @@ export WANDB_DIR="${SCRATCH_ROOT}/wandb${HPC_RUN_PATH_SUFFIX}"
 # ── PYTHON / UV ───────────────────────────────────────────────────────────────
 # uv binary (installed to DATA so it survives scratch cleanup)
 export PATH="${VSC_DATA}/.local/bin:${PATH}"
-export UV="${VSC_DATA}/.local/bin/uv"
+export UV="${UV:-${VSC_DATA}/.local/bin/uv}"
 
 # Limit OpenMP threads to allocated CPUs (prevents libgomp thread creation errors)
 export OMP_NUM_THREADS="${SLURM_CPUS_PER_TASK:-8}"
@@ -160,6 +167,15 @@ uv_run() {
 normalize_slurm_jobid() {
     local raw_jobid="$1"
     printf '%s\n' "${raw_jobid%%;*}"
+}
+
+# ── HELPER: emit optional Slurm mail directives ──────────────────────────────
+slurm_mail_directives() {
+    local mail_type="${1:-FAIL,ARRAY_TASKS}"
+    if [[ -n "${SLURM_MAIL_USER:-}" ]]; then
+        printf '#SBATCH --mail-type=%s\n' "${mail_type}"
+        printf '#SBATCH --mail-user=%s\n' "${SLURM_MAIL_USER}"
+    fi
 }
 
 # ── HELPER: run a Hydra entrypoint with logged argv + optional preflight ─────

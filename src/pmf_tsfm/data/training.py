@@ -42,6 +42,8 @@ import pandas as pd
 import torch
 from torch.utils.data import DataLoader, Dataset
 
+from pmf_tsfm.data.assets import resolve_dataset_asset_path
+
 # ---------------------------------------------------------------------------
 # PyTorch Datasets
 # ---------------------------------------------------------------------------
@@ -276,6 +278,11 @@ class TrainingDataModule:
             return
 
         # Fall back to runtime splitting
+        self.data_path = resolve_dataset_asset_path(
+            self.data_path,
+            dataset_name=self.dataset_name,
+            asset_label="raw parquet",
+        )
         self.data = pd.read_parquet(self.data_path)
         drop_cols = [c for c in ["timestamp", "date"] if c in self.data.columns]
         if drop_cols:

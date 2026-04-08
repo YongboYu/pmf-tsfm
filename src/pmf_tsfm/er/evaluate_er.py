@@ -43,6 +43,7 @@ import numpy as np
 import pandas as pd
 from omegaconf import DictConfig, OmegaConf
 
+from pmf_tsfm.data.assets import resolve_dataset_asset_path
 from pmf_tsfm.er.automaton import compute_er
 from pmf_tsfm.er.dfg import (
     build_prediction_dfg,
@@ -157,7 +158,11 @@ def run_er_evaluation(cfg: DictConfig) -> dict:
     print(f"\n[1/5] Predictions: {predictions.shape}  ({n_windows} windows)")
 
     # ---- derive test-window date ranges ----
-    ts_parquet = Path(cfg.data.path)
+    ts_parquet = resolve_dataset_asset_path(
+        Path(cfg.data.path),
+        dataset_name=dataset_name,
+        asset_label="time-series parquet",
+    )
     starts, ends = _get_test_dates(ts_parquet, val_end, pred_len)
     assert len(starts) == n_windows, (
         f"Window count mismatch: parquet gives {len(starts)}, predictions have {n_windows}"
@@ -165,7 +170,11 @@ def run_er_evaluation(cfg: DictConfig) -> dict:
     print(f"[2/5] Test period: {starts[0].date()} → {ends[-1].date()}")
 
     # ---- load and prepare event log ----
-    log_path = Path(cfg.paths.log_dir) / f"{dataset_name}.xes"
+    log_path = resolve_dataset_asset_path(
+        Path(cfg.paths.log_dir) / f"{dataset_name}.xes",
+        dataset_name=dataset_name,
+        asset_label="processed event log",
+    )
     print(f"[3/5] Loading XES log: {log_path}")
     raw_log = load_event_log(log_path)
     prepared = prepare_log(raw_log)  # adds _next_ts column once

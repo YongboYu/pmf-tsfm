@@ -54,8 +54,7 @@ TRAIN_JOBID=$(sbatch --parsable << SLURM_SCRIPT
 #SBATCH --array=0-$(( N_TASKS - 1 ))%4
 #SBATCH --output=${LOGS_DIR}/full_train_%A_%a.out
 #SBATCH --error=${LOGS_DIR}/full_train_%A_%a.err
-#SBATCH --mail-type=FAIL,ARRAY_TASKS
-#SBATCH --mail-user=${SLURM_MAIL_USER}
+$(slurm_mail_directives "FAIL,ARRAY_TASKS")
 
 export HPC_RUN_SUFFIX="${HPC_RUN_SUFFIX}"
 export MOIRAI_TRAIN_PRECISION="${MOIRAI_TRAIN_PRECISION}"
@@ -127,8 +126,7 @@ INFER_JOBID=$(sbatch --parsable --dependency=aftercorr:${TRAIN_JOBID} << SLURM_S
 #SBATCH --array=0-$(( N_TASKS - 1 ))%4
 #SBATCH --output=${LOGS_DIR}/full_infer_%A_%a.out
 #SBATCH --error=${LOGS_DIR}/full_infer_%A_%a.err
-#SBATCH --mail-type=FAIL,ARRAY_TASKS
-#SBATCH --mail-user=${SLURM_MAIL_USER}
+$(slurm_mail_directives "FAIL,ARRAY_TASKS")
 
 export HPC_RUN_SUFFIX="${HPC_RUN_SUFFIX}"
 export MOIRAI_TRAIN_PRECISION="${MOIRAI_TRAIN_PRECISION}"
