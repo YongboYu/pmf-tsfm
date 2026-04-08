@@ -65,8 +65,7 @@ JOBID=$(sbatch --parsable << SLURM_SCRIPT
 #SBATCH --array=${ARRAY_RANGE}%16
 #SBATCH --output=${LOGS_DIR}/zero_shot_%A_%a.out
 #SBATCH --error=${LOGS_DIR}/zero_shot_%A_%a.err
-#SBATCH --mail-type=FAIL,ARRAY_TASKS
-#SBATCH --mail-user=${SLURM_MAIL_USER}
+$(slurm_mail_directives "FAIL,ARRAY_TASKS")
 
 export HPC_RUN_SUFFIX="${HPC_RUN_SUFFIX}"
 export MOIRAI_TRAIN_PRECISION="${MOIRAI_TRAIN_PRECISION}"

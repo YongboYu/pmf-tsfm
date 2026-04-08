@@ -7,6 +7,7 @@ import pytest
 from omegaconf import OmegaConf
 
 import pmf_tsfm.data.preprocess as preprocess_module
+from pmf_tsfm.data.assets import resolve_dataset_asset_path
 from pmf_tsfm.data.preprocess import _clean, compute_split_indices
 
 
@@ -33,6 +34,32 @@ class TestComputeSplitIndices:
 
     def test_floors_ratio_based_fallback_indices(self) -> None:
         assert compute_split_indices(11, None, None, [0.6, 0.2, 0.2]) == (6, 8)
+
+
+class TestResolveDatasetAssetPath:
+    def test_prefers_existing_canonical_path(self, tmp_path: Path) -> None:
+        canonical = tmp_path / "Sepsis.parquet"
+        canonical.write_text("placeholder")
+
+        resolved = resolve_dataset_asset_path(
+            canonical,
+            dataset_name="Sepsis",
+            asset_label="raw parquet",
+        )
+
+        assert resolved == canonical
+
+    def test_falls_back_to_lowercase_filename(self, tmp_path: Path) -> None:
+        lowercase = tmp_path / "sepsis.parquet"
+        lowercase.write_text("placeholder")
+
+        resolved = resolve_dataset_asset_path(
+            tmp_path / "Sepsis.parquet",
+            dataset_name="Sepsis",
+            asset_label="raw parquet",
+        )
+
+        assert resolved == lowercase
 
 
 class TestPreprocessMain:
@@ -79,3 +106,29 @@ class TestPreprocessMain:
         assert (split_dir / "test.parquet").exists()
         assert (split_dir / "metadata.json").exists()
         assert "print_config: true" in capsys.readouterr().out.lower()
+
+    def test_resolves_lowercase_zenodo_named_raw_parquet(
+        self, synthetic_parquet, tmp_path: Path
+    ) -> None:
+        raw_path, _ = synthetic_parquet
+        lowercase_path = tmp_path / "bpi2017.parquet"
+        lowercase_path.write_bytes(raw_path.read_bytes())
+
+        cfg = OmegaConf.create(
+            {
+                "print_config": False,
+                "processed_dir": str(tmp_path / "processed"),
+                "force_overwrite": False,
+                "data": {
+                    "name": "BPI2017",
+                    "path": str(tmp_path / "BPI2017.parquet"),
+                    "split_ratio": [0.6, 0.2, 0.2],
+                },
+            }
+        )
+
+        metadata = preprocess_module.main.__wrapped__(cfg)
+
+        split_dir = tmp_path / "processed" / "BPI2017"
+        assert metadata["dataset_name"] == "BPI2017"
+        assert (split_dir / "full.parquet").exists()

@@ -46,6 +46,8 @@ import numpy as np
 import pandas as pd
 from omegaconf import DictConfig
 
+from pmf_tsfm.data.assets import resolve_dataset_asset_path
+
 
 class ZeroShotDataModule:
     """
@@ -115,6 +117,11 @@ class ZeroShotDataModule:
 
     def _load_raw(self) -> pd.DataFrame:
         """Load from raw parquet and drop auxiliary columns."""
+        self.data_path = resolve_dataset_asset_path(
+            self.data_path,
+            dataset_name=self.dataset_name,
+            asset_label="raw parquet",
+        )
         df = pd.read_parquet(self.data_path)
         drop_cols = [
             c for c in df.columns if c.lower() in {"timestamp", "date", "datetime", "time"}

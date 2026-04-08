@@ -42,8 +42,7 @@ ER_JOBID=$(sbatch --parsable ${dep_flag} << SLURM_SCRIPT
 #SBATCH --time=${TIME_LIMIT}
 #SBATCH --output=${LOGS_DIR}/er_%j.out
 #SBATCH --error=${LOGS_DIR}/er_%j.err
-#SBATCH --mail-type=END,FAIL
-#SBATCH --mail-user=${SLURM_MAIL_USER}
+$(slurm_mail_directives "END,FAIL")
 
 export HPC_RUN_SUFFIX="${HPC_RUN_SUFFIX}"
 export MOIRAI_TRAIN_PRECISION="${MOIRAI_TRAIN_PRECISION}"

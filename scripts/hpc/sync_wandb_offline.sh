@@ -2,7 +2,7 @@
 # =============================================================================
 # sync_wandb_offline.sh — Upload offline W&B runs from SCRATCH to the cloud.
 #
-# Run from a login node after compute jobs finish (or if WANDB_MODE=offline).
+# Run from a login node after compute jobs finish if you used LOGGER=wandb_offline.
 # Useful when compute nodes have no internet, or for bulk sync after a run.
 #
 # Usage:
@@ -19,8 +19,6 @@ if [[ -z "${WANDB_API_KEY:-}" ]]; then
     echo "  source ${PROJECT_ROOT}/.env"
     exit 1
 fi
-
-WANDB_DIR="${SCRATCH_ROOT}/wandb"
 
 if [[ ! -d "${WANDB_DIR}" ]]; then
     echo "No offline W&B runs found at ${WANDB_DIR}"

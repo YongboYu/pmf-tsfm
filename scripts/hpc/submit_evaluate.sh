@@ -48,8 +48,7 @@ _submit_eval() {
 #SBATCH --time=${TIME_LIMIT}
 #SBATCH --output=${LOGS_DIR}/evaluate_${task}_%j.out
 #SBATCH --error=${LOGS_DIR}/evaluate_${task}_%j.err
-#SBATCH --mail-type=END,FAIL
-#SBATCH --mail-user=${SLURM_MAIL_USER}
+$(slurm_mail_directives "END,FAIL")
 
 export HPC_RUN_SUFFIX="${HPC_RUN_SUFFIX}"
 export MOIRAI_TRAIN_PRECISION="${MOIRAI_TRAIN_PRECISION}"

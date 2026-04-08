@@ -13,12 +13,14 @@
 # Usage:
 #   bash scripts/hpc/pull_metrics_from_vsc.sh <ssh-host-or-alias>
 #   bash scripts/hpc/pull_metrics_from_vsc.sh <ssh-host-or-alias> \
-#       /data/leuven/362/vsc36274/pmf-tsfm \
+#       /data/leuven/.../pmf-tsfm \
 #       /path/to/local/sync_root \
 #       moirai-bf16
 #
 # Examples:
 #   bash scripts/hpc/pull_metrics_from_vsc.sh vsc-login
+#   VSC_REMOTE_ROOT=/data/leuven/.../pmf-tsfm \
+#       bash scripts/hpc/pull_metrics_from_vsc.sh vsc-login
 #   PMF_TSFM_HPC_SYNC_ROOT="$PWD/data/hpc_sync" \
 #       bash scripts/hpc/pull_metrics_from_vsc.sh vsc-login
 # =============================================================================
@@ -27,8 +29,15 @@ set -euo pipefail
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${DIR}/../.." && pwd)"
 
+if [[ -f "${REPO_ROOT}/.env" ]]; then
+    set -a
+    # shellcheck source=/dev/null
+    source "${REPO_ROOT}/.env"
+    set +a
+fi
+
 REMOTE_SPEC="${1:-${VSC_REMOTE:-}}"
-REMOTE_ROOT="${2:-${VSC_REMOTE_ROOT:-/data/leuven/362/vsc36274/pmf-tsfm}}"
+REMOTE_ROOT="${2:-${VSC_REMOTE_ROOT:-}}"
 LOCAL_SYNC_ROOT="${3:-${PMF_TSFM_HPC_SYNC_ROOT:-${REPO_ROOT}/data/hpc_sync}}"
 RUN_SUFFIX="${4:-${HPC_RUN_SUFFIX:-}}"
 RUN_SUFFIX_SAFE="${RUN_SUFFIX//[^[:alnum:]._-]/_}"
@@ -42,6 +51,15 @@ if [[ -z "${REMOTE_SPEC}" ]]; then
     echo ""
     echo "Example:"
     echo "  bash scripts/hpc/pull_metrics_from_vsc.sh vsc-login"
+    exit 1
+fi
+
+if [[ -z "${REMOTE_ROOT}" ]]; then
+    echo "Remote root not set."
+    echo "Pass it as the second argument or set VSC_REMOTE_ROOT in your environment/.env."
+    echo ""
+    echo "Example:"
+    echo "  VSC_REMOTE_ROOT=/data/leuven/.../pmf-tsfm bash scripts/hpc/pull_metrics_from_vsc.sh vsc-login"
     exit 1
 fi
 
