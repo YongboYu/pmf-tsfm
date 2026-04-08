@@ -14,7 +14,8 @@
 #   bash scripts/hpc/pull_metrics_from_vsc.sh <ssh-host-or-alias>
 #   bash scripts/hpc/pull_metrics_from_vsc.sh <ssh-host-or-alias> \
 #       /data/leuven/362/vsc36274/pmf-tsfm \
-#       /path/to/local/sync_root
+#       /path/to/local/sync_root \
+#       moirai-bf16
 #
 # Examples:
 #   bash scripts/hpc/pull_metrics_from_vsc.sh vsc-login
@@ -29,17 +30,23 @@ REPO_ROOT="$(cd "${DIR}/../.." && pwd)"
 REMOTE_SPEC="${1:-${VSC_REMOTE:-}}"
 REMOTE_ROOT="${2:-${VSC_REMOTE_ROOT:-/data/leuven/362/vsc36274/pmf-tsfm}}"
 LOCAL_SYNC_ROOT="${3:-${PMF_TSFM_HPC_SYNC_ROOT:-${REPO_ROOT}/data/hpc_sync}}"
+RUN_SUFFIX="${4:-${HPC_RUN_SUFFIX:-}}"
+RUN_SUFFIX_SAFE="${RUN_SUFFIX//[^[:alnum:]._-]/_}"
+RUN_PATH_SUFFIX=""
+if [[ -n "${RUN_SUFFIX_SAFE}" ]]; then
+    RUN_PATH_SUFFIX="-${RUN_SUFFIX_SAFE}"
+fi
 
 if [[ -z "${REMOTE_SPEC}" ]]; then
-    echo "Usage: bash scripts/hpc/pull_metrics_from_vsc.sh <ssh-host-or-alias> [remote_root] [local_sync_root]"
+    echo "Usage: bash scripts/hpc/pull_metrics_from_vsc.sh <ssh-host-or-alias> [remote_root] [local_sync_root] [run_suffix]"
     echo ""
     echo "Example:"
     echo "  bash scripts/hpc/pull_metrics_from_vsc.sh vsc-login"
     exit 1
 fi
 
-REMOTE_OUTPUTS="${REMOTE_ROOT%/}/outputs"
-LOCAL_OUTPUTS="${LOCAL_SYNC_ROOT%/}/outputs"
+REMOTE_OUTPUTS="${REMOTE_ROOT%/}/outputs${RUN_PATH_SUFFIX}"
+LOCAL_OUTPUTS="${LOCAL_SYNC_ROOT%/}/outputs${RUN_PATH_SUFFIX}"
 
 mkdir -p "${LOCAL_OUTPUTS}"
 

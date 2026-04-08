@@ -51,6 +51,10 @@ _submit_eval() {
 #SBATCH --mail-type=END,FAIL
 #SBATCH --mail-user=${SLURM_MAIL_USER}
 
+export HPC_RUN_SUFFIX="${HPC_RUN_SUFFIX}"
+export MOIRAI_TRAIN_PRECISION="${MOIRAI_TRAIN_PRECISION}"
+export HPC_HYDRA_VALIDATE="${HPC_HYDRA_VALIDATE}"
+
 source "${DIR}/hpc_env.sh"
 _ensure_scratch_dirs
 print_job_info
@@ -58,7 +62,7 @@ print_job_info
 echo "Evaluating task: ${task}"
 
 # Sync outputs from DATA → SCRATCH (in case inference ran in a previous session)
-rsync -av "\${DATA_ROOT}/outputs/${task}/" "\${OUTPUTS_DIR}/${task}/" 2>/dev/null || true
+rsync -av "\${DATA_OUTPUTS_DIR}/${task}/" "\${OUTPUTS_DIR}/${task}/" 2>/dev/null || true
 
 cd "\${PROJECT_ROOT}"
 EVAL_ARGS=(

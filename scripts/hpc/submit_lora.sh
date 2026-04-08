@@ -59,6 +59,10 @@ TRAIN_JOBID=$(sbatch --parsable << SLURM_SCRIPT
 #SBATCH --mail-type=FAIL,ARRAY_TASKS
 #SBATCH --mail-user=${SLURM_MAIL_USER}
 
+export HPC_RUN_SUFFIX="${HPC_RUN_SUFFIX}"
+export MOIRAI_TRAIN_PRECISION="${MOIRAI_TRAIN_PRECISION}"
+export HPC_HYDRA_VALIDATE="${HPC_HYDRA_VALIDATE}"
+
 source "${DIR}/hpc_env.sh"
 _load_modules
 _ensure_scratch_dirs
@@ -129,6 +133,10 @@ INFER_JOBID=$(sbatch --parsable --dependency=aftercorr:${TRAIN_JOBID} << SLURM_S
 #SBATCH --mail-type=FAIL,ARRAY_TASKS
 #SBATCH --mail-user=${SLURM_MAIL_USER}
 
+export HPC_RUN_SUFFIX="${HPC_RUN_SUFFIX}"
+export MOIRAI_TRAIN_PRECISION="${MOIRAI_TRAIN_PRECISION}"
+export HPC_HYDRA_VALIDATE="${HPC_HYDRA_VALIDATE}"
+
 source "${DIR}/hpc_env.sh"
 _load_modules
 _ensure_scratch_dirs
@@ -157,7 +165,7 @@ echo "Task \${SLURM_ARRAY_TASK_ID}: LoRA infer model=\${MODEL} data=\${DATASET}"
 echo "  Adapter: \${ADAPTER_PATH}"
 
 # Sync refreshed data + results (adapter may be in DATA if scratch was cleaned)
-rsync -av --progress "\${DATA_ROOT}/results/lora_tune/" "\${RESULTS_DIR}/lora_tune/" 2>/dev/null || true
+rsync -av --progress "\${DATA_RESULTS_DIR}/lora_tune/" "\${RESULTS_DIR}/lora_tune/" 2>/dev/null || true
 sync_data_to_scratch
 
 if [[ ! -d "\${ADAPTER_PATH}" ]]; then

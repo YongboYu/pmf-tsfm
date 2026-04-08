@@ -42,6 +42,7 @@ from omegaconf import DictConfig, OmegaConf
 
 from pmf_tsfm.data import ZeroShotDataModule
 from pmf_tsfm.models import get_model_adapter
+from pmf_tsfm.utils.precision import resolve_inference_precision
 from pmf_tsfm.utils.wandb_logger import init_run
 
 
@@ -140,6 +141,8 @@ def run_inference(cfg: DictConfig) -> dict:
         print(f"Warning: MPS not available, falling back to {fallback}")
         device = fallback
 
+    precision_policy = resolve_inference_precision(device)
+
     # Determine run mode
     task = cfg.task.name if hasattr(cfg.task, "name") else cfg.task
     lora_adapter_path = cfg.get("lora_adapter_path")
@@ -163,6 +166,7 @@ def run_inference(cfg: DictConfig) -> dict:
     print(f"  Model:  {cfg.model.name}")
     print(f"  Data:   {cfg.data.name}")
     print(f"  Device: {device}")
+    print(f"  Precision: {precision_policy.mode}")
     print(f"  Prediction Length: {cfg.prediction_length}")
     print(f"  Task:   {task}")
     if lora_adapter_path:
@@ -240,6 +244,7 @@ def run_inference(cfg: DictConfig) -> dict:
         "feature_names": prepared_data["feature_names"],
         "prediction_shape": list(predictions.shape),
         "target_shape": list(targets.shape),
+        "precision_mode": precision_policy.mode,
     }
 
     output_path = save_predictions(
@@ -275,6 +280,7 @@ def run_inference(cfg: DictConfig) -> dict:
             "inference/dataset": dataset_name,
             "inference/task": task,
             "inference/device": device,
+            "inference/precision_mode": precision_policy.mode,
             **context_summary,
         }
     )

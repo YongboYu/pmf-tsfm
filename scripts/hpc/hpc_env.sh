@@ -46,20 +46,37 @@ export TRANSFORMERS_CACHE="${VSC_SCRATCH}/.cache/huggingface/transformers"
 export TORCH_HOME="${VSC_SCRATCH}/.cache/torch"
 export UV_CACHE_DIR="${VSC_SCRATCH}/.cache/uv"
 
-# W&B local dir (offline runs buffer here before sync)
-export WANDB_DIR="${SCRATCH_ROOT}/wandb"
-
 # Suppress HF tokenizer parallelism warnings
 export TOKENIZERS_PARALLELISM="false"
 
 # Validate Hydra overrides before the real run unless explicitly disabled.
 export HPC_HYDRA_VALIDATE="${HPC_HYDRA_VALIDATE:-1}"
 
+# Optional run suffix to keep comparison runs side by side on VSC.
+export HPC_RUN_SUFFIX="${HPC_RUN_SUFFIX:-}"
+export HPC_RUN_SUFFIX_SAFE="${HPC_RUN_SUFFIX//[^[:alnum:]._-]/_}"
+if [[ -n "${HPC_RUN_SUFFIX_SAFE}" ]]; then
+    export HPC_RUN_PATH_SUFFIX="-${HPC_RUN_SUFFIX_SAFE}"
+else
+    export HPC_RUN_PATH_SUFFIX=""
+fi
+
+# Optional Moirai fine-tuning precision override for comparison runs.
+#   default / ""          -> current default TF32 behavior
+#   bf16_amp              -> force Moirai fine-tuning AMP on CUDA
+#   tf32                  -> force Moirai fine-tuning onto the TF32 path
+export MOIRAI_TRAIN_PRECISION="${MOIRAI_TRAIN_PRECISION:-}"
+
 # ── RUNTIME PATHS (derived, do not edit) ─────────────────────────────────────
-export OUTPUTS_DIR="${SCRATCH_ROOT}/outputs"   # inference + eval outputs
-export RESULTS_DIR="${SCRATCH_ROOT}/results"   # training checkpoints / adapters
+export OUTPUTS_DIR="${SCRATCH_ROOT}/outputs${HPC_RUN_PATH_SUFFIX}"   # inference + eval outputs
+export RESULTS_DIR="${SCRATCH_ROOT}/results${HPC_RUN_PATH_SUFFIX}"   # training checkpoints / adapters
 export DATA_DIR="${SCRATCH_ROOT}/data"         # processed event log data
-export LOGS_DIR="${SCRATCH_ROOT}/logs"         # Slurm stdout/stderr
+export LOGS_DIR="${SCRATCH_ROOT}/logs${HPC_RUN_PATH_SUFFIX}"         # Slurm stdout/stderr
+export DATA_OUTPUTS_DIR="${DATA_ROOT}/outputs${HPC_RUN_PATH_SUFFIX}"
+export DATA_RESULTS_DIR="${DATA_ROOT}/results${HPC_RUN_PATH_SUFFIX}"
+
+# W&B local dir (offline runs buffer here before sync)
+export WANDB_DIR="${SCRATCH_ROOT}/wandb${HPC_RUN_PATH_SUFFIX}"
 
 # ── PYTHON / UV ───────────────────────────────────────────────────────────────
 # uv binary (installed to DATA so it survives scratch cleanup)
@@ -121,13 +138,14 @@ sync_data_to_scratch() {
 # Call at end of each job to persist results.
 sync_results_to_data() {
     echo "[sync] Copying outputs/results from SCRATCH to DATA..."
+    mkdir -p "${DATA_OUTPUTS_DIR}" "${DATA_RESULTS_DIR}"
     rsync -av \
         "${OUTPUTS_DIR}/" \
-        "${DATA_ROOT}/outputs/" 2>&1 | tail -5
+        "${DATA_OUTPUTS_DIR}/" 2>&1 | tail -5
     rsync -av \
         "${RESULTS_DIR}/" \
-        "${DATA_ROOT}/results/" 2>&1 | tail -5
-    echo "[sync] Results persisted to ${DATA_ROOT}"
+        "${DATA_RESULTS_DIR}/" 2>&1 | tail -5
+    echo "[sync] Results persisted to ${DATA_OUTPUTS_DIR} and ${DATA_RESULTS_DIR}"
 }
 
 # ── HELPER: run a python module via uv in the project virtualenv ──────────────
@@ -175,6 +193,11 @@ print_job_info() {
     echo "  Node:       $(hostname)"
     echo "  Project:    ${PROJECT_ROOT}"
     echo "  Scratch:    ${SCRATCH_ROOT}"
+    echo "  Run suffix: ${HPC_RUN_SUFFIX_SAFE:-default}"
+    echo "  Outputs:    ${OUTPUTS_DIR}"
+    echo "  Results:    ${RESULTS_DIR}"
+    echo "  Persisted:  ${DATA_OUTPUTS_DIR} | ${DATA_RESULTS_DIR}"
+    echo "  Moirai precision override: ${MOIRAI_TRAIN_PRECISION:-default}"
     echo "  HF cache:   ${HF_HOME}"
     echo "  GPU:        $(nvidia-smi --query-gpu=name --format=csv,noheader 2>/dev/null | head -1 || echo 'N/A')"
     echo "  Started:    $(date)"
