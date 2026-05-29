@@ -20,7 +20,7 @@ Usage:
 
     # Evaluate a specific subdirectory (single model + dataset)
     python -m pmf_tsfm.evaluate \\
-        results_dir=outputs/zero_shot/BPI2017/chronos_bolt_small
+        results_dir=outputs/zero_shot/bpi2017/chronos_bolt_small
 
     # Evaluate lora or full_tune results
     python -m pmf_tsfm.evaluate task=lora_tune
@@ -59,11 +59,11 @@ def find_result_files(results_dir: Path) -> list[tuple[Path, str, str]]:
         stem = pred_file.stem.replace("_predictions", "")
         # Split on first underscore: dataset names may contain underscores
         # Prefer splitting using the parent directory names when available:
-        #   .../BPI2017/chronos_bolt_small/BPI2017_chronos_bolt_small_predictions.npy
+        #   .../bpi2017/chronos_bolt_small/bpi2017_chronos_bolt_small_predictions.npy
         parent_parts = pred_file.parent.parts
         if len(parent_parts) >= 2:
             model_name = parent_parts[-1]  # e.g. chronos_bolt_small
-            dataset_name = parent_parts[-2]  # e.g. BPI2017
+            dataset_name = parent_parts[-2]  # e.g. bpi2017
         else:
             # Fallback: split filename on first underscore
             parts = stem.split("_", 1)
@@ -113,7 +113,7 @@ def evaluate_single(
 
     Args:
         results_dir: Directory that contains the prediction .npy files
-        dataset_name: Name of dataset (e.g. BPI2017)
+        dataset_name: Name of dataset (e.g. bpi2017)
         model_name:   Name of model   (e.g. chronos_bolt_small)
         save:         Write metrics JSON next to the prediction files
 

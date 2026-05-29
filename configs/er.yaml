@@ -3,13 +3,13 @@
 # Entropic Relevance (ER) evaluation configuration.
 #
 # Usage:
-#   # Chronos-2 zero-shot on BPI2017
+#   # Chronos-2 zero-shot on bpi2017
 #   python -m pmf_tsfm.er.evaluate_er model=chronos/chronos2 data=bpi2017
 #
-#   # Moirai-2.0 zero-shot on BPI2017
+#   # Moirai-2.0 zero-shot on bpi2017
 #   python -m pmf_tsfm.er.evaluate_er model=moirai/2_0_small data=bpi2017
 #
-#   # TimesFM-2.5 zero-shot on BPI2017
+#   # TimesFM-2.5 zero-shot on bpi2017
 #   python -m pmf_tsfm.er.evaluate_er model=timesfm/2_5_200m data=bpi2017
 #
 #   # Evaluate all paper models across all datasets (multirun)

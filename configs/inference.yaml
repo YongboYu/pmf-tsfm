@@ -9,15 +9,15 @@
 #
 #   # After LoRA fine-tuning (task=lora_tune routes output separately)
 #   python -m pmf_tsfm.inference model=chronos/bolt_small data=bpi2017 \
-#     task=lora_tune lora_adapter_path=results/lora_tune/BPI2017/chronos_bolt_small/lora_adapter/best
+#     task=lora_tune lora_adapter_path=results/lora_tune/bpi2017/chronos_bolt_small/lora_adapter/best
 #
 #   # After full fine-tuning (task=full_tune routes output separately)
 #   python -m pmf_tsfm.inference model=chronos/bolt_small data=bpi2017 \
-#     task=full_tune checkpoint_path=results/full_tune/BPI2017/chronos_bolt_small/checkpoints/best
+#     task=full_tune checkpoint_path=results/full_tune/bpi2017/chronos_bolt_small/checkpoints/best
 #
 #   # Chronos-2 full fine-tune (HF checkpoint directory)
 #   python -m pmf_tsfm.inference model=chronos/chronos2 data=bpi2017 \
-#     task=full_tune checkpoint_path=results/full_tune/BPI2017/chronos2/checkpoints/best
+#     task=full_tune checkpoint_path=results/full_tune/bpi2017/chronos2/checkpoints/best
 #
 #   # Device override (for local mac testing vs cluster)
 #   python -m pmf_tsfm.inference device=mps model=chronos/bolt_small data=bpi2017
@@ -43,7 +43,7 @@ device: cuda
 prediction_length: 7
 
 # LoRA adapter path — set to load LoRA-adapted weights for inference
-# Example: results/lora_tune/BPI2017/chronos_bolt_small/lora_adapter/best
+# Example: results/lora_tune/bpi2017/chronos_bolt_small/lora_adapter/best
 lora_adapter_path: null
 
 # Full fine-tune checkpoint path — set to load fully fine-tuned weights

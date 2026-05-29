@@ -147,15 +147,11 @@ MODEL="\${MODELS[\$MODEL_IDX]}"
 DATASET="\${DATASETS[\$DATASET_IDX]}"
 MODEL_LABEL="\${MODEL//\//_}"
 
-declare -A DATASET_NAMES=(
-    ["bpi2017"]="BPI2017" ["bpi2019_1"]="BPI2019_1"
-    ["sepsis"]="Sepsis" ["hospital_billing"]="Hospital_Billing"
-)
 # Chronos-2 config name vs directory name differ
 declare -A MODEL_NAME_MAP=(
     ["chronos_chronos2"]="chronos_2"
 )
-DATA_NAME="\${DATASET_NAMES[\${DATASET}]}"
+DATA_NAME="\${DATASET}"
 RAW_DIR_NAME="\${MODEL_LABEL}"
 DIR_NAME="\${MODEL_NAME_MAP[\${RAW_DIR_NAME}]:-\${RAW_DIR_NAME}}"
 

@@ -1,8 +1,8 @@
 # Hospital Billing dataset
 # Shape: (726, 73)
 # Date range: 2013-07-04 to 2015-06-29
-name: Hospital_Billing
-path: ${paths.data_dir}/Hospital_Billing.parquet
+name: hospital_billing
+path: ${paths.data_dir}/hospital_billing.parquet
 
 # Data split ratio [train, val, test]
 split_ratio: [0.6, 0.2, 0.2]

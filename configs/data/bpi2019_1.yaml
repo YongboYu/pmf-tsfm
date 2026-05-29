@@ -1,8 +1,8 @@
 # BPI Challenge 2019 dataset (subset 1)
 # Shape: (307, 149)
 # Date range: 2018-02-08 to 2018-12-11
-name: BPI2019_1
-path: ${paths.data_dir}/BPI2019_1.parquet
+name: bpi2019_1
+path: ${paths.data_dir}/bpi2019_1.parquet
 
 # Data split ratio [train, val, test]
 split_ratio: [0.6, 0.2, 0.2]

@@ -1,8 +1,8 @@
 # Sepsis Cases dataset
 # Shape: (459, 135)
 # Date range: 2014-01-03 to 2015-04-06
-name: Sepsis
-path: ${paths.data_dir}/Sepsis.parquet
+name: sepsis
+path: ${paths.data_dir}/sepsis.parquet
 
 # Data split ratio [train, val, test]
 split_ratio: [0.6, 0.2, 0.2]

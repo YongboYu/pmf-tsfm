@@ -59,7 +59,7 @@ exists). The "compared to what?" reference.
 ### Demo vocabulary
 
 **Bundled log**:
-One of the four named logs shipped with the demo (BPI2017, BPI2019_1, Sepsis, Hospital_Billing),
+One of the four named logs shipped with the demo (bpi2017, bpi2019_1, sepsis, hospital_billing),
 for which forecasts are precomputed.
 _Avoid_: example, sample.
 
