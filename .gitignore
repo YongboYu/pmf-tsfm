@@ -233,3 +233,19 @@ presentation/
 
 # Reference scripts and papers (local working copies, not part of the codebase)
 temp_ref/
+
+# Presentation sub-project (own tooling, WIP — kept local)
+slides/
+
+# Analysis notebooks (regenerated from results, large output cells)
+notebooks/
+
+# Experiment run artifacts / local data sync
+wandb/
+.hydra_outputs/
+data/hpc_sync/
+
+# Local Claude Code agent/skill tooling (machine-specific)
+.agents/
+.claude/
+skills-lock.json
