@@ -150,12 +150,7 @@ MODEL="\${MODELS[\$MODEL_IDX]}"
 DATASET="\${DATASETS[\$DATASET_IDX]}"
 MODEL_LABEL="\${MODEL//\//_}"
 
-# Derive dataset display name (matches results directory naming)
-declare -A DATASET_NAMES=(
-    ["bpi2017"]="BPI2017" ["bpi2019_1"]="BPI2019_1"
-    ["sepsis"]="Sepsis" ["hospital_billing"]="Hospital_Billing"
-)
-DATA_NAME="\${DATASET_NAMES[\${DATASET}]}"
+DATA_NAME="\${DATASET}"
 
 ADAPTER_PATH="\${RESULTS_DIR}/lora_tune/\${DATA_NAME}/\${MODEL_LABEL}/lora_adapter/best"
 

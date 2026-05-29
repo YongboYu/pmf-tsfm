@@ -1,6 +1,0 @@
-outs:
-- md5: 918d1c8f58b0a40ae34c66c742701933.dir
-  size: 1314593118
-  nfiles: 4
-  hash: md5
-  path: processed_logs

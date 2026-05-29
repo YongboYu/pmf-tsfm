@@ -37,14 +37,6 @@ declare -A LORA_CONFIGS=(
 
 MODELS=("chronos/bolt_small" "chronos/bolt_base" "moirai/1_1_small" "moirai/1_1_large")
 
-# Dataset config name → canonical data.name used in output paths (must match data config)
-declare -A DATASET_NAMES=(
-    ["bpi2017"]="BPI2017"
-    ["bpi2019_1"]="BPI2019_1"
-    ["sepsis"]="Sepsis"
-    ["hospital_billing"]="Hospital_Billing"
-)
-
 echo ""
 echo "============================================================"
 echo "  LoRA Fine-tuning + Inference — All Variants × All Datasets"
@@ -62,7 +54,7 @@ TRAIN_OK=0; TRAIN_FAIL=0; TRAIN_SKIP=0
 INFER_OK=0; INFER_FAIL=0; INFER_SKIP=0
 
 for DATASET in $DATASETS; do
-    DATA_NAME="${DATASET_NAMES[$DATASET]}"
+    DATA_NAME="${DATASET}"
 
     for MODEL in "${MODELS[@]}"; do
         LORA_CFG="${LORA_CONFIGS[$MODEL]}"

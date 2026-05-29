@@ -1,6 +1,6 @@
 _target_: src.data.timeseries_datamodules.TimeSeriesForecastingData
-dataset_name: "BPI2017"
-data_dir: "${paths.data_dir}/time_series/BPI2017.parquet"
+dataset_name: "bpi2017"
+data_dir: "${paths.data_dir}/time_series/bpi2017.parquet"
 #batch_size: 128
 # shape:（319，21）
 #  Start Date: 2016-02-10 00:00:00+00:00

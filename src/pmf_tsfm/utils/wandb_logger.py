@@ -10,7 +10,7 @@ Typical usage
 -------------
     from pmf_tsfm.utils.wandb_logger import WandbRun, init_run
 
-    run = init_run(cfg, job_type="inference", name="chronos2/BPI2017")
+    run = init_run(cfg, job_type="inference", name="chronos2/bpi2017")
     run.log({"train/loss": 0.42}, step=1)
     run.log_summary({"mae_mean": 1.23, "elapsed_s": 42.0})
     run.finish()

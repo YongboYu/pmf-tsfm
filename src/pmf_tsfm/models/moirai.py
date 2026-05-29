@@ -315,7 +315,7 @@ class MoiraiAdapter(BaseAdapter, LoRAMixin, FullTuneMixin):
             failed += seq_failed
 
             # Release GPU memory after each sequence to prevent accumulation across
-            # many sequences (the root cause of the OOM crash on BPI2019_1/moirai_1_1_small).
+            # many sequences (the root cause of the OOM crash on bpi2019_1/moirai_1_1_small).
             try:
                 import torch
 

@@ -15,7 +15,7 @@
 #
 #   # Evaluate a single model+dataset directory directly
 #   python -m pmf_tsfm.evaluate \
-#     results_dir=outputs/zero_shot/BPI2017/chronos_bolt_small
+#     results_dir=outputs/zero_shot/bpi2017/chronos_bolt_small
 
 defaults:
   - _self_

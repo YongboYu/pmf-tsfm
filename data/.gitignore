@@ -1,3 +1,10 @@
+# Large data assets — downloaded from Zenodo (and HuggingFace), never committed
 /raw_logs
 /time_series
 /processed_logs
+
+# Regenerated locally by `python -m pmf_tsfm.data.preprocess`
+/processed
+
+# Local HPC sync staging
+/hpc_sync

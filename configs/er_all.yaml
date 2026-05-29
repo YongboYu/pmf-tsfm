@@ -7,7 +7,7 @@
 # to avoid repeated XES log loading (dominant I/O cost on large logs).
 #
 # Usage:
-#   # Evaluate all discovered models for BPI2017
+#   # Evaluate all discovered models for bpi2017
 #   python -m pmf_tsfm.er.evaluate_er_all data=bpi2017
 #
 #   # All four datasets in one multirun (4 XES parses total)

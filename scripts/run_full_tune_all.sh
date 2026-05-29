@@ -39,14 +39,6 @@ MODELS=(
     "moirai/1_1_large"
 )
 
-# Dataset config name → canonical data.name used in output paths
-declare -A DATASET_NAMES=(
-    ["bpi2017"]="BPI2017"
-    ["bpi2019_1"]="BPI2019_1"
-    ["sepsis"]="Sepsis"
-    ["hospital_billing"]="Hospital_Billing"
-)
-
 echo ""
 echo "============================================================"
 echo "  Full Fine-tuning + Inference — All Variants × All Datasets"
@@ -64,7 +56,7 @@ TRAIN_OK=0; TRAIN_FAIL=0; TRAIN_SKIP=0
 INFER_OK=0; INFER_FAIL=0; INFER_SKIP=0
 
 for DATASET in $DATASETS; do
-    DATA_NAME="${DATASET_NAMES[$DATASET]}"
+    DATA_NAME="${DATASET}"
 
     for MODEL in "${MODELS[@]}"; do
         MODEL_LABEL="${MODEL//\//_}"

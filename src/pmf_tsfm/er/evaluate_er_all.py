@@ -13,7 +13,7 @@ Instead of loading and parsing the XES log separately for each model
   4. Save per-model JSON + a combined summary JSON
 
 For N models × M windows this reduces XES parsing from O(N) to O(1)
-and sublog extraction from O(N × M) to O(M).  On large logs (BPI2017
+and sublog extraction from O(N × M) to O(M).  On large logs (bpi2017
 with ~1 million events) this is the dominant saving.
 
 Models are auto-discovered by scanning
@@ -23,7 +23,7 @@ to a specific subset (useful when only the paper models are of interest).
 
 Usage
 -----
-    # Evaluate all discovered models for BPI2017 (zero-shot)
+    # Evaluate all discovered models for bpi2017 (zero-shot)
     python -m pmf_tsfm.er.evaluate_er_all data=bpi2017
 
     # All datasets in one go (one XES parse per dataset)
@@ -50,7 +50,6 @@ import numpy as np
 import pandas as pd
 from omegaconf import DictConfig, OmegaConf
 
-from pmf_tsfm.data.assets import resolve_dataset_asset_path
 from pmf_tsfm.er.automaton import compute_er
 from pmf_tsfm.er.dfg import (
     build_prediction_dfg,
@@ -175,11 +174,7 @@ def run_er_all(cfg: DictConfig) -> dict:
         return {}
 
     # ---- derive test-window date ranges (use first model as reference) ----
-    ts_parquet = resolve_dataset_asset_path(
-        Path(cfg.data.path),
-        dataset_name=dataset_name,
-        asset_label="time-series parquet",
-    )
+    ts_parquet = Path(cfg.data.path)
     n_windows_ref = model_preds[0][1].shape[0]
     starts, ends = _get_test_dates(ts_parquet, val_end, pred_len)
     assert len(starts) == n_windows_ref, (
@@ -188,11 +183,7 @@ def run_er_all(cfg: DictConfig) -> dict:
     print(f"\n[1/4] Test period: {starts[0].date()} → {ends[-1].date()} ({n_windows_ref} windows)")
 
     # ---- load and prepare event log ONCE ----
-    log_path = resolve_dataset_asset_path(
-        Path(cfg.paths.log_dir) / f"{dataset_name}.xes",
-        dataset_name=dataset_name,
-        asset_label="processed event log",
-    )
+    log_path = Path(cfg.paths.log_dir) / f"{dataset_name}.xes"
     print(f"[2/4] Loading XES log: {log_path}")
     t_xes = time.perf_counter()
     raw_log = load_event_log(log_path)

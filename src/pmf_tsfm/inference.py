@@ -4,7 +4,7 @@ Forecasting inference script — zero-shot, LoRA-adapted, and fully fine-tuned.
 Generates predictions only. Use evaluate.py for metrics computation.
 
 Usage:
-    # Zero-shot (default: chronos/bolt_small on BPI2017)
+    # Zero-shot (default: chronos/bolt_small on bpi2017)
     python -m pmf_tsfm.inference
 
     # Specific model and dataset
@@ -19,15 +19,15 @@ Usage:
 
     # After LoRA fine-tuning
     python -m pmf_tsfm.inference model=chronos/bolt_small data=bpi2017 \\
-      task=lora_tune lora_adapter_path=results/lora_tune/BPI2017/chronos_bolt_small/lora_adapter/best
+      task=lora_tune lora_adapter_path=results/lora_tune/bpi2017/chronos_bolt_small/lora_adapter/best
 
     # After full fine-tuning (Chronos Bolt or Moirai)
     python -m pmf_tsfm.inference model=chronos/bolt_small data=bpi2017 \\
-      task=full_tune checkpoint_path=results/full_tune/BPI2017/chronos_bolt_small/checkpoints/best
+      task=full_tune checkpoint_path=results/full_tune/bpi2017/chronos_bolt_small/checkpoints/best
 
     # After full fine-tuning (Chronos 2)
     python -m pmf_tsfm.inference model=chronos/chronos2 data=bpi2017 \\
-      task=full_tune checkpoint_path=results/full_tune/BPI2017/chronos2/checkpoints/best
+      task=full_tune checkpoint_path=results/full_tune/bpi2017/chronos2/checkpoints/best
 """
 
 import json

@@ -43,10 +43,10 @@ Four process mining event logs from the BPI Challenge and healthcare domains:
 
 | Dataset | Description | Cases | DFs |
 |---------|-------------|------:|----:|
-| **BPI2017** | Loan application process | 40,229 | 21 |
-| **BPI2019_1** | Purchase order process (3-way match) | 197,521 | 149 |
-| **Sepsis** | Sepsis clinical pathway | 999 | 135 |
-| **Hospital Billing** | Hospital billing process | 78,828 | 73 |
+| **bpi2017** | Loan application process | 40,229 | 21 |
+| **bpi2019_1** | Purchase order process (3-way match) | 197,521 | 149 |
+| **sepsis** | Sepsis clinical pathway | 999 | 135 |
+| **hospital_billing** | Hospital billing process | 78,828 | 73 |
 
 The experiment data assets are published on [Zenodo](https://zenodo.org/records/18327515). After extraction, the archive is organized as:
 
@@ -136,7 +136,7 @@ python -m pmf_tsfm.inference model=chronos/bolt_small data=bpi2017
 
 # 2. Evaluate that output directory
 python -m pmf_tsfm.evaluate \
-  results_dir=outputs/zero_shot/BPI2017/chronos_bolt_small
+  results_dir=outputs/zero_shot/bpi2017/chronos_bolt_small
 
 # 3. Evaluate Entropic Relevance on the same predictions
 python -m pmf_tsfm.er.evaluate_er model=chronos/bolt_small data=bpi2017
@@ -151,7 +151,7 @@ All experiment entry points are [Hydra](https://hydra.cc/)-based.
 ### Zero-shot inference
 
 ```bash
-# Default run (Chronos Bolt Small on BPI2017)
+# Default run (Chronos Bolt Small on bpi2017)
 python -m pmf_tsfm.inference
 
 # Single model + dataset
@@ -180,11 +180,11 @@ python -m pmf_tsfm.train \
 ```bash
 # LoRA-adapted inference
 python -m pmf_tsfm.inference model=chronos/bolt_small data=bpi2017 \
-  task=lora_tune lora_adapter_path=results/lora_tune/BPI2017/chronos_bolt_small/lora_adapter/best
+  task=lora_tune lora_adapter_path=results/lora_tune/bpi2017/chronos_bolt_small/lora_adapter/best
 
 # Fully fine-tuned inference
 python -m pmf_tsfm.inference model=chronos/bolt_small data=bpi2017 \
-  task=full_tune checkpoint_path=results/full_tune/BPI2017/chronos_bolt_small/checkpoints/best
+  task=full_tune checkpoint_path=results/full_tune/bpi2017/chronos_bolt_small/checkpoints/best
 ```
 
 ### Evaluation
@@ -199,7 +199,7 @@ python -m pmf_tsfm.evaluate task=full_tune
 
 # Evaluate a specific model/dataset directory
 python -m pmf_tsfm.evaluate \
-  results_dir=outputs/zero_shot/BPI2017/chronos_bolt_small
+  results_dir=outputs/zero_shot/bpi2017/chronos_bolt_small
 
 # Entropic Relevance on one model/dataset pair
 python -m pmf_tsfm.er.evaluate_er model=chronos/bolt_small data=bpi2017

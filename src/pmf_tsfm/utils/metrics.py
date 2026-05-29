@@ -4,7 +4,7 @@ Metrics computation for time series forecasting evaluation.
 Follows the paper's Eq. (1)-(2) exactly; std is across DF series (features).
 
 Predictions shape: (num_sequences, prediction_length, num_features)
-  e.g. for BPI2017: (58, 7, 21)
+  e.g. for bpi2017: (58, 7, 21)
 
 MAE (Eq. 1):
     MAE_d  = mean over (seq s, horizon h) of |y_{s,h,d} - yhat_{s,h,d}|
