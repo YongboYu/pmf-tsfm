@@ -1,6 +1,0 @@
-outs:
-- md5: 0fab07e72696341f9766489e86bfb225.dir
-  size: 853615074
-  nfiles: 4
-  hash: md5
-  path: raw_logs

@@ -1,6 +1,0 @@
-outs:
-- md5: 3035da212e6a25541e62f4a662ffc790.dir
-  size: 382571
-  nfiles: 4
-  hash: md5
-  path: time_series
