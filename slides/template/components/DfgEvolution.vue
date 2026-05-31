@@ -54,7 +54,7 @@ const weekLabel = computed(() =>
 // Hero-edge sparkline geometry (per render_diagram.js buildSpark). Frame-independent scales;
 // the data-centred y-range shows the gentle weekly wiggle without faking a dramatic drift.
 const SPARK = (() => {
-  const dims = { W: 200, H: 96, padL: 26, padR: 12, padT: 12, padB: 20 }
+  const dims = { W: 200, H: 140, padL: 26, padR: 12, padT: 16, padB: 24 }
   const vals = dfgData.frames.map((f) => f.weights[dfgData.hero])
   const { X, Y } = sparkScale(vals, dims)
   return { ...dims, vals, X, Y, n: dfgData.frames.length }
@@ -97,7 +97,7 @@ const spark = computed(() => {
       data-testid="log-slice" :data-slice-index="state.sliceIndex"
       :viewBox="`0 0 ${LOG.W} ${LOG.H}`" width="100%" height="100%"
     >
-      <text :x="LOG.x0" y="10" font-size="9" fill="#64748b" font-weight="600">event log</text>
+      <text :x="LOG.x0" y="10" style="font-size: 9px" fill="#64748b" font-weight="600">event log</text>
       <rect
         v-for="(cell, k) in LOG.cells" :key="k"
         :x="cell.x" :y="cell.y" :width="LOG.bw" :height="LOG.bh" rx="1.5" fill="#e2e8f0"
@@ -110,7 +110,7 @@ const spark = computed(() => {
         />
         <text
           :x="LOG.x0 - 2 + LOG.bandW / 2" :y="LOG.labelY" text-anchor="middle"
-          font-size="9" font-weight="700" :fill="dfgData.accent"
+          style="font-size: 9px" font-weight="700" :fill="dfgData.accent"
         >{{ weekLabel }}</text>
       </g>
     </svg>
@@ -128,7 +128,7 @@ const spark = computed(() => {
         <marker
           v-for="m in [{ id: 'arrow', col: '#475569' }, { id: 'arrowA', col: dfgData.accent }]"
           :key="m.id" :id="m.id" viewBox="0 0 10 10" refX="8" refY="5"
-          markerWidth="3.4" markerHeight="3.4" orient="auto-start-reverse"
+          markerWidth="2.8" markerHeight="2.8" orient="auto-start-reverse"
           markerUnits="userSpaceOnUse"
         >
           <path d="M0,0 L10,5 L0,10 z" :fill="m.col" />
@@ -161,7 +161,7 @@ const spark = computed(() => {
         data-testid="hero-label"
         :x="(edgeGeo[dfgData.hero][0] + edgeGeo[dfgData.hero][2]) / 2 + 6"
         :y="(edgeGeo[dfgData.hero][1] + edgeGeo[dfgData.hero][3]) / 2 - 1"
-        font-size="3.4" font-weight="700" :fill="state.heroLabel.fill"
+        style="font-size: 3.4px" font-weight="700" :fill="state.heroLabel.fill"
       >{{ state.heroLabel.text }}</text>
       <!-- Nodes drawn above edges. Activity = labelled rect; start ● / end ■. -->
       <g v-for="node in dfgData.nodes" :key="node.id" :data-node="node.id">
@@ -172,7 +172,7 @@ const spark = computed(() => {
           />
           <text
             :x="node.x" :y="node.y + 1.3" text-anchor="middle"
-            font-size="3.4" fill="#0f172a"
+            style="font-size: 3.4px" fill="#0f172a"
           >{{ node.label }}</text>
         </template>
         <circle
@@ -197,7 +197,10 @@ const spark = computed(() => {
         <div class="slot slot-spark">
     <!-- Accumulating hero-edge sparkline: observed line grows one point per frame; the
          held-out forecast lands as a dashed accent segment on the final frame. -->
-    <svg data-testid="sparkline" :viewBox="`0 0 ${SPARK.W} ${SPARK.H}`" width="100%">
+    <svg
+      data-testid="sparkline" :viewBox="`0 0 ${SPARK.W} ${SPARK.H}`"
+      width="100%" height="100%" preserveAspectRatio="xMidYMin meet"
+    >
       <line
         :x1="SPARK.padL" :y1="SPARK.H - SPARK.padB" :x2="SPARK.W - SPARK.padR"
         :y2="SPARK.H - SPARK.padB" stroke="#cbd5e1" stroke-width="1"
@@ -208,7 +211,7 @@ const spark = computed(() => {
       />
       <text
         v-for="(f, k) in dfgData.frames" :key="k"
-        :x="SPARK.X(k)" :y="SPARK.H - 6" text-anchor="middle" font-size="8" fill="#94a3b8"
+        :x="SPARK.X(k)" :y="SPARK.H - 6" text-anchor="middle" style="font-size: 8px" fill="#94a3b8"
       >t{{ k + 1 }}</text>
       <polyline
         data-testid="spark-line" fill="none" stroke="#0f172a" stroke-width="2"
@@ -226,7 +229,7 @@ const spark = computed(() => {
       />
       <text
         :x="spark.valLabel.x" :y="spark.valLabel.y" :text-anchor="spark.valLabel.anchor"
-        font-size="9" font-weight="700" :fill="spark.valLabel.fill"
+        style="font-size: 9px" font-weight="700" :fill="spark.valLabel.fill"
       >{{ spark.valLabel.text }}</text>
     </svg>
         </div>
@@ -245,11 +248,15 @@ const spark = computed(() => {
 /* Woven full-width layout, ported from prototypes/dfg-anim/layout.html (woven branch).
    Monochrome + the single KU Leuven accent (dfgData.accent #1d4ed8); no 3D, no shadows. */
 .dfg-evolution {
+  position: relative;
   display: flex;
   flex-direction: column;
   width: 100%;
   height: 100%;
   min-height: 0;
+  /* Reserve the forecast-caption strip in every frame so the woven row never shifts
+     when step ④ appears on the forecast frame (the caption is absolutely positioned). */
+  padding-bottom: 22px;
   color: #0f172a;
   font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
 }
@@ -283,8 +290,8 @@ const spark = computed(() => {
   max-height: 160px;
 }
 .slot-spark {
-  flex: none;
-  height: 104px;
+  flex: 1;
+  min-height: 0;
 }
 .cap {
   font-size: 12px;
@@ -298,7 +305,10 @@ const spark = computed(() => {
   text-align: center;
 }
 .cap-forecast {
-  margin-top: 8px;
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
   font-weight: 600;
   font-size: 12.5px;
 }

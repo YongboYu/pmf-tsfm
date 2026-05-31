@@ -49,6 +49,10 @@ For brief / hard constraints / spoken lines, see `../SLIDES.md`.
 - One sentence: *"Each DF edge becomes a univariate time series — like website
   traffic per day, but for one activity transition in your process."*
 - Calibration: *"We aggregate daily, forecast 7 days ahead."*
+- **Layout note:** rendered as one **full-width woven figure** (`DfgEvolution.vue`) — the
+  workflow diagram and DFG-evolution animation are a single unified picture advanced by
+  `v-click` (frames t₁→t₄, climaxing on the forecast frame). Departs from the original
+  two-column split; pre-authorised by PRD #60 / issue #63.
 
 ## Beat 3 — Where current PMF stands (75s)
 **Purpose:** Anchor the gap that motivates TSFMs.

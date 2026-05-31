@@ -5,7 +5,7 @@
 
 // sqrt scaling compresses the weight range so busy chain edges don't swamp the hero edge.
 export const strokeWidthFor = (weight, maxFreq) =>
-  Number((0.7 + 2.9 * Math.sqrt(weight / maxFreq)).toFixed(2))
+  Number((0.5 + 1.6 * Math.sqrt(weight / maxFreq)).toFixed(2))
 
 const INK = '#0f172a'
 const NEUTRAL = '#475569'

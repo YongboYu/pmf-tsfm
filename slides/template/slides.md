@@ -69,40 +69,22 @@ PPM uses case prefixes. PMF uses something different — let me show you."
 -->
 
 ---
-layout: two-cols-header
+clicks: 3
 ---
+
+<script setup>
+import { frameForClicks } from './components/frameForClicks.js'
+import { dfgData } from './components/dfgData.js'
+</script>
 
 # From event log to DF time series
 
-::left::
-
-**Workflow**
-
-1. Event log  →  time-windowed sublogs
-2. Each window  →  a time-indexed DFG
-3. Each DF edge  →  one univariate time series
-4. Forecast next horizon  →  forecasted DFG
-
-<div class="mt-6 text-sm opacity-80">
-<em>Each DF edge becomes a univariate time series — like website traffic per day, but for one activity transition.</em>
+<div class="mt-2" style="height: 360px">
+  <DfgEvolution :frame="frameForClicks($clicks, dfgData.frames.length)" />
 </div>
 
-<div class="mt-2 text-sm opacity-60">
-We aggregate <strong>daily</strong>, forecast <strong>7 days</strong> ahead.
-</div>
-
-::right::
-
-<div class="border-2 border-dashed border-gray-400 rounded-lg p-4 flex items-center justify-center min-h-[300px]">
-<div class="text-center opacity-60 text-sm">
-[PLACEHOLDER]<br/>
-DFG-evolution animation<br/>
-(10–15s gif / Manim)<br/><br/>
-DFG at t₁ → t₂ → t₃<br/>
-↓<br/>
-forecasted DFG at t₄<br/>
-(predicted edges highlighted)
-</div>
+<div class="mt-3 text-sm opacity-70 text-center">
+Each DF edge becomes a univariate time series — we aggregate <strong>daily</strong>, forecast <strong>7 days</strong> ahead.
 </div>
 
 <!--
