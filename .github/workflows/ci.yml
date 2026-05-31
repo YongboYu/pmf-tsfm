@@ -60,6 +60,9 @@ jobs:
         with:
           enable-cache: true
 
+      # graphviz `dot` binary — required by demo/render.py (DFG → SVG)
+      - run: sudo apt-get update && sudo apt-get install -y graphviz
+
       - run: uv sync --frozen --group dev
 
       - run: |

@@ -158,8 +158,8 @@ ignore_errors = true
 # =============================================================================
 
 [tool.pytest.ini_options]
-testpaths = ["tests"]
-pythonpath = ["src"]
+testpaths = ["tests", "demo/tests"]
+pythonpath = ["src", "demo"]
 norecursedirs = ["data", "logs", "outputs", "results", "temp"]
 addopts = "-v --tb=short --strict-markers"
 markers = [

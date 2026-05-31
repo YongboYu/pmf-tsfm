@@ -1,0 +1,136 @@
+{
+  "nodes": [
+    {
+      "label": "▶",
+      "id": 0,
+      "freq": 815
+    },
+    {
+      "label": "■",
+      "id": 1,
+      "freq": 744
+    },
+    {
+      "label": "O_Create Offer",
+      "id": 2,
+      "freq": 0
+    },
+    {
+      "label": "O_Created",
+      "id": 3,
+      "freq": 815
+    },
+    {
+      "label": "O_Sent (mail and online)",
+      "id": 4,
+      "freq": 745
+    },
+    {
+      "label": "O_Cancelled",
+      "id": 5,
+      "freq": 102
+    },
+    {
+      "label": "O_Returned",
+      "id": 6,
+      "freq": 335
+    },
+    {
+      "label": "O_Accepted",
+      "id": 7,
+      "freq": 304
+    },
+    {
+      "label": "O_Sent (online only)",
+      "id": 8,
+      "freq": 41
+    },
+    {
+      "label": "O_Refused",
+      "id": 9,
+      "freq": 85
+    }
+  ],
+  "arcs": [
+    {
+      "from": 0,
+      "to": 2,
+      "freq": 815
+    },
+    {
+      "from": 2,
+      "to": 3,
+      "freq": 815
+    },
+    {
+      "from": 3,
+      "to": 4,
+      "freq": 745
+    },
+    {
+      "from": 4,
+      "to": 5,
+      "freq": 45
+    },
+    {
+      "from": 5,
+      "to": 1,
+      "freq": 374
+    },
+    {
+      "from": 4,
+      "to": 6,
+      "freq": 313
+    },
+    {
+      "from": 6,
+      "to": 7,
+      "freq": 304
+    },
+    {
+      "from": 7,
+      "to": 1,
+      "freq": 277
+    },
+    {
+      "from": 3,
+      "to": 5,
+      "freq": 22
+    },
+    {
+      "from": 3,
+      "to": 8,
+      "freq": 41
+    },
+    {
+      "from": 8,
+      "to": 6,
+      "freq": 22
+    },
+    {
+      "from": 6,
+      "to": 9,
+      "freq": 72
+    },
+    {
+      "from": 9,
+      "to": 1,
+      "freq": 93
+    },
+    {
+      "from": 4,
+      "to": 9,
+      "freq": 13
+    },
+    {
+      "from": 6,
+      "to": 5,
+      "freq": 22
+    },
+    {
+      "from": 8,
+      "to": 5,
+      "freq": 13
+    }
+  ]
+}

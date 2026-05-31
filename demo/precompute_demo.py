@@ -1,0 +1,127 @@
+"""Precompute bundled demo assets from existing zero-shot outputs.
+
+The bundled path is a holdout backtest (ADR-0004): for each bundled dataset ×
+demo model we reuse the **final forecast window** already in ``predictions.npy``
+(the held-out last week — forecast origin ``log_end − horizon``) and the matching
+``targets.npy`` (what actually happened). No model is re-run.
+
+For each pair this writes
+``demo/assets/<dataset>/<model>/{forecast_dfg.json, actual_dfg.json, metrics.json}``,
+reusing ``pmf_tsfm.er.dfg.dfg_to_json`` for DFG serialisation, the precomputed ER
+sweep for ER, and ``pmf_tsfm.utils.metrics.compute_metrics`` for MAE/RMSE.
+
+    uv run python demo/precompute_demo.py
+"""
+
+from __future__ import annotations
+
+import json
+from pathlib import Path
+from typing import Any
+
+import numpy as np
+
+from pmf_tsfm.er.dfg import dfg_to_json
+from pmf_tsfm.utils.metrics import compute_metrics
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+OUTPUTS_ROOT = REPO_ROOT / "outputs"
+ASSETS_ROOT = REPO_ROOT / "demo" / "assets"
+
+# demo model id -> on-disk model directory under outputs/zero_shot/<dataset>/
+MODEL_DIRS: dict[str, str] = {"chronos2": "chronos_2"}
+
+# Slice-1 scope: one bundled dataset x one model. Later slices widen this list.
+BUNDLED: list[tuple[str, str]] = [("bpi2017", "chronos2")]
+
+
+def frequencies_to_dfg_json(window: np.ndarray, feature_names: list[str]) -> dict[str, Any]:
+    """Build a clean DFG JSON from one window's DF-relation frequencies.
+
+    Sums the horizon, rounds, drops zero-frequency relations, and keeps the raw
+    ▶/■ markers so ``dfg_to_json`` maps them to the canonical start/end nodes —
+    no duplicate Start/End nodes and no artificial freq-1 arcs.
+
+    Args:
+        window:        shape (horizon, n_features) — one forecast/actual window.
+        feature_names: ``"A -> B"`` column names aligned with the last axis.
+
+    Returns:
+        DFG in ``{"nodes": [...], "arcs": [...]}`` format.
+    """
+    freqs = np.clip(np.round(window.sum(axis=0)), 0, None).astype(int)
+    dfg: dict[tuple[str, str], int] = {}
+    for name, freq in zip(feature_names, freqs, strict=True):
+        if freq > 0:
+            src, tgt = name.split("->", 1)
+            dfg[(src.strip(), tgt.strip())] = int(freq)
+    return dfg_to_json(dfg)
+
+
+def precompute_one(
+    dataset: str,
+    model: str,
+    *,
+    outputs_root: Path,
+    assets_root: Path,
+) -> Path:
+    """Precompute the bundled assets for one dataset × demo model.
+
+    Args:
+        dataset:      bundled dataset id (e.g. ``"bpi2017"``).
+        model:        demo model id (e.g. ``"chronos2"``).
+        outputs_root: root of the existing ``outputs/`` artifacts.
+        assets_root:  root under which ``<dataset>/<model>/`` assets are written.
+
+    Returns:
+        The asset directory that was written.
+    """
+    model_dir = MODEL_DIRS[model]
+    src_dir = outputs_root / "zero_shot" / dataset / model_dir
+
+    metadata = json.loads(next(src_dir.glob("*_metadata.json")).read_text())
+    feature_names = metadata["feature_names"]
+    prefix = metadata["data_metadata"]["dataset_name"]  # e.g. "BPI2017"
+
+    predictions = np.load(src_dir / f"{prefix}_{model_dir}_predictions.npy")
+    targets = np.load(src_dir / f"{prefix}_{model_dir}_targets.npy")
+
+    # Final window = the held-out last week (forecast origin = log_end - horizon).
+    forecast_dfg = frequencies_to_dfg_json(predictions[-1], feature_names)
+    actual_dfg = frequencies_to_dfg_json(targets[-1], feature_names)
+
+    # MAE / RMSE of just the final window (paper formula, reused).
+    final = compute_metrics(predictions[-1:], targets[-1:], feature_names)["summary"]
+
+    # ER of the final window from the precomputed ER sweep.
+    er_path = (
+        outputs_root / "er" / "zero_shot" / prefix / model_dir / f"{prefix}_{model_dir}_er.json"
+    )
+    er_windows = json.loads(er_path.read_text())["windows"]
+    metrics = {
+        "er": float(er_windows[-1]["pred_er"]),
+        "mae": float(final["MAE_mean"]),
+        "rmse": float(final["RMSE_mean"]),
+    }
+
+    out_dir = assets_root / dataset / model
+    out_dir.mkdir(parents=True, exist_ok=True)
+    # Trailing newline keeps the committed assets stable under end-of-file-fixer.
+    (out_dir / "forecast_dfg.json").write_text(
+        json.dumps(forecast_dfg, ensure_ascii=False, indent=2) + "\n"
+    )
+    (out_dir / "actual_dfg.json").write_text(
+        json.dumps(actual_dfg, ensure_ascii=False, indent=2) + "\n"
+    )
+    (out_dir / "metrics.json").write_text(json.dumps(metrics, indent=2) + "\n")
+    return out_dir
+
+
+def main() -> None:
+    for dataset, model in BUNDLED:
+        out_dir = precompute_one(dataset, model, outputs_root=OUTPUTS_ROOT, assets_root=ASSETS_ROOT)
+        print(f"wrote {out_dir.relative_to(REPO_ROOT)}")
+
+
+if __name__ == "__main__":
+    main()
