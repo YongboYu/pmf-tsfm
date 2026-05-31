@@ -2,9 +2,9 @@ import { describe, it, expect } from 'vitest'
 import { mount } from '@vue/test-utils'
 import DfgEvolution from './DfgEvolution.vue'
 
-// Stroke width for an edge weight, per the approved prototype:
-// scaleW(f) = 0.7 + 2.9 * sqrt(f / max_freq), max_freq = 927.
-const expectedWidth = (f) => 0.7 + 2.9 * Math.sqrt(f / 927)
+// Stroke width for an edge weight:
+// scaleW(f) = 0.5 + 1.6 * sqrt(f / max_freq), max_freq = 927.
+const expectedWidth = (f) => 0.5 + 1.6 * Math.sqrt(f / 927)
 
 const heroWidth = (wrapper) =>
   Number(wrapper.get('[data-edge="sent__cancelled"]').attributes('stroke-width'))

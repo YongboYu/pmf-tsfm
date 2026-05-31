@@ -15,7 +15,7 @@ export function trim(x1, y1, x2, y2, gapStart, gapEnd) {
 }
 
 // Frame-independent trimmed geometry [x1, y1, x2, y2] for every edge, keyed by edge id.
-export function edgeGeometry(nodes, edges, gapStart = 4.4, gapEnd = 4.8) {
+export function edgeGeometry(nodes, edges, gapStart = 4.4, gapEnd = 5.8) {
   const byId = Object.fromEntries(nodes.map((n) => [n.id, n]))
   return Object.fromEntries(
     edges.map((e) => {
