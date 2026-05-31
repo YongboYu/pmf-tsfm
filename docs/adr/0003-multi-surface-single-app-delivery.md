@@ -18,3 +18,8 @@ and a tool others self-host on their own logs/hardware (no caps). A Claude **Ski
   docstrings) because those *are* the MCP/REST tool schemas.
 - The agent-facing forecast tool takes a **bundled dataset name or a log URL**, not a browser file
   picker — MCP passes files as URL/base64, so the GUI upload widget has no agent equivalent.
+- **Refinement (slice design):** the agent-facing tool exposes only the *live forecasting mechanism*
+  (a log → forecast DFG); it **never serves precomputed metrics**. Precomputed bundled results +
+  accuracy metrics (ER/MAE/RMSE) are a **GUI-only** reproducibility concern. `mcp_server=True` is
+  flipped on only *after* the GUI tracer-bullet slice — building the GUI does **not** block on the
+  MCP contract, as long as the forecast functions are written agent-clean from the start.
