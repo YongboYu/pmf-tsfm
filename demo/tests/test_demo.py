@@ -1,13 +1,16 @@
-"""Tests for the bundled forecast explorer demo (slice 1).
+"""Tests for the bundled forecast explorer demo.
 
-Two deep modules are tested here through their public interfaces:
+The deep modules are tested through their public interfaces:
 
 render.py
-  - test_dfg_json_to_svg_returns_svg          valid <svg> string
-  - (further behaviours added per TDD cycle)
+  - dfg_json_to_svg — a DFG JSON renders to a valid <svg> string
+  - diff_svg        — a forecast/actual pair renders to a colour-coded overlay
+
+dfg_diff.py
+  - dfg_diff        — DF relations partition into matched / added / removed
 
 forecast.py
-  - (added per TDD cycle)
+  - forecast_bundled — reads the committed assets into the forecast triple
 
 The Gradio glue (app.py) and the precompute script are smoke-tested only.
 """
@@ -15,13 +18,15 @@ The Gradio glue (app.py) and the precompute script are smoke-tested only.
 from __future__ import annotations
 
 import json
+import re
 
 import forecast
 import numpy as np
 import pytest
+from dfg_diff import dfg_diff
 from forecast import forecast_bundled
 from precompute_demo import frequencies_to_dfg_json, precompute_one
-from render import dfg_json_to_svg
+from render import dfg_json_to_svg, diff_svg
 
 # ---------------------------------------------------------------------------
 # Shared DFG fixture — a tiny ▶ → A → B → ■ graph
@@ -73,6 +78,137 @@ def test_dfg_json_to_svg_shows_arc_weights():
     svg = dfg_json_to_svg(SMALL_DFG)
     # The A -> B arc has the distinctive weight 4.
     assert ">4<" in svg
+
+
+# ---------------------------------------------------------------------------
+# dfg_diff.dfg_diff
+#
+# Classifies DF relations (keyed on (from_label, to_label)) between a forecast
+# DFG and the actual-future DFG, with conventional diff(from=forecast, to=actual)
+# semantics:
+#   matched = in both                          (grey)
+#   added   = in actual, not forecast          (amber dashed: happened, missed)
+#   removed = in forecast, not actual          (red dashed: predicted, didn't happen)
+# ---------------------------------------------------------------------------
+
+
+def _rels(entries):
+    """The set of (from, to) relation keys in a diff class."""
+    return {(e["from"], e["to"]) for e in entries}
+
+
+def test_dfg_diff_identical_all_matched():
+    """Diffing a DFG against itself classifies every relation as matched."""
+    diff = dfg_diff(SMALL_DFG, SMALL_DFG)
+    assert _rels(diff["matched"]) == {("▶", "A"), ("A", "B"), ("B", "■")}
+    assert diff["added"] == [] and diff["removed"] == []
+
+
+def test_dfg_diff_disjoint_all_added_and_removed():
+    """No shared relations → forecast's are all removed, actual's all added."""
+    forecast = {
+        "nodes": [{"label": "▶", "id": 0}, {"label": "X", "id": 1}],
+        "arcs": [{"from": 0, "to": 1, "freq": 2}],  # ▶ -> X
+    }
+    actual = {
+        "nodes": [{"label": "▶", "id": 9}, {"label": "Y", "id": 8}],
+        "arcs": [{"from": 9, "to": 8, "freq": 3}],  # ▶ -> Y
+    }
+    diff = dfg_diff(forecast, actual)
+    assert diff["matched"] == []
+    assert _rels(diff["removed"]) == {("▶", "X")}
+    assert _rels(diff["added"]) == {("▶", "Y")}
+
+
+def test_dfg_diff_partial_overlap_is_label_keyed_with_directional_freq():
+    """Relations key on labels (not ids); freq comes from the right DFG."""
+    forecast = {
+        "nodes": [{"label": "A", "id": 0}, {"label": "B", "id": 1}, {"label": "C", "id": 2}],
+        "arcs": [
+            {"from": 0, "to": 1, "freq": 4},  # A -> B   (shared)
+            {"from": 1, "to": 2, "freq": 7},  # B -> C   (forecast only -> removed)
+        ],
+    }
+    actual = {
+        # Same labels, deliberately different ids, to prove label-keying.
+        "nodes": [{"label": "A", "id": 5}, {"label": "B", "id": 6}, {"label": "D", "id": 7}],
+        "arcs": [
+            {"from": 5, "to": 6, "freq": 9},  # A -> B   (shared, different weight)
+            {"from": 6, "to": 7, "freq": 2},  # B -> D   (actual only -> added)
+        ],
+    }
+    diff = dfg_diff(forecast, actual)
+
+    assert _rels(diff["matched"]) == {("A", "B")}
+    assert _rels(diff["added"]) == {("B", "D")}
+    assert _rels(diff["removed"]) == {("B", "C")}
+    # matched/added carry the actual weight; removed carries the forecast weight.
+    assert diff["matched"][0]["freq"] == 9
+    assert diff["added"][0]["freq"] == 2
+    assert diff["removed"][0]["freq"] == 7
+
+
+def test_dfg_diff_handles_start_end_marker_relations():
+    """Relations touching the ▶/■ markers classify like any other relation."""
+    # forecast: ▶ -> A -> ■ ; actual: ▶ -> A (drops the A -> ■ ending).
+    forecast = {
+        "nodes": [{"label": "▶", "id": 0}, {"label": "A", "id": 1}, {"label": "■", "id": 2}],
+        "arcs": [{"from": 0, "to": 1, "freq": 5}, {"from": 1, "to": 2, "freq": 5}],
+    }
+    actual = {
+        "nodes": [{"label": "▶", "id": 0}, {"label": "A", "id": 1}],
+        "arcs": [{"from": 0, "to": 1, "freq": 6}],
+    }
+    diff = dfg_diff(forecast, actual)
+    assert _rels(diff["matched"]) == {("▶", "A")}
+    assert _rels(diff["removed"]) == {("A", "■")}  # forecast predicted an ending that didn't happen
+    assert diff["added"] == []
+
+
+def test_dfg_diff_empty_inputs_yield_empty_partition():
+    """Empty DFGs diff to an empty (but well-formed) partition — no crash."""
+    empty = {"nodes": [], "arcs": []}
+    diff = dfg_diff(empty, empty)
+    assert diff == {"matched": [], "added": [], "removed": []}
+
+
+# ---------------------------------------------------------------------------
+# render.diff_svg
+# ---------------------------------------------------------------------------
+
+
+def test_diff_svg_returns_svg():
+    """A pair of DFGs renders to a single overlay SVG document string."""
+    svg = diff_svg(SMALL_DFG, ACTUAL_DFG)
+    assert isinstance(svg, str)
+    assert "<svg" in svg
+
+
+def test_diff_svg_colour_codes_the_three_diff_classes():
+    """A drifting pair emits matched (grey solid), added (amber dashed),
+    removed (red dashed) arcs — one of each."""
+    # A -> B matched; B -> D added (actual only); B -> C removed (forecast only).
+    forecast = {
+        "nodes": [{"label": "A", "id": 0}, {"label": "B", "id": 1}, {"label": "C", "id": 2}],
+        "arcs": [{"from": 0, "to": 1, "freq": 4}, {"from": 1, "to": 2, "freq": 7}],
+    }
+    actual = {
+        "nodes": [{"label": "A", "id": 5}, {"label": "B", "id": 6}, {"label": "D", "id": 7}],
+        "arcs": [{"from": 5, "to": 6, "freq": 9}, {"from": 6, "to": 7, "freq": 2}],
+    }
+    svg = diff_svg(forecast, actual)
+
+    # All three diff classes are present, by colour.
+    grey, amber, red = "#9e9e9e", "#ffb300", "#e53935"
+    assert grey in svg and amber in svg and red in svg
+
+    # Added/removed are dashed; matched is solid. Inspect each coloured edge path.
+    def stroke_paths(colour):
+        return re.findall(rf'stroke="{colour}"[^/]*?d="', svg)
+
+    assert all("stroke-dasharray" in p for p in stroke_paths(amber))  # added dashed
+    assert all("stroke-dasharray" in p for p in stroke_paths(red))  # removed dashed
+    assert all("stroke-dasharray" not in p for p in stroke_paths(grey))  # matched solid
 
 
 # ---------------------------------------------------------------------------
@@ -214,3 +350,35 @@ def test_app_builds_blocks(asset_dir):
     import app
 
     assert isinstance(app.build(), gr.Blocks)
+
+
+@pytest.fixture
+def drift_asset_dir(tmp_path, monkeypatch):
+    """Assets whose forecast and actual genuinely drift (matched + added + removed)."""
+    # forecast: A -> B, B -> C ; actual: A -> B, B -> D  → matched A->B, removed B->C, added B->D.
+    forecast_dfg = {
+        "nodes": [{"label": "A", "id": 0}, {"label": "B", "id": 1}, {"label": "C", "id": 2}],
+        "arcs": [{"from": 0, "to": 1, "freq": 4}, {"from": 1, "to": 2, "freq": 7}],
+    }
+    actual_dfg = {
+        "nodes": [{"label": "A", "id": 0}, {"label": "B", "id": 1}, {"label": "D", "id": 2}],
+        "arcs": [{"from": 0, "to": 1, "freq": 9}, {"from": 1, "to": 2, "freq": 2}],
+    }
+    base = tmp_path / "bpi2017" / "chronos2"
+    base.mkdir(parents=True)
+    (base / "forecast_dfg.json").write_text(json.dumps(forecast_dfg))
+    (base / "actual_dfg.json").write_text(json.dumps(actual_dfg))
+    (base / "metrics.json").write_text(json.dumps(METRICS))
+    monkeypatch.setattr(forecast, "ASSETS_ROOT", tmp_path)
+    return tmp_path
+
+
+def test_app_load_diff_produces_colour_coded_overlay(drift_asset_dir):
+    """app.load_diff renders the forecast/actual pair into one diff overlay pane."""
+    pytest.importorskip("gradio")
+    import app
+
+    diff_html = app.load_diff("bpi2017", "chronos2")
+    assert "<svg" in diff_html
+    # The overlay carries the diff colour coding (grey / amber / red).
+    assert "#9e9e9e" in diff_html and "#ffb300" in diff_html and "#e53935" in diff_html
