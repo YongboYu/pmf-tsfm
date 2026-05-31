@@ -234,8 +234,12 @@ presentation/
 # Reference scripts and papers (local working copies, not part of the codebase)
 temp_ref/
 
-# Presentation sub-project (own tooling, WIP — kept local)
-slides/
+# Presentation sub-project (Slidev deck). Source is tracked; node deps, build
+# output, and third-party reference papers are not.
+slides/**/node_modules/
+slides/**/dist/
+slides/**/.slidev/
+slides/reference/
 
 # Analysis notebooks (regenerated from results, large output cells)
 notebooks/
