@@ -1,0 +1,742 @@
+---
+theme: default
+title: Time Series Foundation Models for Process Model Forecasting
+info: |
+  CAiSE 2026 presentation — pmf-tsfm
+  Yongbo Yu, Jari Peeperkorn, Johannes De Smedt, Jochen De Weerdt
+  KU Leuven · LIRIS
+class: text-center
+transition: slide-left
+duration: 20min
+mdc: true
+---
+
+# Time Series Foundation Models<br/>for Process Model Forecasting
+
+<div class="opacity-80 text-lg mt-8">
+Yongbo Yu · Jari Peeperkorn · Johannes De Smedt · Jochen De Weerdt
+</div>
+
+<div class="opacity-60 text-base mt-4">
+KU Leuven · Research Center for Information Systems Engineering (LIRIS)
+</div>
+
+<div class="opacity-50 text-sm mt-12">
+CAiSE 2026
+</div>
+
+<!--
+OPENING ANCHOR LINE (rehearse cold):
+"I'm going to show you something that took me a while to believe:
+the best forecaster for your process model isn't one you trained —
+and probably isn't one you should train."
+
+Pause. Let it land. Then advance.
+-->
+
+---
+layout: two-cols-header
+---
+
+# PMF vs PPM
+
+::left::
+
+**PPM** — case-level
+
+- One ongoing case → next event, remaining time, outcome
+- *"Will **this** loan application be cancelled?"*
+- Horizon: rest of one case
+
+::right::
+
+**PMF** — system-level
+
+- A window of the log → next process model
+- *"Across all applications next week, how often does 'offer sent → offer cancelled' fire?"*
+- Horizon: short-term system future (a week or a month)
+
+<div class="absolute bottom-8 left-0 right-0 text-center opacity-70 text-sm">
+Same event log. Different question. PMF tells you where the process is heading.
+</div>
+
+<!--
+Q: What is PMF and why should I care?
+
+60s budget. PMF horizon is calibrated as weeks-to-months range; this paper uses 7-day experimental horizon.
+After landing the contrast, transition: "Both questions need data.
+PPM uses case prefixes. PMF uses something different — let me show you."
+-->
+
+---
+layout: two-cols-header
+---
+
+# From event log to DF time series
+
+::left::
+
+**Workflow**
+
+1. Event log  →  time-windowed sublogs
+2. Each window  →  a time-indexed DFG
+3. Each DF edge  →  one univariate time series
+4. Forecast next horizon  →  forecasted DFG
+
+<div class="mt-6 text-sm opacity-80">
+<em>Each DF edge becomes a univariate time series — like website traffic per day, but for one activity transition.</em>
+</div>
+
+<div class="mt-2 text-sm opacity-60">
+We aggregate <strong>daily</strong>, forecast <strong>7 days</strong> ahead.
+</div>
+
+::right::
+
+<div class="border-2 border-dashed border-gray-400 rounded-lg p-4 flex items-center justify-center min-h-[300px]">
+<div class="text-center opacity-60 text-sm">
+[PLACEHOLDER]<br/>
+DFG-evolution animation<br/>
+(10–15s gif / Manim)<br/><br/>
+DFG at t₁ → t₂ → t₃<br/>
+↓<br/>
+forecasted DFG at t₄<br/>
+(predicted edges highlighted)
+</div>
+</div>
+
+<!--
+Q: How does PMF become a forecasting problem?
+
+Transition in: "Both questions need data. PPM uses case prefixes. PMF uses something different — let me show you."
+
+60s. Land "DF time series" hard — it's the term the rest of the talk depends on.
+The animation does heavy lifting; don't talk over it.
+
+Transition out: "So we have a forecasting problem. Why isn't it already solved?"
+-->
+
+---
+layout: two-cols-header
+---
+
+# Where current PMF stands
+
+<div class="text-sm opacity-70">From our prior benchmark (Yu et al. 2025)</div>
+
+::left::
+
+**Three findings:**
+
+1. **ML/DL doesn't reliably beat naive** — sparsity + small data defeat training
+2. **Univariate beats multivariate** — heterogeneity within each log
+3. **No model wins across logs** — heterogeneity also across logs
+
+<div class="mt-3 text-xs opacity-70">
+Benchmark recommends XGBoost as the strongest ML default — our baseline going forward.
+</div>
+
+<div class="mt-2 text-xs opacity-60">
+Quantified in this paper: DF series score 2–3× higher on transition, shifting, non-Gaussianity than 21 standard benchmarks.
+</div>
+
+::right::
+
+<img src="/figures/bpi2017-drift-xgb-only.png" class="block mx-auto rounded-lg w-full max-h-[300px] object-contain" alt="BPI2017 O_Sent→O_Cancelled — ground truth vs XGBoost (XGBoost misses the drift)" />
+
+<div class="text-xs opacity-60 mt-2 text-center">
+XGBoost stays flat. The actual line drops.
+</div>
+
+<!--
+Q: Why don't existing methods already solve this?
+
+Transition in: "So we have a forecasting problem. Why isn't it already solved?"
+
+75s. Three DF properties — sparsity, heterogeneity (within and across logs), small scale — explain three benchmark findings. Land the WHY, not just the WHAT.
+
+Also pre-loads the XGBoost baseline for beat 7. When the results chart appears, recall: "XGBoost was the strongest ML in the benchmark — that's why it's our ML baseline."
+
+Transition out (BRIDGE INTO BEAT 4 — memorize):
+"These three properties — sparsity, heterogeneity, small scale — defeat from-scratch ML/DL. That's exactly what foundation models are designed for."
+-->
+
+---
+
+# Why a time series foundation model?
+
+<div class="grid grid-cols-2 gap-8 mt-2">
+
+<div class="border rounded-lg p-4">
+<div class="font-bold text-center mb-3 opacity-80">LLM</div>
+
+- Text in → text out
+- Web-scale text corpus
+- Generalizes across language tasks
+
+</div>
+
+<div class="border-2 rounded-lg p-4" style="border-color: #1d4ed8">
+<div class="font-bold text-center mb-3" style="color: #1d4ed8">TSFM</div>
+
+- **Numbers in → numbers out**
+- Millions of diverse time series
+- Generalizes across forecasting tasks
+
+</div>
+
+</div>
+
+<div class="mt-6 space-y-2">
+
+- Same paradigm as LLMs: pretrain at scale, generalize **zero-shot**
+- **No event logs in pretraining, to our knowledge**
+- Built for: heterogeneity · small data · no per-task retraining
+
+</div>
+
+<div class="mt-2 text-sm opacity-60">
+zero-shot = run a pretrained model on a new series with no extra training
+</div>
+
+<div class="mt-6 text-center font-semibold opacity-90 italic">
+"Specialized models overfit on small heterogeneous PMF data.<br/>
+Foundation models, pretrained on millions of diverse series, are designed to not."
+</div>
+
+<!--
+Q: Why should a generic forecaster do better than a specialized one?
+
+Transition in (bridge from beat 3): "These three properties — sparsity, heterogeneity, small scale — defeat from-scratch ML/DL. That's exactly what foundation models are designed for."
+
+60s. CRITIQUE CONSTRAINT: must say "no event logs in pretraining, TO OUR KNOWLEDGE." Not "no process data." The wording is non-negotiable.
+
+Load-bearing line — deliver the footer aloud: "Specialized models overfit on small heterogeneous PMF data. Foundation models, pretrained on millions of diverse series, are designed to not."
+
+Transition out (into beat 5): "We have a candidate. Here's what we ask of it."
+-->
+
+---
+layout: center
+---
+
+# Three questions this talk answers
+
+<div class="text-left max-w-3xl mt-8 space-y-6">
+
+<div>
+<span class="font-bold opacity-50 mr-2">1.</span>
+Can an <strong>off-the-shelf forecaster</strong> — trained on no process data — beat the strongest PMF baselines?
+</div>
+
+<div>
+<span class="font-bold opacity-50 mr-2">2.</span>
+If yes, does <strong>adapting it to process data</strong> help?
+</div>
+
+<div>
+<span class="font-bold opacity-50 mr-2">3.</span>
+Does a better forecast give us a <strong>better process model</strong>?
+</div>
+
+</div>
+
+<!--
+Q: What does this talk actually deliver?
+
+30s. Plain-English scaffold — names ("TSFM", "LoRA", "Entropic Relevance") land on later slides, not here.
+
+The three questions map to the three findings:
+- Q1 (zero-shot beats baselines)  → beat 7 (results bars + drift callback)
+- Q2 (adapting it helps?)          → beat 8 (fine-tuning + timing): marginal, dataset-dependent
+- Q3 (better forecast → better process model?) → beat 9 via Entropic Relevance: parity, not better; Sepsis the exception
+
+Transition out (into beat 6): "Three questions. Here's what we point at them."
+-->
+
+---
+
+# The candidates
+
+<div class="border-2 border-dashed border-gray-400 rounded-lg p-4 mb-4 flex items-center justify-center min-h-[180px]">
+<div class="text-center opacity-60 text-sm">
+[PLACEHOLDER]<br/>
+Release timeline — three lanes (Chronos / MOIRAI / TimesFM)<br/>
+x-axis: release date (2024 → 2025)  ·  y-axis: model size (parameters, log scale)<br/>
+one point per variant, labeled; latest of each highlighted in accent<br/>
+Chronos-T5 · Bolt · 2  |  MOIRAI 1.0 · 1.1 · MoE · 2.0  |  TimesFM 1.0 · 2.0 · 2.5<br/>
+(several variants span a size range — plot the representative/used size)
+</div>
+</div>
+
+<div class="grid grid-cols-3 gap-4 text-sm">
+
+<div>
+<strong>Chronos</strong> <span class="opacity-60">— Amazon</span><br/>
+<span class="opacity-80">encoder-decoder → encoder-only (Chronos-2)</span>
+</div>
+
+<div>
+<strong>MOIRAI</strong> <span class="opacity-60">— Salesforce</span><br/>
+<span class="opacity-80">masked encoder → decoder-only (MOIRAI-2.0)</span>
+</div>
+
+<div>
+<strong>TimesFM</strong> <span class="opacity-60">— Google</span><br/>
+<span class="opacity-80">decoder-only throughout (scales 1.0 → 2.5)</span>
+</div>
+
+</div>
+
+<div class="mt-6 flex justify-center gap-3 text-sm">
+<span class="px-3 py-1 rounded border" style="border-color: #1d4ed8; color: #1d4ed8">zero-shot</span>
+<span class="px-3 py-1 rounded border opacity-80">LoRA <span class="text-xs opacity-70">(small trainable adapters on attention)</span></span>
+<span class="px-3 py-1 rounded border opacity-80">full fine-tuning</span>
+</div>
+
+<div class="mt-4 text-center text-xs opacity-70">
+Univariate throughout (per Yu 2025 finding)
+</div>
+
+<!--
+Q: Which models? Which settings?
+
+45s. Names appear on screen, not in voice. Let the timeline do the work.
+Three evolving families; results use the latest of each (Chronos-2, MOIRAI-2.0, TimesFM-2.5).
+Size axis tells a "newer = smaller, yet better" story — MOIRAI-2.0 is just 11.4M params.
+
+Transition into results: "Three families. Eight model variants. No event logs in pretraining.
+Here's what happens when you point them at DF time series."
+-->
+
+---
+
+# Results — MAE across 4 event logs
+
+<img src="/figures/results-mae-bars.png" class="block mx-auto rounded-lg w-full max-h-[420px] object-contain" alt="Zero-shot MAE across 4 event logs — TSFMs vs Seasonal-Naive and XGBoost baselines" />
+
+<div class="mt-4 text-xs opacity-70 text-center">
+Two strongest baselines from our prior benchmark (Yu 2025) — full ranking on backup.
+</div>
+
+<!--
+Q: Does Q1 hold — do zero-shot TSFMs beat the baselines?
+
+Transition in: "Three families. Eight model variants. No event logs in pretraining.
+Here's what happens when you point them at DF time series."
+
+~2 min. CRITIQUE CONSTRAINT — open with the baseline framing verbatim:
+"We compare against the two strongest baselines from our prior benchmark; full ranking
+on backup." Pre-empts cherry-picking.
+
+The three latest models (Chronos-2, MOIRAI-2.0, TimesFM-2.5) win MAE on all four logs —
+including Sepsis (MOIRAI-2.0 ↓28%). Sepsis is NOT a MAE exception; it only becomes the
+hard case later, on ER (beat 9). Don't undercut the MAE win here.
+
+Q&A defense: some older/smaller variants don't beat the baselines on BPI2017 (paper
+p.11) — that's why the bars show the latest of each family.
+
+Transition out (into 7b): "Same data, same window — here's what that win looks like."
+-->
+
+---
+
+# Drift, revealed
+
+<div class="grid grid-cols-2 gap-6 items-center">
+
+<div>
+
+Same plot as before. Same prediction window.
+
+This time with the TSFM line.
+
+<div class="mt-6 text-sm space-y-2 opacity-90">
+
+- XGBoost stays flat
+- TSFM misses the initial drop, then **adapts**
+- This is online adaptation from historical context — no retraining
+
+</div>
+
+</div>
+
+<img src="/figures/bpi2017-drift-with-tsfm.png" class="block mx-auto rounded-lg w-full max-h-[340px] object-contain" alt="BPI2017 drift revealed — Chronos-2 and MOIRAI-2.0 track the drop XGBoost missed" />
+
+</div>
+
+<!--
+Q: What does the zero-shot win look like on real drift?
+
+~1 min. THE CALLBACK MOMENT — the audience remembers this plot from slide 3 (XGBoost
+flat, actual line drops). Now reveal the TSFM line. Don't rush — let them see it appear.
+Single spoken line: "Same data. Same prediction window. The TSFM tracks what XGBoost missed."
+
+Mechanism (if asked): the TSFM adapts via an expanding historical-context window at
+inference — no retraining (paper §4.1). Misses the initial drift, then catches up.
+
+Transition out (into beat 8): "TSFMs win zero-shot. Natural next question: can we make
+them better?"
+-->
+
+---
+
+# Does fine-tuning help?
+
+<div class="grid grid-cols-2 gap-4">
+
+<div>
+<div class="text-xs opacity-70 mb-1 text-center">Accuracy — MAE across settings</div>
+<img src="/figures/ft-slope.png" class="block mx-auto rounded-lg w-full max-h-[330px] object-contain" alt="Fine-tuning vs zero-shot, normalized — most lines hug 1.0; a few overfit" />
+</div>
+
+<div>
+<div class="text-xs opacity-70 mb-1 text-center">Compute — wall-clock (log scale)</div>
+<div class="border-2 border-dashed border-gray-400 rounded-lg p-4 flex items-center justify-center min-h-[320px]">
+<div class="text-center opacity-60 text-sm">
+[PLACEHOLDER]<br/>
+Log-scale bar chart<br/>
+7 bars:<br/>
+3 ZS · 3 LoRA · 3 Full-FT · 1 XGBoost reference
+</div>
+</div>
+</div>
+
+</div>
+
+<div class="mt-4 text-center font-semibold opacity-90">
+Marginal accuracy. ~100× compute. Skip it at PMF data scale.
+</div>
+
+<!--
+~3 min 15s. Two findings: (a) fine-tuning rarely helps, (b) it costs a lot.
+Drive the eye to the flat lines on the left, then the log-scale jump on the right.
+Don't moralize — let the visual do it.
+-->
+
+---
+
+# Process-aware evaluation — Entropic Relevance
+
+<div class="grid grid-cols-2 gap-6">
+
+<div>
+<div class="text-xs opacity-70 mb-1 text-center">ER (lower = better process model) · Hospital Billing</div>
+<img src="/figures/er-hospital-billing.png" class="block mx-auto rounded-lg w-full max-h-[320px] object-contain" alt="Hospital Billing ER — reusing the historical (Training) model is far worse than any forecast" />
+<div class="mt-2 text-xs opacity-60 text-center italic">
+ER = bits-per-trace cost of encoding the log; in-bar % = traces the forecasted model fits
+</div>
+</div>
+
+<div class="pt-6 space-y-4">
+
+<div>TSFMs <strong>match</strong> baselines on ER — not better.</div>
+
+<div>Reusing the historical model (Training) is worst — every forecast beats it.</div>
+
+<div class="font-semibold" style="color: #1d4ed8">The bottleneck has moved from forecasting accuracy to process-aware representation.</div>
+
+</div>
+
+</div>
+
+<!--
+Q: Does the forecasting win translate to a better process model?
+
+Transition in: "But forecasting accuracy isn't the only thing we care about in PM."
+Open with the QUESTION, not the result — beat 8→9 is the talk's lowest-energy moment.
+
+~1 min 30s. THE LOAD-BEARING SLIDE.
+Memorized rebuttal — deliver in speech, not on slide (verbatim from SLIDES.md):
+
+"ER parity means we're not producing better DFG structures — we're producing
+DFGs with better edge weights. For tasks where the forecast itself is the
+deliverable — capacity planning, drift detection, anomaly baselines —
+edge-weight accuracy IS the contribution. For tasks where you need a different
+process model, ER says the bottleneck is now the DFG representation,
+not the forecaster."
+
+Do not skip this line. Rehearse it cold.
+-->
+
+---
+
+# Takeaways
+
+<div class="space-y-5 mt-6">
+
+<div class="border-l-4 pl-4" style="border-color: #1d4ed8">
+<div class="font-semibold mb-1">For practitioners</div>
+<div class="text-sm opacity-90">
+Zero-shot TSFMs are the new PMF default — skip fine-tuning at PMF data scale.
+<span class="opacity-70 italic">Four logs is not a paradigm — but it is a strong enough signal to make zero-shot the right new starting baseline.</span>
+</div>
+</div>
+
+<div class="border-l-4 pl-4" style="border-color: #1d4ed8">
+<div class="font-semibold mb-1">For PMF research</div>
+<div class="text-sm opacity-90">
+The bottleneck has moved from forecasting accuracy to process-aware representation.
+DFGs are a lossy target.
+</div>
+</div>
+
+<div class="border-l-4 pl-4" style="border-color: #1d4ed8">
+<div class="font-semibold mb-1">For process mining</div>
+<div class="text-sm opacity-90">
+PM can borrow from adjacent fields cheaply — a process-native FM is the next frontier,
+but needs a corpus of event logs we don't yet have.
+</div>
+</div>
+
+</div>
+
+<div class="mt-8 pt-4 border-t border-gray-300 flex justify-between items-center text-xs opacity-80">
+<div>
+<strong>github.com/YongboYu/pmf-tsfm</strong> · demo URL · paper
+</div>
+<div class="italic">
+Runs on laptop (MPS) · GPU server (CUDA) · HPC
+</div>
+</div>
+
+<!--
+Q: What do I do with this? Where do I go next?
+
+Transition in: "So what do we walk away with?"
+
+~2 min. CRITIQUE CONSTRAINT: signal 1 must contain "four logs is not a paradigm" hedge.
+
+CLOSING ANCHOR LINE (rehearse cold):
+"Zero-shot TSFMs are the new PMF default. Four logs is not a paradigm — but it is
+a strong enough signal that the right new default is to try a zero-shot TSFM first.
+The deeper signal is that time-series forecasting just became cheap enough that
+process mining can borrow from it without paying the training tax.
+What else can we borrow?"
+-->
+
+---
+layout: center
+---
+
+# Demo
+
+<div class="border-2 border-dashed border-gray-400 rounded-lg p-6 mt-4 mb-4 min-h-[280px] flex items-center justify-center">
+<div class="text-center opacity-60 text-sm">
+[PLACEHOLDER]<br/>
+Pre-recorded screencast (~2 min)<br/><br/>
+1. Open small event log<br/>
+2. Pick TSFM checkpoint<br/>
+3. Run zero-shot inference<br/>
+4. Render forecasted DFG vs ground truth
+</div>
+</div>
+
+<div class="text-center text-sm opacity-80">
+Try it yourself · <strong>[demo URL]</strong> · QR code below
+</div>
+
+<!--
+~2-3 min. Live demo NOT recommended in single-screen room (Wi-Fi/projector risk).
+Pre-recorded screencast is the safe play.
+Audience can scan QR during Q&A.
+-->
+
+---
+layout: end
+---
+
+# Thank you
+
+<div class="text-lg opacity-80 mt-6">
+Questions, please.
+</div>
+
+<div class="text-sm opacity-60 mt-8">
+yongbo.yu@kuleuven.be · github.com/YongboYu/pmf-tsfm
+</div>
+
+<!--
+10 min Q&A.
+Backup slides follow. Have answers to the ranked hostile questions rehearsed cold
+(see SLIDES.md "Required backup slides" and Q&A defense section).
+-->
+
+---
+hideInToc: true
+---
+
+# Backup · Full baseline ranking (Yu 2025)
+
+<div class="border-2 border-dashed border-gray-400 rounded-lg p-4 flex items-center justify-center min-h-[400px]">
+<div class="text-center opacity-60 text-sm">
+[PLACEHOLDER]<br/>
+Full benchmark ranking from Yu et al. 2025<br/>
+All methods × all datasets<br/>
+Used to defend the 2-baseline choice on the main results slide
+</div>
+</div>
+
+<!--
+Q&A defense: "We compare against the two strongest baselines from our prior
+benchmark — here's the full ranking."
+-->
+
+---
+hideInToc: true
+---
+
+# Backup · Full RMSE table
+
+<img src="/figures/rmse-full.png" class="block mx-auto rounded-lg w-full max-h-[440px] object-contain" alt="Full zero-shot RMSE table — all model variants × 4 logs; confirms the MAE ranking" />
+
+<!--
+Q&A defense: when asked "does RMSE tell the same story?" — yes, point at this.
+-->
+
+---
+hideInToc: true
+---
+
+# Backup · ER across all four logs
+
+<img src="/figures/er-bars.png" class="block mx-auto rounded-lg w-full max-h-[380px] object-contain" alt="Entropic Relevance across all 4 event logs — TSFMs match baselines except Sepsis" />
+
+<div class="mt-3 text-sm opacity-80 text-center">
+Parity on BPI2017 / BPI2019-1 / Hospital Billing. <strong>Sepsis is the exception</strong> — high behavioral heterogeneity defeats all models (TSFMs worst, tiny fitting ratios).
+</div>
+
+<!--
+Q&A defense: the main ER slide shows Hospital Billing only. This is the full picture.
+Sepsis: ER far above Truth AND lowest fitting ratios — the process is both heterogeneous
+and hard to encode with any single forecasted model.
+-->
+
+---
+hideInToc: true
+---
+
+# Backup · Hyperparameter configuration
+
+<div class="grid grid-cols-2 gap-6 mt-4 text-sm">
+
+<div>
+<div class="font-semibold mb-2">XGBoost</div>
+<div class="opacity-80">
+- Optuna hyperparameter optimization<br/>
+- N trials per dataset (specify exact count)<br/>
+- Lagged features, daily aggregation
+</div>
+</div>
+
+<div>
+<div class="font-semibold mb-2">LoRA / Full FT</div>
+<div class="opacity-80">
+- LoRA: r=2, α=4, applied to Q/K/V/O<br/>
+- Patch size 16, batch 32<br/>
+- LR 1e-4, AdamW, 3 epochs<br/>
+- Full FT follows original model recipes
+</div>
+</div>
+
+</div>
+
+<!--
+Q&A defense: pre-empts "was your baseline actually tuned?" and "what's your LoRA setup?"
+-->
+
+---
+hideInToc: true
+---
+
+# Backup · DF complexity vs standard benchmarks
+
+<img src="/figures/df-complexity-radar.png" class="block mx-auto rounded-lg max-h-[400px] object-contain" alt="DF time-series complexity radar across 7 metrics for the 4 event logs (paper Table 3)" />
+
+<!--
+Q&A defense: backs the "DF time series are unusually hard" claim with the
+full quantitative profile.
+-->
+
+---
+hideInToc: true
+---
+
+# Backup · Sepsis — why it's hard
+
+<div class="border-2 border-dashed border-gray-400 rounded-lg p-4 flex items-center justify-center min-h-[380px]">
+<div class="text-center opacity-60 text-sm">
+[PLACEHOLDER]<br/>
+Sepsis DFG sample or trace variant distribution<br/>
+Shows behavioral heterogeneity:<br/>
+many infrequent variants, low fitting ratio<br/><br/>
+Reinforces ER slide's Sepsis caveat
+</div>
+</div>
+
+<!--
+Q&A defense: "Why does Sepsis fail?" — show the variant tail and the sparse DF activity.
+-->
+
+---
+hideInToc: true
+---
+
+# Backup · Horizon sensitivity
+
+<div class="text-sm space-y-4 mt-4">
+
+<div>
+We forecast at a <strong>7-day horizon</strong>, matching:
+
+- The cadence used in the Yu 2025 benchmark
+- The operational reporting cadence of the source logs
+- Comparable to the horizons TSFMs were pretrained on (weather, traffic series)
+</div>
+
+<div>
+<strong>Open question:</strong> longer horizons (30+ days). Not tested here.
+Future work — pair TSFM forecasts with drift detection for adaptive multi-horizon prediction.
+</div>
+
+</div>
+
+<!--
+Q&A defense: "What about month-long horizons?" — acknowledge openly,
+flag as future work; don't pretend we tested it.
+-->
+
+---
+hideInToc: true
+---
+
+# Backup · Multivariate experiments
+
+<div class="text-sm space-y-4 mt-6">
+
+<div>
+MOIRAI, MOIRAI-MoE, and Chronos-2 support multivariate inference.
+We ran initial multivariate experiments.
+</div>
+
+<div>
+<strong>Result:</strong> no consistent gains over univariate, consistent with the
+Yu 2025 finding that univariate outperforms multivariate on DF time series.
+</div>
+
+<div>
+<strong>Why?</strong> Likely the high heterogeneity across DF series in one log makes
+cross-series attention hurt more than it helps at this data scale.
+</div>
+
+<div>
+<strong>Open question:</strong> dedicated multivariate fine-tuning for PMF — not
+covered here. Future work.
+</div>
+
+</div>
+
+<!--
+Q&A defense: "Why didn't you use the multivariate capabilities of MOIRAI/Chronos-2?"
+Pre-empted on slide 3 (finding #2), reinforced here with the actual experiment.
+-->

@@ -1,0 +1,166 @@
+<!doctype html>
+<!-- PROTOTYPE — wipe me when slide 3 is finalised.
+     Compares two LAYOUTS of the same slide-3 figure (woven full-width vs
+     two-column), both presenter-paced. Toggle via the bottom bar or
+     ?layout=woven|twocol.  Run:  open .../dfg-anim/layout.html              -->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Slide 3 — layout comparison</title>
+    <style>
+      :root { --accent:#1d4ed8; --ink:#0f172a; --muted:#64748b; }
+      * { box-sizing: border-box; }
+      body { margin:0; background:#eef1f5; color:var(--ink);
+        font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+        min-height:100vh; display:flex; flex-direction:column; align-items:center; padding:24px 16px 140px; }
+      h1.page { font-size:14px; font-weight:600; color:var(--muted); margin:0 0 14px; }
+      .slide { width:min(1040px,96vw); aspect-ratio:16/9; background:#fff; border-radius:10px;
+        box-shadow:0 10px 30px rgba(15,23,42,.10); padding:28px 34px; display:flex; flex-direction:column; overflow:hidden; }
+      .slide h2 { font-size:25px; margin:0 0 12px; font-weight:700; }
+      .diagram { flex:1; min-height:0; display:flex; flex-direction:column; }
+
+      /* ---- woven full-width ---- */
+      .woven-grid { display:grid; grid-template-columns:.85fr 24px 1.5fr 24px 1.2fr;
+        align-items:stretch; flex:1; min-height:0; gap:4px; }
+      .wcol { display:flex; flex-direction:column; min-height:0; justify-content:center; gap:6px; }
+      .warrow { display:flex; align-items:center; justify-content:center; font-size:22px; color:#94a3b8; }
+      .slot-dfg { flex:1; min-height:0; }
+      .wcol-log .slot-log { flex:1; min-height:0; max-height:160px; }
+      .wcol-spark .slot-spark { height:104px; }
+      .cap { font-size:12px; color:#475569; text-align:center; line-height:1.35; }
+      .cap .num, .wf-step .num { color:var(--accent); font-weight:700; }
+      .spark-title { font-size:11px; color:var(--muted); text-align:center; }
+      .cap-forecast { opacity:0; transition:opacity .4s ease; margin-top:8px; text-align:center;
+        font-weight:600; font-size:12.5px; }
+      .cap-forecast.on { opacity:1; }
+
+      /* ---- two-column ---- */
+      .twocol-grid { display:grid; grid-template-columns:.92fr 1.3fr; gap:26px; flex:1; min-height:0; }
+      .twocol-left { font-size:15px; display:flex; flex-direction:column; }
+      .wf-title { font-weight:700; margin-bottom:8px; }
+      .wf-step { margin:5px 0; line-height:1.4; transition:opacity .3s, color .3s; }
+      .wf-step.dim { opacity:.38; }
+      .wf-step.on { color:var(--accent); font-weight:600; }
+      .wf-note { margin-top:auto; font-size:12.5px; color:#475569; font-style:italic; }
+      .twocol-right { display:flex; flex-direction:column; min-height:0; gap:4px; }
+      .tc-logrow { display:flex; align-items:center; gap:8px; flex:1; min-height:0; }
+      .tc-logrow .slot-log { width:120px; height:100%; max-height:200px; }
+      .tc-arrow { font-size:20px; color:#94a3b8; }
+      .tc-dfg { flex:1; min-height:0; height:100%; }
+      .tc-dfg .slot-dfg { height:100%; }
+      .twocol-right .slot-spark { height:92px; }
+
+      /* ---- bottom bar ---- */
+      .bar { position:fixed; left:50%; transform:translateX(-50%); bottom:16px; z-index:10;
+        background:#fff; border:1px solid #e2e8f0; border-radius:12px; padding:10px 14px;
+        box-shadow:0 8px 24px rgba(15,23,42,.16); display:flex; flex-direction:column; gap:8px; width:min(1040px,96vw); }
+      .row { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+      .pill { border:1px solid #cbd5e1; background:#fff; color:var(--ink); border-radius:999px;
+        padding:6px 14px; font-size:13px; cursor:pointer; font-weight:600; }
+      .pill.on { background:var(--accent); border-color:var(--accent); color:#fff; }
+      .step-btn { border:1px solid #cbd5e1; background:#fff; border-radius:8px; padding:6px 12px; font-size:13px; cursor:pointer; font-weight:600; }
+      .step-btn:disabled { opacity:.4; cursor:default; }
+      .frame-dots { display:flex; gap:5px; margin-left:4px; }
+      .dot { width:9px; height:9px; border-radius:50%; background:#cbd5e1; }
+      .dot.on { background:var(--accent); }
+      .caption { font-size:12.5px; color:#475569; line-height:1.45; }
+      .spacer { flex:1; }
+    </style>
+  </head>
+  <body>
+    <h1 class="page">Slide 3 · layout comparison — woven full-width vs two-column (throwaway prototype)</h1>
+
+    <div class="slide">
+      <h2>From event log to DF time series</h2>
+      <div id="root"></div>
+    </div>
+
+    <div class="bar">
+      <div class="row" id="layouts"></div>
+      <div class="row">
+        <button class="step-btn" id="next">Next ▶</button>
+        <button class="step-btn" id="reset">Reset</button>
+        <div class="frame-dots" id="dots"></div>
+        <span class="spacer"></span>
+        <span class="step-btn" id="framelbl" style="cursor:default;border:none">—</span>
+      </div>
+      <div class="caption" id="caption"></div>
+    </div>
+
+    <script src="./data.js"></script>
+    <script src="./render_svg.js"></script>
+    <script src="./render_diagram.js"></script>
+    <script>
+      const DATA = window.DFG_DATA;
+      const root = document.getElementById("root");
+      const nextBtn = document.getElementById("next");
+      const resetBtn = document.getElementById("reset");
+      const dotsEl = document.getElementById("dots");
+      const frameLbl = document.getElementById("framelbl");
+      const captionEl = document.getElementById("caption");
+
+      const LAYOUTS = {
+        woven: {
+          label: "Woven full-width",
+          caption:
+            "<b>Woven full-width</b> · one figure: log slice → morphing DFG → hero-edge sparkline, " +
+            "with each workflow step labelled at its part of the diagram. Word+picture coupled; " +
+            "distinct from the deck's two-column slides.",
+        },
+        twocol: {
+          label: "Two-column",
+          caption:
+            "<b>Two-column</b> · numbered workflow list on the left (active step highlights in lockstep), " +
+            "diagram on the right (log → DFG, sparkline below). Closest to the current slide & other slides; " +
+            "smaller diagram.",
+        },
+      };
+
+      const params = new URLSearchParams(location.search);
+      let layout = LAYOUTS[params.get("layout")] ? params.get("layout") : "woven";
+      let ctrl = null;
+
+      const layoutsEl = document.getElementById("layouts");
+      for (const key of Object.keys(LAYOUTS)) {
+        const b = document.createElement("button");
+        b.className = "pill" + (key === layout ? " on" : "");
+        b.textContent = LAYOUTS[key].label;
+        b.dataset.key = key;
+        b.onclick = () => {
+          const u = new URLSearchParams(location.search);
+          u.set("layout", key);
+          history.replaceState(null, "", "?" + u.toString());
+          layout = key;
+          mount();
+        };
+        layoutsEl.appendChild(b);
+      }
+
+      function onFrame(i, fr) {
+        frameLbl.textContent = fr.label;
+        [...dotsEl.children].forEach((d, k) => d.classList.toggle("on", k === i));
+      }
+
+      function mount() {
+        [...layoutsEl.children].forEach((b) => b.classList.toggle("on", b.dataset.key === layout));
+        captionEl.innerHTML = LAYOUTS[layout].caption;
+        ctrl = window.renderDiagram(root, DATA, { layout, onFrame });
+        dotsEl.innerHTML = "";
+        for (let i = 0; i < ctrl.frameCount; i++) dotsEl.appendChild(Object.assign(document.createElement("span"), { className: "dot" }));
+        const f = parseInt(params.get("frame"), 10);
+        if (!isNaN(f)) ctrl.setFrame(Math.max(0, Math.min(ctrl.frameCount - 1, f)));
+        onFrame(ctrl.current, DATA.frames[ctrl.current]);
+      }
+
+      nextBtn.onclick = () => ctrl && ctrl.step();
+      resetBtn.onclick = () => ctrl && ctrl.reset();
+      window.addEventListener("keydown", (e) => {
+        if ((e.key === " " || e.key === "ArrowRight") && ctrl) { e.preventDefault(); ctrl.step(); }
+        if (e.key === "ArrowLeft" && ctrl) ctrl.reset();
+      });
+
+      mount();
+    </script>
+  </body>
+</html>
