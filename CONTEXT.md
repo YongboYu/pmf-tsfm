@@ -54,7 +54,9 @@ The DFG reconstructed from forecast DF frequencies.
 **Comparison DFG**:
 The DFG shown beside the forecast DFG. For a **bundled log** it is the *actual-future* DFG (real
 ground truth exists); for a **custom upload** it is the *last-known-window* DFG (no future truth
-exists). The "compared to what?" reference.
+exists). The "compared to what?" reference. The metric beside it **changes meaning** with the path:
+against the actual-future DFG it measures **accuracy** (ER/MAE/RMSE); against the last-known-window
+DFG it measures **drift**, not accuracy.
 
 ### Demo vocabulary
 
@@ -72,6 +74,18 @@ Used for every bundled log × model × horizon.
 
 **Live path**:
 Computing a forecast on demand for a custom upload, on serverless GPU, under size/rate caps.
+
+**Forecast origin**:
+The point in time from which the horizon is forecast. For a **bundled log** it is `log_end − horizon`
+(the last week is held out as a backtest, so real future exists); for a **custom upload** it is the
+**log end** (the genuine, unseen future). That difference is exactly why one path yields accuracy and
+the other only drift.
+
+**Drift**:
+How much a forecast DFG differs from the **last-known-window** DFG (e.g. DF relations added/removed).
+The custom-upload comparison — a *change-from-recent-past* signal, **not** an accuracy measure (there
+is no future truth to score against).
+_Avoid_: accuracy, error (reserve those for the bundled actual-future comparison).
 
 ## Flagged ambiguities
 
