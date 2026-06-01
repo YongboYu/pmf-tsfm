@@ -245,7 +245,7 @@ const spark = computed(() => {
 </template>
 
 <style scoped>
-/* Woven full-width layout, ported from prototypes/dfg-anim/layout.html (woven branch).
+/* Woven full-width layout.
    Monochrome + the single KU Leuven accent (dfgData.accent #1d4ed8); no 3D, no shadows. */
 .dfg-evolution {
   position: relative;

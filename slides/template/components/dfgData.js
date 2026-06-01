@@ -1,7 +1,6 @@
 // Baked bpi2017 "offer" subgraph frames for the slide-3 DFG-evolution figure.
 // Real numbers (weeks Oct 02–23); hero edge `sent__cancelled` 346→314→316, forecast 316
-// vs held-out truth 315. Produced by prototypes/dfg-anim/make_data.py — baked in here so
-// the slide renders with no runtime data read. Do not hand-edit weights; regenerate upstream.
+// vs held-out truth 315. Baked in here so the slide renders with no runtime data read.
 export const dfgData = {
   dataset: 'bpi2017',
   subgraph: 'offer',
