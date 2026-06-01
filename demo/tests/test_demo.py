@@ -506,6 +506,29 @@ def test_fmt_shows_na_for_non_finite_metric():
     assert app._fmt(float("inf")) == "n/a"
 
 
+def test_app_head_inlines_vendored_pan_zoom(asset_dir):
+    """The built Blocks inline the vendored svg-pan-zoom + the pane initializer."""
+    pytest.importorskip("gradio")
+    import app
+
+    head = app.build().demo_head
+    assert "svg-pan-zoom v3.6.2" in head  # vendored source inlined, not a CDN URL
+    assert "svgPanZoom(" in head and ".dfg-pane svg" in head  # pane initializer
+
+
+def test_app_panes_carry_dfg_pane_class(asset_dir):
+    """All three SVG panes carry the `dfg-pane` class so JS can target them."""
+    pytest.importorskip("gradio")
+    import app
+
+    panes = [
+        c
+        for c in app.build().blocks.values()
+        if getattr(c, "elem_classes", None) and "dfg-pane" in c.elem_classes
+    ]
+    assert len(panes) == 3  # forecast, actual-future, diff overlay
+
+
 @pytest.fixture
 def drift_asset_dir(tmp_path, monkeypatch):
     """Assets whose forecast and actual genuinely drift (matched + added + removed)."""

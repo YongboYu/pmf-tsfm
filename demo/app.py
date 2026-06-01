@@ -16,6 +16,7 @@ so the app needs no ``dot`` binary at runtime — GPU-free. Launch plainly;
 from __future__ import annotations
 
 import math
+from pathlib import Path
 from typing import Any
 
 import gradio as gr
@@ -24,6 +25,65 @@ from forecast import forecast_bundled
 # Only the precomputed bundled pairs are offered as choices: the full 4-by-3 matrix.
 DATASETS: list[str] = ["bpi2017", "bpi2019_1", "sepsis", "hospital_billing"]
 MODELS: list[str] = ["chronos2", "moirai2", "timesfm2.5"]
+
+# Vendored (not CDN) so the Hugging Face Space works fully offline / behind
+# restrictive networks. svg-pan-zoom v3.6.2 — https://github.com/bumbu/svg-pan-zoom
+_VENDOR_DIR = Path(__file__).resolve().parent / "static"
+_SVG_PAN_ZOOM_JS = _VENDOR_DIR / "svg-pan-zoom.min.js"
+
+# Re-apply pan/zoom whenever Gradio swaps the innerHTML of a `.dfg-pane`
+# (initial load, dropdown change, Side-by-side↔Diff toggle). A MutationObserver
+# watches for fresh `<svg>` elements; each gets sized to fill its pane and gets
+# its own svg-pan-zoom instance, destroying any stale one first.
+_PAN_ZOOM_INIT = """
+<script>
+(function () {
+  function attach(svg) {
+    if (!svg || svg.dataset.panzoom === "ready") return;
+    svg.dataset.panzoom = "ready";
+    svg.style.width = "100%";
+    svg.style.height = "70vh";
+    svg.style.maxHeight = "70vh";
+    svg.style.margin = "0";
+    try {
+      if (svg._panzoom) { svg._panzoom.destroy(); }
+      svg._panzoom = svgPanZoom(svg, {
+        controlIconsEnabled: true,
+        fit: true,
+        center: true,
+      });
+    } catch (e) {
+      svg.dataset.panzoom = "";  // let a later mutation retry
+    }
+  }
+  function scan() {
+    document.querySelectorAll(".dfg-pane svg").forEach(attach);
+  }
+  function boot() {
+    scan();
+    new MutationObserver(scan).observe(document.body, {
+      childList: true,
+      subtree: true,
+    });
+  }
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", boot);
+  } else {
+    boot();
+  }
+})();
+</script>
+"""
+
+
+def _head() -> str:
+    """Assemble the ``<head>`` payload: inlined svg-pan-zoom + the pane initializer.
+
+    Inlining (rather than a static-file URL or CDN) keeps the Space self-contained
+    and works offline. Read at app-build time so the bytes ship with the page.
+    """
+    vendor = _SVG_PAN_ZOOM_JS.read_text(encoding="utf-8")
+    return f"<script>{vendor}</script>\n{_PAN_ZOOM_INIT}"
 
 
 def _scrollable(svg: str) -> str:
@@ -106,10 +166,15 @@ def build() -> gr.Blocks:
             label="View",
         )
         with gr.Row(visible=True) as twin_panes:
-            forecast_pane = gr.HTML(label="Forecast DFG")
-            actual_pane = gr.HTML(label="Actual-future DFG")
-        with gr.Row(visible=False) as diff_overlay:
-            diff_pane = gr.HTML(label="Diff (forecast vs actual)")
+            with gr.Column():
+                gr.Markdown("### Forecast — the held-out last week, predicted")
+                forecast_pane = gr.HTML(elem_classes=["dfg-pane"])
+            with gr.Column():
+                gr.Markdown("### Actual future — what really happened that week")
+                actual_pane = gr.HTML(elem_classes=["dfg-pane"])
+        with gr.Row(visible=False) as diff_overlay, gr.Column():
+            gr.Markdown("### Diff — forecast vs actual future")
+            diff_pane = gr.HTML(elem_classes=["dfg-pane"])
         with gr.Row():
             er = gr.Textbox(label="ER", interactive=False)
             mae = gr.Textbox(label="MAE", interactive=False)
@@ -138,11 +203,16 @@ def build() -> gr.Blocks:
             return gr.update(visible=not is_diff), gr.update(visible=is_diff)
 
         view.change(set_view, view, [twin_panes, diff_overlay])
+
+    # Gradio 6 takes `head` at launch() (not the Blocks constructor); stash it on
+    # the Blocks so callers (main, tests, drivers) pass the same inlined payload.
+    demo.demo_head = _head()
     return demo
 
 
 def main() -> None:
-    build().launch()
+    demo = build()
+    demo.launch(head=demo.demo_head)
 
 
 if __name__ == "__main__":
