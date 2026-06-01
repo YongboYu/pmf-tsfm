@@ -5,12 +5,13 @@ Bake the shared DFG-evolution frame data that all four pipeline prototypes
 *identical* real numbers and only the rendering differs.
 
 Story: bpi2017 "offer" subgraph. Three observed weeks (t1..t3) then a forecast
-week (t4). Every edge is stable except the hero edge `Sent -> Cancelled`, whose
-weekly frequency collapses 281 -> 262 -> 88 (an edge-specific behavioural drift,
-the same O_Sent->O_Cancelled drift used on slides 2 and 4). The forecast frame is
-an illustrative naive-persistence forecast (= last observed week); the held-out
-ground truth for that week is kept so the asset can ghost it behind the
-accent-blue prediction.
+week (t4). A calm mid-series stretch (Oct 02-23) with gentle week-to-week
+variation on the hero edge `Sent -> Cancelled` (346 -> 314 -> 316) -- capability
+framing, NOT the dramatic drift reserved for slides 4/7b. The forecast frame is an
+illustrative naive-persistence forecast (= last observed week, 316); the held-out
+ground truth (315) is kept so the asset can ghost it behind the accent-blue
+prediction -- the forecast lands on the truth, showing we can predict next week's
+whole DFG.
 
 Run:  uv run python slides/template/prototypes/dfg-anim/make_data.py
 """
