@@ -38,16 +38,23 @@ def dfg_diff(
 
     Returns:
         ``{"matched": [...], "added": [...], "removed": [...]}`` where each entry
-        is ``{"from": label, "to": label, "freq": int}``. ``matched``/``added``
-        carry the actual weight; ``removed`` carries the forecast weight.
+        is ``{"from": label, "to": label, "forecast_freq": int, "actual_freq":
+        int}``. Every entry carries *both* weights as a ``forecast → actual``
+        transition; the side where the relation is absent is ``0`` (so ``added``
+        has ``forecast_freq == 0`` and ``removed`` has ``actual_freq == 0``).
     """
     forecast = _relations(forecast_dfg)
     actual = _relations(actual_dfg)
 
-    def entry(rel: tuple[str, str], freq: int) -> dict[str, Any]:
-        return {"from": rel[0], "to": rel[1], "freq": freq}
+    def entry(rel: tuple[str, str]) -> dict[str, Any]:
+        return {
+            "from": rel[0],
+            "to": rel[1],
+            "forecast_freq": forecast.get(rel, 0),
+            "actual_freq": actual.get(rel, 0),
+        }
 
-    matched = [entry(rel, actual[rel]) for rel in actual if rel in forecast]
-    added = [entry(rel, actual[rel]) for rel in actual if rel not in forecast]
-    removed = [entry(rel, forecast[rel]) for rel in forecast if rel not in actual]
+    matched = [entry(rel) for rel in actual if rel in forecast]
+    added = [entry(rel) for rel in actual if rel not in forecast]
+    removed = [entry(rel) for rel in forecast if rel not in actual]
     return {"matched": matched, "added": added, "removed": removed}

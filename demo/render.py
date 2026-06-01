@@ -25,6 +25,38 @@ _MATCHED_COLOUR = "#9e9e9e"
 _ADDED_COLOUR = "#ffb300"
 _REMOVED_COLOUR = "#e53935"
 
+# Each arc label shows two numbers — the forecast weight and the actual weight —
+# distinguished by colour rather than by an arrow, so a reader can tell at a
+# glance which side is which (a 0 means the relation is absent on that side).
+_FORECAST_COLOUR = "#1e88e5"  # blue
+_ACTUAL_COLOUR = "#2e7d32"  # green
+_SEP_COLOUR = "#bdbdbd"  # faint separator between the two numbers
+
+# Embedded legend rows: (line-sample HTML, meaning). The sample is a short glyph
+# in that class's colour — a solid rule for matched, dashes for the changed
+# classes — so a first-time reader can map line colour/style to meaning. The
+# samples are padded to a similar visual width so the column stays aligned.
+_LEGEND_ROWS = [
+    (f'<FONT COLOR="{_MATCHED_COLOUR}">&#9472;&#9472;&#9472;&#9472;&#9472;</FONT>', "matched"),
+    (
+        f'<FONT COLOR="{_ADDED_COLOUR}">&#8211; &#8211; &#8211;</FONT>',
+        "happened &#8212; forecast missed it",
+    ),
+    (
+        f'<FONT COLOR="{_REMOVED_COLOUR}">&#8211; &#8211; &#8211;</FONT>',
+        "forecast predicted it &#8212; did not happen",
+    ),
+]
+
+
+def _arc_label(forecast_freq: int, actual_freq: int) -> str:
+    """HTML-like edge label: forecast weight (blue) · actual weight (green)."""
+    return (
+        f'<<FONT COLOR="{_FORECAST_COLOUR}">{forecast_freq}</FONT>'
+        f'<FONT COLOR="{_SEP_COLOUR}">&#160;|&#160;</FONT>'
+        f'<FONT COLOR="{_ACTUAL_COLOUR}">{actual_freq}</FONT>>'
+    )
+
 
 def dfg_json_to_svg(dfg: dict[str, Any]) -> str:
     """Render a DFG JSON document to an SVG string.
@@ -72,12 +104,48 @@ def diff_svg(forecast_dfg: dict[str, Any], actual_dfg: dict[str, Any]) -> str:
     for label in labels:
         graph.node(label, label=label)
 
+    # De-emphasize the unchanged backbone (thin grey) so the amber/red changed
+    # arcs (thicker) dominate.
     styling = {
-        "matched": {"color": _MATCHED_COLOUR},
-        "added": {"color": _ADDED_COLOUR, "style": "dashed"},
-        "removed": {"color": _REMOVED_COLOUR, "style": "dashed"},
+        "matched": {"color": _MATCHED_COLOUR, "penwidth": "1.0"},
+        "added": {"color": _ADDED_COLOUR, "style": "dashed", "penwidth": "2.5"},
+        "removed": {"color": _REMOVED_COLOUR, "style": "dashed", "penwidth": "2.5"},
     }
     for diff_class, entries in diff.items():
         for entry in entries:
-            graph.edge(entry["from"], entry["to"], label=str(entry["freq"]), **styling[diff_class])
+            label = _arc_label(entry["forecast_freq"], entry["actual_freq"])
+            graph.edge(entry["from"], entry["to"], label=label, **styling[diff_class])
+
+    _add_legend(graph)
     return graph.pipe(format="svg").decode("utf-8")
+
+
+def _add_legend(graph: graphviz.Digraph) -> None:
+    """Embed a compact key as a single HTML-table node in its own cluster.
+
+    The table has two parts: a forecast/actual number-colour key (explaining the
+    bicolour edge labels) and one row per diff class pairing a line sample with
+    its meaning. A single table keeps the legend tight instead of sprawling.
+    """
+    # The forecast/actual number-colour key spans the full width on its own row,
+    # so it does not widen the line-sample column and throw the grid off.
+    number_key = (
+        '<FONT COLOR="#555555">edge numbers: </FONT>'
+        f'<FONT COLOR="{_FORECAST_COLOUR}">forecast</FONT>'
+        f'<FONT COLOR="{_SEP_COLOUR}">&#160;|&#160;</FONT>'
+        f'<FONT COLOR="{_ACTUAL_COLOUR}">actual</FONT>'
+    )
+    # The three diff classes form an aligned 2-column grid: line sample | meaning.
+    class_rows = "".join(
+        f'<TR><TD ALIGN="LEFT">{sample}</TD><TD ALIGN="LEFT">{meaning}</TD></TR>'
+        for sample, meaning in _LEGEND_ROWS
+    )
+    table = (
+        '<<TABLE BORDER="0" CELLBORDER="0" CELLSPACING="3">'
+        '<TR><TD COLSPAN="2" ALIGN="CENTER"><B>Legend</B></TD></TR>'
+        f'<TR><TD COLSPAN="2" ALIGN="LEFT">{number_key}</TD></TR>'
+        f"{class_rows}</TABLE>>"
+    )
+    with graph.subgraph(name="cluster_legend") as legend:
+        legend.attr(color="#bdbdbd", style="dashed")
+        legend.node("_legend", label=table, shape="plaintext")

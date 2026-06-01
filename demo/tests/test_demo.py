@@ -120,8 +120,8 @@ def test_dfg_diff_disjoint_all_added_and_removed():
     assert _rels(diff["added"]) == {("▶", "Y")}
 
 
-def test_dfg_diff_partial_overlap_is_label_keyed_with_directional_freq():
-    """Relations key on labels (not ids); freq comes from the right DFG."""
+def test_dfg_diff_partial_overlap_is_label_keyed_with_both_freqs():
+    """Relations key on labels (not ids); every entry carries both weights."""
     forecast = {
         "nodes": [{"label": "A", "id": 0}, {"label": "B", "id": 1}, {"label": "C", "id": 2}],
         "arcs": [
@@ -142,10 +142,13 @@ def test_dfg_diff_partial_overlap_is_label_keyed_with_directional_freq():
     assert _rels(diff["matched"]) == {("A", "B")}
     assert _rels(diff["added"]) == {("B", "D")}
     assert _rels(diff["removed"]) == {("B", "C")}
-    # matched/added carry the actual weight; removed carries the forecast weight.
-    assert diff["matched"][0]["freq"] == 9
-    assert diff["added"][0]["freq"] == 2
-    assert diff["removed"][0]["freq"] == 7
+    # Every entry exposes both weights; the absent side is 0.
+    assert diff["matched"][0]["forecast_freq"] == 4
+    assert diff["matched"][0]["actual_freq"] == 9
+    assert diff["added"][0]["forecast_freq"] == 0  # forecast missed it
+    assert diff["added"][0]["actual_freq"] == 2
+    assert diff["removed"][0]["forecast_freq"] == 7
+    assert diff["removed"][0]["actual_freq"] == 0  # it did not happen
 
 
 def test_dfg_diff_handles_start_end_marker_relations():
@@ -209,6 +212,67 @@ def test_diff_svg_colour_codes_the_three_diff_classes():
     assert all("stroke-dasharray" in p for p in stroke_paths(amber))  # added dashed
     assert all("stroke-dasharray" in p for p in stroke_paths(red))  # removed dashed
     assert all("stroke-dasharray" not in p for p in stroke_paths(grey))  # matched solid
+
+
+# A drifting forecast/actual pair: A->B matched (4,9), B->D added (0,2, forecast
+# missed it), B->C removed (7,0, predicted but didn't happen).
+DRIFT_FORECAST = {
+    "nodes": [{"label": "A", "id": 0}, {"label": "B", "id": 1}, {"label": "C", "id": 2}],
+    "arcs": [{"from": 0, "to": 1, "freq": 4}, {"from": 1, "to": 2, "freq": 7}],
+}
+DRIFT_ACTUAL = {
+    "nodes": [{"label": "A", "id": 5}, {"label": "B", "id": 6}, {"label": "D", "id": 7}],
+    "arcs": [{"from": 5, "to": 6, "freq": 9}, {"from": 6, "to": 7, "freq": 2}],
+}
+
+# Edge numbers are colour-coded by side (forecast vs actual), not joined by "→".
+FORECAST_COLOUR = "#1e88e5"  # blue
+ACTUAL_COLOUR = "#2e7d32"  # green
+
+
+def test_diff_svg_labels_arcs_with_bicolour_forecast_actual():
+    """Each arc shows its forecast weight and actual weight as two distinctly
+    coloured numbers (forecast = blue, actual = green) — no "→" join."""
+    svg = diff_svg(DRIFT_FORECAST, DRIFT_ACTUAL)
+    # matched A->B: forecast 4 (blue), actual 9 (green).
+    assert re.search(rf'fill="{FORECAST_COLOUR}"[^>]*>4<', svg)
+    assert re.search(rf'fill="{ACTUAL_COLOUR}"[^>]*>9<', svg)
+    # added B->D: forecast 0 (blue, it missed it), actual 2 (green).
+    assert re.search(rf'fill="{FORECAST_COLOUR}"[^>]*>0<', svg)
+    assert re.search(rf'fill="{ACTUAL_COLOUR}"[^>]*>2<', svg)
+    # The arrow join is gone — colour carries the forecast/actual distinction.
+    assert "→" not in svg
+
+
+def _stroke_width(svg, colour):
+    """The stroke-width of the first ``colour`` edge path (1.0 if unset)."""
+    path = re.search(rf'<path[^>]*stroke="{colour}"[^>]*?/>', svg).group(0)
+    m = re.search(r'stroke-width="([\d.]+)"', path)
+    return float(m.group(1)) if m else 1.0
+
+
+def test_diff_svg_deemphasizes_matched_arcs():
+    """Matched arcs are thinner than the amber/red changed arcs, so drift pops
+    against the unchanged backbone."""
+    svg = diff_svg(DRIFT_FORECAST, DRIFT_ACTUAL)
+    grey, amber, red = "#9e9e9e", "#ffb300", "#e53935"
+    matched = _stroke_width(svg, grey)
+    assert matched < _stroke_width(svg, amber)  # added stands out
+    assert matched < _stroke_width(svg, red)  # removed stands out
+
+
+def test_diff_svg_embeds_legend():
+    """The diff graph carries an embedded legend explaining both the three
+    line-style classes and the forecast/actual number colours."""
+    svg = diff_svg(DRIFT_FORECAST, DRIFT_ACTUAL)
+    assert "Legend" in svg
+    # The three diff classes, in forecast-centric wording.
+    assert "matched" in svg
+    assert "missed it" in svg  # amber: it happened but the forecast missed it
+    assert "did not happen" in svg  # red: predicted but it did not happen
+    # The forecast/actual number-colour key (so the bicolour edge labels read).
+    assert "forecast" in svg and "actual" in svg
+    assert FORECAST_COLOUR in svg and ACTUAL_COLOUR in svg
 
 
 # ---------------------------------------------------------------------------

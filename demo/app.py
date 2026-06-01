@@ -27,8 +27,14 @@ MODELS: list[str] = ["chronos2"]
 
 
 def _scrollable(svg: str) -> str:
-    """Wrap a rendered SVG so it scrolls within its pane."""
-    return f'<div style="overflow:auto; max-height:70vh">{svg}</div>'
+    """Wrap a rendered SVG so it scrolls within its pane, centred horizontally.
+
+    Gradio renders ``<svg>`` as ``display:block``, so it ignores ``text-align``;
+    ``margin:0 auto`` on the element itself centres it when it is narrower than the
+    pane, while ``overflow:auto`` keeps a wider graph fully scrollable.
+    """
+    centred = svg.replace("<svg ", '<svg style="display:block;margin:0 auto" ', 1)
+    return f'<div style="overflow:auto; max-height:70vh">{centred}</div>'
 
 
 def _pane(dfg: dict[str, Any]) -> str:
