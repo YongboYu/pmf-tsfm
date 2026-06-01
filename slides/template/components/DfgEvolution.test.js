@@ -3,8 +3,8 @@ import { mount } from '@vue/test-utils'
 import DfgEvolution from './DfgEvolution.vue'
 
 // Stroke width for an edge weight:
-// scaleW(f) = 0.5 + 1.6 * sqrt(f / max_freq), max_freq = 927.
-const expectedWidth = (f) => 0.5 + 1.6 * Math.sqrt(f / 927)
+// scaleW(f) = 0.55 + 1.15 * sqrt(f / max_freq), max_freq = 927.
+const expectedWidth = (f) => 0.55 + 1.15 * Math.sqrt(f / 927)
 
 const heroWidth = (wrapper) =>
   Number(wrapper.get('[data-edge="sent__cancelled"]').attributes('stroke-width'))
@@ -64,6 +64,16 @@ describe('DfgEvolution — frame choreography', () => {
     }
     await wrapper.setProps({ frame: 3 })
     expect(allForecastFlags().every((f) => f === 'true')).toBe(true)
+  })
+
+  it('renders each DFG edge with a separate arrowhead, not an SVG marker overlay', () => {
+    const wrapper = mount(DfgEvolution, { props: { frame: 2 } })
+    const edgeShafts = wrapper.findAll('[data-edge]')
+    const edgeHeads = wrapper.findAll('[data-edge-head]')
+
+    expect(edgeShafts).toHaveLength(8)
+    expect(edgeHeads).toHaveLength(8)
+    expect(edgeShafts.every((edge) => edge.attributes('marker-end') === undefined)).toBe(true)
   })
 
   it('renders every DFG node, with activity labels shown', () => {
