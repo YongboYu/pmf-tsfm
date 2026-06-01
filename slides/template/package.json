@@ -12,7 +12,6 @@
     "@slidev/cli": "^52.14.1",
     "@slidev/theme-default": "latest",
     "@slidev/theme-seriph": "latest",
-    "cytoscape": "^3.33.4",
     "vue": "^3.5.29"
   },
   "devDependencies": {
