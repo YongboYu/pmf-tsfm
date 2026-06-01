@@ -297,6 +297,12 @@ ACTUAL_DFG = {
 METRICS = {"er": 1.5127795943816802, "mae": 3.21, "rmse": 4.56}
 
 
+# Minimal valid pre-rendered SVGs, distinct per pane so the panes differ.
+FORECAST_SVG = '<svg id="forecast"><g class="node"></g></svg>'
+ACTUAL_SVG = '<svg id="actual"><g class="node"></g></svg>'
+DIFF_SVG = '<svg id="diff">#9e9e9e #ffb300 #e53935</svg>'
+
+
 @pytest.fixture
 def asset_dir(tmp_path, monkeypatch):
     """A fixture asset directory for bpi2017 × chronos2 with known contents."""
@@ -305,14 +311,32 @@ def asset_dir(tmp_path, monkeypatch):
     (base / "forecast_dfg.json").write_text(json.dumps(SMALL_DFG))
     (base / "actual_dfg.json").write_text(json.dumps(ACTUAL_DFG))
     (base / "metrics.json").write_text(json.dumps(METRICS))
+    (base / "forecast.svg").write_text(FORECAST_SVG)
+    (base / "actual.svg").write_text(ACTUAL_SVG)
+    (base / "diff.svg").write_text(DIFF_SVG)
     monkeypatch.setattr(forecast, "ASSETS_ROOT", tmp_path)
     return tmp_path
 
 
 def test_forecast_bundled_returns_triple(asset_dir):
-    """forecast_bundled returns the forecast/actual/metrics triple."""
+    """forecast_bundled returns the forecast/actual/metrics triple plus pre-rendered SVGs."""
     result = forecast_bundled("bpi2017", "chronos2", 7)
-    assert set(result) == {"forecast_dfg", "actual_dfg", "metrics"}
+    assert set(result) == {
+        "forecast_dfg",
+        "actual_dfg",
+        "metrics",
+        "forecast_svg",
+        "actual_svg",
+        "diff_svg",
+    }
+
+
+def test_forecast_bundled_reads_pre_rendered_svgs(asset_dir):
+    """The triple carries the pre-rendered SVG figures straight from the assets."""
+    result = forecast_bundled("bpi2017", "chronos2", 7)
+    assert result["forecast_svg"] == FORECAST_SVG
+    assert result["actual_svg"] == ACTUAL_SVG
+    assert result["diff_svg"] == DIFF_SVG
 
 
 def test_forecast_bundled_reads_committed_assets(asset_dir):
@@ -351,27 +375,35 @@ def test_frequencies_to_dfg_json_has_single_start_end():
     assert {a["freq"] for a in dfg["arcs"]} == {3, 6}  # summed weights, no artificial 1s
 
 
-def _write_synthetic_outputs(root):
-    """A minimal stand-in for outputs/zero_shot + outputs/er for one dataset × model."""
+def _write_synthetic_outputs(root, *, cap_dir="TESTDS", model_dir="chronos_2"):
+    """A minimal stand-in for outputs/zero_shot + outputs/er for one dataset × model.
+
+    ``cap_dir`` is the Capitalized on-disk dataset directory (and ``dataset_name``);
+    ``model_dir`` is the on-disk model directory — together they mirror the real
+    ``outputs/zero_shot/<CapDir>/<model_dir>/`` layout that ``precompute_one`` reads.
+    """
     feature_names = ["▶ -> A", "A -> B", "B -> ■"]
-    src = root / "zero_shot" / "testds" / "chronos_2"
+    src = root / "zero_shot" / cap_dir / model_dir
     src.mkdir(parents=True)
-    (src / "TESTDS_chronos_2_metadata.json").write_text(
-        json.dumps({"feature_names": feature_names, "data_metadata": {"dataset_name": "TESTDS"}})
+    (src / f"{cap_dir}_{model_dir}_metadata.json").write_text(
+        json.dumps({"feature_names": feature_names, "data_metadata": {"dataset_name": cap_dir}})
     )
     window = np.array([[1, 2, 1], [1, 2, 1], [1, 2, 1]], dtype=float)
     arr = np.stack([window, window])  # (2 windows, horizon 3, 3 features)
-    np.save(src / "TESTDS_chronos_2_predictions.npy", arr)
-    np.save(src / "TESTDS_chronos_2_targets.npy", arr)  # preds == targets → MAE/RMSE = 0
-    er_dir = root / "er" / "zero_shot" / "TESTDS" / "chronos_2"
+    np.save(src / f"{cap_dir}_{model_dir}_predictions.npy", arr)
+    np.save(src / f"{cap_dir}_{model_dir}_targets.npy", arr)  # preds == targets → MAE/RMSE = 0
+    er_dir = root / "er" / "zero_shot" / cap_dir / model_dir
     er_dir.mkdir(parents=True)
-    (er_dir / "TESTDS_chronos_2_er.json").write_text(
+    (er_dir / f"{cap_dir}_{model_dir}_er.json").write_text(
         json.dumps({"windows": [{"pred_er": 0.9}, {"pred_er": 1.23}]})
     )
 
 
-def test_precompute_one_emits_valid_assets(tmp_path):
+def test_precompute_one_emits_valid_assets(tmp_path, monkeypatch):
     """precompute_one reuses existing outputs (no model run) and writes valid assets."""
+    import precompute_demo
+
+    monkeypatch.setitem(precompute_demo.DATASET_DIRS, "testds", "TESTDS")
     outputs_root = tmp_path / "outputs"
     _write_synthetic_outputs(outputs_root)
 
@@ -389,6 +421,54 @@ def test_precompute_one_emits_valid_assets(tmp_path):
     assert set(metrics) == {"er", "mae", "rmse"}
     assert metrics["er"] == 1.23  # ER of the final window
     assert metrics["mae"] == 0.0 and metrics["rmse"] == 0.0
+    # The pre-rendered SVG figures sit alongside the regenerable JSON source.
+    for name in ("forecast.svg", "actual.svg", "diff.svg"):
+        assert "<svg" in (out_dir / name).read_text()
+
+
+def test_precompute_matrix_emits_all_twelve(tmp_path):
+    """Precompute over the full BUNDLED matrix writes valid assets for every pair.
+
+    Builds a synthetic ``outputs/`` for each (dataset, model) pair — using the
+    DATASET_DIRS / MODEL_DIRS mappings so the src dirs match precompute_one's
+    lookup — then asserts the full 4×3 = 12 matrix of asset directories, each
+    with valid forecast/actual JSON DFGs (▶/■ markers), an {er,mae,rmse} metrics
+    file, and the three pre-rendered SVG figures.
+    """
+    import precompute_demo
+
+    assert len(precompute_demo.BUNDLED) == 12
+    assert len({d for d, _ in precompute_demo.BUNDLED}) == 4  # four datasets
+    assert len({m for _, m in precompute_demo.BUNDLED}) == 3  # three models
+
+    outputs_root = tmp_path / "outputs"
+    assets_root = tmp_path / "assets"
+    for dataset, model in precompute_demo.BUNDLED:
+        _write_synthetic_outputs(
+            outputs_root,
+            cap_dir=precompute_demo.DATASET_DIRS[dataset],
+            model_dir=precompute_demo.MODEL_DIRS[model],
+        )
+
+    written = set()
+    for dataset, model in precompute_demo.BUNDLED:
+        out_dir = precompute_one(dataset, model, outputs_root=outputs_root, assets_root=assets_root)
+        written.add((dataset, model))
+
+        forecast_dfg = json.loads((out_dir / "forecast_dfg.json").read_text())
+        actual_dfg = json.loads((out_dir / "actual_dfg.json").read_text())
+        metrics = json.loads((out_dir / "metrics.json").read_text())
+
+        for dfg in (forecast_dfg, actual_dfg):
+            assert {"nodes", "arcs"} <= set(dfg)
+            labels = {n["label"] for n in dfg["nodes"]}
+            assert "▶" in labels and "■" in labels  # ▶/■ markers
+        assert set(metrics) == {"er", "mae", "rmse"}
+        for name in ("forecast.svg", "actual.svg", "diff.svg"):
+            assert "<svg" in (out_dir / name).read_text()
+
+    assert written == set(precompute_demo.BUNDLED)
+    assert len(written) == 12
 
 
 # ---------------------------------------------------------------------------
@@ -416,6 +496,16 @@ def test_app_builds_blocks(asset_dir):
     assert isinstance(app.build(), gr.Blocks)
 
 
+def test_fmt_shows_na_for_non_finite_metric():
+    """A non-finite metric (e.g. an ER that could not be computed) shows ``n/a``."""
+    pytest.importorskip("gradio")
+    import app
+
+    assert app._fmt(1.5127) == "1.513"
+    assert app._fmt(float("nan")) == "n/a"
+    assert app._fmt(float("inf")) == "n/a"
+
+
 @pytest.fixture
 def drift_asset_dir(tmp_path, monkeypatch):
     """Assets whose forecast and actual genuinely drift (matched + added + removed)."""
@@ -433,6 +523,9 @@ def drift_asset_dir(tmp_path, monkeypatch):
     (base / "forecast_dfg.json").write_text(json.dumps(forecast_dfg))
     (base / "actual_dfg.json").write_text(json.dumps(actual_dfg))
     (base / "metrics.json").write_text(json.dumps(METRICS))
+    (base / "forecast.svg").write_text(FORECAST_SVG)
+    (base / "actual.svg").write_text(ACTUAL_SVG)
+    (base / "diff.svg").write_text(DIFF_SVG)
     monkeypatch.setattr(forecast, "ASSETS_ROOT", tmp_path)
     return tmp_path
 

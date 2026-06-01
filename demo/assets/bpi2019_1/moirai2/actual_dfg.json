@@ -1,0 +1,406 @@
+{
+  "nodes": [
+    {
+      "label": "▶",
+      "id": 0,
+      "freq": 3427
+    },
+    {
+      "label": "■",
+      "id": 1,
+      "freq": 9470
+    },
+    {
+      "label": "Record Goods Receipt",
+      "id": 2,
+      "freq": 1289
+    },
+    {
+      "label": "Record Invoice Receipt",
+      "id": 3,
+      "freq": 703
+    },
+    {
+      "label": "Clear Invoice",
+      "id": 4,
+      "freq": 247
+    },
+    {
+      "label": "Remove Payment Block",
+      "id": 5,
+      "freq": 295
+    },
+    {
+      "label": "Vendor creates invoice",
+      "id": 6,
+      "freq": 1053
+    },
+    {
+      "label": "Create Purchase Order Item",
+      "id": 7,
+      "freq": 1540
+    },
+    {
+      "label": "Change Price",
+      "id": 8,
+      "freq": 45
+    },
+    {
+      "label": "Change Quantity",
+      "id": 9,
+      "freq": 57
+    },
+    {
+      "label": "Delete Purchase Order Item",
+      "id": 10,
+      "freq": 47
+    },
+    {
+      "label": "Cancel Invoice Receipt",
+      "id": 11,
+      "freq": 0
+    },
+    {
+      "label": "Cancel Goods Receipt",
+      "id": 12,
+      "freq": 6
+    },
+    {
+      "label": "Change Delivery Indicator",
+      "id": 13,
+      "freq": 0
+    },
+    {
+      "label": "Vendor creates debit memo",
+      "id": 14,
+      "freq": 80
+    },
+    {
+      "label": "Receive Order Confirmation",
+      "id": 15,
+      "freq": 467
+    },
+    {
+      "label": "Create Purchase Requisition Item",
+      "id": 16,
+      "freq": 0
+    },
+    {
+      "label": "Change Approval for Purchase Order",
+      "id": 17,
+      "freq": 11
+    },
+    {
+      "label": "Release Purchase Requisition",
+      "id": 18,
+      "freq": 117
+    }
+  ],
+  "arcs": [
+    {
+      "from": 2,
+      "to": 3,
+      "freq": 312
+    },
+    {
+      "from": 3,
+      "to": 4,
+      "freq": 89
+    },
+    {
+      "from": 4,
+      "to": 1,
+      "freq": 6480
+    },
+    {
+      "from": 2,
+      "to": 5,
+      "freq": 108
+    },
+    {
+      "from": 5,
+      "to": 4,
+      "freq": 144
+    },
+    {
+      "from": 2,
+      "to": 6,
+      "freq": 579
+    },
+    {
+      "from": 6,
+      "to": 3,
+      "freq": 314
+    },
+    {
+      "from": 6,
+      "to": 2,
+      "freq": 947
+    },
+    {
+      "from": 7,
+      "to": 2,
+      "freq": 144
+    },
+    {
+      "from": 7,
+      "to": 6,
+      "freq": 301
+    },
+    {
+      "from": 3,
+      "to": 2,
+      "freq": 50
+    },
+    {
+      "from": 3,
+      "to": 5,
+      "freq": 154
+    },
+    {
+      "from": 3,
+      "to": 1,
+      "freq": 1443
+    },
+    {
+      "from": 4,
+      "to": 4,
+      "freq": 6
+    },
+    {
+      "from": 8,
+      "to": 5,
+      "freq": 33
+    },
+    {
+      "from": 3,
+      "to": 8,
+      "freq": 12
+    },
+    {
+      "from": 2,
+      "to": 2,
+      "freq": 30
+    },
+    {
+      "from": 6,
+      "to": 9,
+      "freq": 5
+    },
+    {
+      "from": 9,
+      "to": 2,
+      "freq": 72
+    },
+    {
+      "from": 10,
+      "to": 1,
+      "freq": 105
+    },
+    {
+      "from": 0,
+      "to": 6,
+      "freq": 8
+    },
+    {
+      "from": 6,
+      "to": 7,
+      "freq": 7
+    },
+    {
+      "from": 9,
+      "to": 6,
+      "freq": 16
+    },
+    {
+      "from": 2,
+      "to": 1,
+      "freq": 437
+    },
+    {
+      "from": 11,
+      "to": 1,
+      "freq": 10
+    },
+    {
+      "from": 0,
+      "to": 7,
+      "freq": 1688
+    },
+    {
+      "from": 4,
+      "to": 3,
+      "freq": 8
+    },
+    {
+      "from": 8,
+      "to": 2,
+      "freq": 10
+    },
+    {
+      "from": 11,
+      "to": 4,
+      "freq": 8
+    },
+    {
+      "from": 12,
+      "to": 1,
+      "freq": 8
+    },
+    {
+      "from": 7,
+      "to": 10,
+      "freq": 41
+    },
+    {
+      "from": 13,
+      "to": 1,
+      "freq": 1
+    },
+    {
+      "from": 7,
+      "to": 12,
+      "freq": 6
+    },
+    {
+      "from": 3,
+      "to": 3,
+      "freq": 4
+    },
+    {
+      "from": 8,
+      "to": 6,
+      "freq": 3
+    },
+    {
+      "from": 14,
+      "to": 6,
+      "freq": 34
+    },
+    {
+      "from": 7,
+      "to": 3,
+      "freq": 19
+    },
+    {
+      "from": 7,
+      "to": 9,
+      "freq": 47
+    },
+    {
+      "from": 6,
+      "to": 14,
+      "freq": 46
+    },
+    {
+      "from": 7,
+      "to": 8,
+      "freq": 33
+    },
+    {
+      "from": 3,
+      "to": 6,
+      "freq": 59
+    },
+    {
+      "from": 7,
+      "to": 15,
+      "freq": 467
+    },
+    {
+      "from": 15,
+      "to": 10,
+      "freq": 5
+    },
+    {
+      "from": 14,
+      "to": 3,
+      "freq": 46
+    },
+    {
+      "from": 15,
+      "to": 6,
+      "freq": 61
+    },
+    {
+      "from": 15,
+      "to": 2,
+      "freq": 36
+    },
+    {
+      "from": 2,
+      "to": 14,
+      "freq": 34
+    },
+    {
+      "from": 7,
+      "to": 1,
+      "freq": 538
+    },
+    {
+      "from": 9,
+      "to": 10,
+      "freq": 1
+    },
+    {
+      "from": 15,
+      "to": 9,
+      "freq": 3
+    },
+    {
+      "from": 0,
+      "to": 16,
+      "freq": 1731
+    },
+    {
+      "from": 16,
+      "to": 7,
+      "freq": 1391
+    },
+    {
+      "from": 9,
+      "to": 1,
+      "freq": 21
+    },
+    {
+      "from": 10,
+      "to": 17,
+      "freq": 11
+    },
+    {
+      "from": 17,
+      "to": 1,
+      "freq": 11
+    },
+    {
+      "from": 8,
+      "to": 1,
+      "freq": 13
+    },
+    {
+      "from": 10,
+      "to": 9,
+      "freq": 2
+    },
+    {
+      "from": 5,
+      "to": 1,
+      "freq": 385
+    },
+    {
+      "from": 15,
+      "to": 1,
+      "freq": 18
+    },
+    {
+      "from": 16,
+      "to": 18,
+      "freq": 117
+    },
+    {
+      "from": 18,
+      "to": 7,
+      "freq": 142
+    }
+  ]
+}

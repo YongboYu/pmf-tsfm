@@ -1,29 +1,29 @@
 """Gradio app — the bundled forecast explorer (demo slice 1).
 
-Thin glue over the deep modules ``forecast.forecast_bundled``,
-``render.dfg_json_to_svg`` / ``render.diff_svg`` and ``dfg_diff``: a
-dataset/model picker drives twin panes (forecast DFG | actual-future DFG), with
-a ``[Side-by-side | Diff]`` toggle that swaps them for one colour-coded diff
+Thin glue over the deep module ``forecast.forecast_bundled``: a dataset/model
+picker drives twin panes (forecast DFG | actual-future DFG), with a
+``[Side-by-side | Diff]`` toggle that swaps them for one colour-coded diff
 overlay. An ER/MAE/RMSE metrics strip stays below in both views. The bundled
 path is a holdout backtest (ADR-0004), so the metrics are genuine accuracy.
 
-Served entirely from precomputed assets — GPU-free. Launch plainly; ``mcp_server``
-stays off in this slice (ADR-0003).
+Served entirely from precomputed assets — including the pre-rendered SVG figures,
+so the app needs no ``dot`` binary at runtime — GPU-free. Launch plainly;
+``mcp_server`` stays off in this slice (ADR-0003).
 
     uv run --with gradio python demo/app.py
 """
 
 from __future__ import annotations
 
+import math
 from typing import Any
 
 import gradio as gr
 from forecast import forecast_bundled
-from render import dfg_json_to_svg, diff_svg
 
-# Slice-1 scope: only the precomputed bundled pairs are offered as choices.
-DATASETS: list[str] = ["bpi2017"]
-MODELS: list[str] = ["chronos2"]
+# Only the precomputed bundled pairs are offered as choices: the full 4-by-3 matrix.
+DATASETS: list[str] = ["bpi2017", "bpi2019_1", "sepsis", "hospital_billing"]
+MODELS: list[str] = ["chronos2", "moirai2", "timesfm2.5"]
 
 
 def _scrollable(svg: str) -> str:
@@ -37,26 +37,35 @@ def _scrollable(svg: str) -> str:
     return f'<div style="overflow:auto; max-height:70vh">{centred}</div>'
 
 
-def _pane(dfg: dict[str, Any]) -> str:
-    """Render a DFG to a scrollable SVG pane."""
-    return _scrollable(dfg_json_to_svg(dfg))
+def _fmt(value: float) -> str:
+    """Format a metric to 3 decimals, showing ``n/a`` when it is not finite.
+
+    Some upstream ER sweeps yield ``nan`` for a window where ER cannot be computed
+    (e.g. sepsis × moirai2): we keep the value faithful and only present the gap as
+    ``n/a`` rather than a raw ``nan``.
+    """
+    return f"{value:.3f}" if math.isfinite(value) else "n/a"
 
 
 def _render_panes(result: dict[str, Any]) -> tuple[str, str, str, str, str]:
-    """Render the side-by-side outputs from a resolved forecast triple."""
+    """Assemble the side-by-side outputs from a resolved forecast result.
+
+    The SVGs are pre-rendered at precompute time (no ``dot`` at runtime); the app
+    only wraps them in a scrollable pane.
+    """
     metrics = result["metrics"]
     return (
-        _pane(result["forecast_dfg"]),
-        _pane(result["actual_dfg"]),
-        f"{metrics['er']:.3f}",
-        f"{metrics['mae']:.3f}",
-        f"{metrics['rmse']:.3f}",
+        _scrollable(result["forecast_svg"]),
+        _scrollable(result["actual_svg"]),
+        _fmt(metrics["er"]),
+        _fmt(metrics["mae"]),
+        _fmt(metrics["rmse"]),
     )
 
 
 def _render_diff(result: dict[str, Any]) -> str:
-    """Render the colour-coded diff overlay pane from a resolved forecast triple."""
-    return _scrollable(diff_svg(result["forecast_dfg"], result["actual_dfg"]))
+    """Wrap the pre-rendered colour-coded diff overlay SVG in a scrollable pane."""
+    return _scrollable(result["diff_svg"])
 
 
 def load(dataset: str, model: str) -> tuple[str, str, str, str, str]:
