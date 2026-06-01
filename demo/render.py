@@ -94,15 +94,21 @@ def diff_svg(forecast_dfg: dict[str, Any], actual_dfg: dict[str, Any]) -> str:
     diff = dfg_diff(forecast_dfg, actual_dfg)
     graph = graphviz.Digraph()
 
-    # Nodes are the union of every relation's endpoints, keyed (and id'd) by label.
-    labels = {
-        end
-        for entries in diff.values()
-        for entry in entries
-        for end in (entry["from"], entry["to"])
-    }
+    # Nodes are the union of every relation's endpoints, keyed by label. Each gets
+    # an opaque integer id so a label containing a colon (e.g. "SRM: Created") is
+    # not parsed by graphviz as node:port syntax (which would merge every such
+    # activity into one phantom node and corrupt the diff).
+    labels = sorted(
+        {
+            end
+            for entries in diff.values()
+            for entry in entries
+            for end in (entry["from"], entry["to"])
+        }
+    )
+    node_id = {label: str(i) for i, label in enumerate(labels)}
     for label in labels:
-        graph.node(label, label=label)
+        graph.node(node_id[label], label=label)
 
     # De-emphasize the unchanged backbone (thin grey) so the amber/red changed
     # arcs (thicker) dominate.
@@ -114,7 +120,12 @@ def diff_svg(forecast_dfg: dict[str, Any], actual_dfg: dict[str, Any]) -> str:
     for diff_class, entries in diff.items():
         for entry in entries:
             label = _arc_label(entry["forecast_freq"], entry["actual_freq"])
-            graph.edge(entry["from"], entry["to"], label=label, **styling[diff_class])
+            graph.edge(
+                node_id[entry["from"]],
+                node_id[entry["to"]],
+                label=label,
+                **styling[diff_class],
+            )
 
     _add_legend(graph)
     return graph.pipe(format="svg").decode("utf-8")

@@ -1,0 +1,431 @@
+{
+  "nodes": [
+    {
+      "label": "▶",
+      "id": 0,
+      "freq": 3654
+    },
+    {
+      "label": "■",
+      "id": 1,
+      "freq": 1967
+    },
+    {
+      "label": "Record Goods Receipt",
+      "id": 2,
+      "freq": 3100
+    },
+    {
+      "label": "Record Invoice Receipt",
+      "id": 3,
+      "freq": 2021
+    },
+    {
+      "label": "Clear Invoice",
+      "id": 4,
+      "freq": 900
+    },
+    {
+      "label": "Remove Payment Block",
+      "id": 5,
+      "freq": 504
+    },
+    {
+      "label": "Vendor creates invoice",
+      "id": 6,
+      "freq": 2604
+    },
+    {
+      "label": "SRM: Created",
+      "id": 7,
+      "freq": 0
+    },
+    {
+      "label": "SRM: Complete",
+      "id": 8,
+      "freq": 2
+    },
+    {
+      "label": "SRM: Awaiting Approval",
+      "id": 9,
+      "freq": 2
+    },
+    {
+      "label": "SRM: Document Completed",
+      "id": 10,
+      "freq": 2
+    },
+    {
+      "label": "SRM: In Transfer to Execution Syst.",
+      "id": 11,
+      "freq": 1
+    },
+    {
+      "label": "SRM: Ordered",
+      "id": 12,
+      "freq": 1
+    },
+    {
+      "label": "Create Purchase Order Item",
+      "id": 13,
+      "freq": 2282
+    },
+    {
+      "label": "Change Price",
+      "id": 14,
+      "freq": 55
+    },
+    {
+      "label": "Change Quantity",
+      "id": 15,
+      "freq": 110
+    },
+    {
+      "label": "Delete Purchase Order Item",
+      "id": 16,
+      "freq": 90
+    },
+    {
+      "label": "Cancel Invoice Receipt",
+      "id": 17,
+      "freq": 0
+    },
+    {
+      "label": "Change Delivery Indicator",
+      "id": 18,
+      "freq": 0
+    },
+    {
+      "label": "Cancel Goods Receipt",
+      "id": 19,
+      "freq": 2
+    },
+    {
+      "label": "Receive Order Confirmation",
+      "id": 20,
+      "freq": 709
+    },
+    {
+      "label": "Change Approval for Purchase Order",
+      "id": 21,
+      "freq": 3
+    },
+    {
+      "label": "Create Purchase Requisition Item",
+      "id": 22,
+      "freq": 0
+    },
+    {
+      "label": "Release Purchase Requisition",
+      "id": 23,
+      "freq": 2
+    }
+  ],
+  "arcs": [
+    {
+      "from": 2,
+      "to": 3,
+      "freq": 937
+    },
+    {
+      "from": 3,
+      "to": 4,
+      "freq": 548
+    },
+    {
+      "from": 4,
+      "to": 1,
+      "freq": 1387
+    },
+    {
+      "from": 2,
+      "to": 5,
+      "freq": 203
+    },
+    {
+      "from": 5,
+      "to": 4,
+      "freq": 347
+    },
+    {
+      "from": 2,
+      "to": 6,
+      "freq": 1179
+    },
+    {
+      "from": 6,
+      "to": 3,
+      "freq": 1038
+    },
+    {
+      "from": 6,
+      "to": 2,
+      "freq": 1836
+    },
+    {
+      "from": 0,
+      "to": 7,
+      "freq": 2
+    },
+    {
+      "from": 7,
+      "to": 8,
+      "freq": 2
+    },
+    {
+      "from": 8,
+      "to": 9,
+      "freq": 2
+    },
+    {
+      "from": 9,
+      "to": 10,
+      "freq": 2
+    },
+    {
+      "from": 10,
+      "to": 11,
+      "freq": 1
+    },
+    {
+      "from": 11,
+      "to": 12,
+      "freq": 1
+    },
+    {
+      "from": 13,
+      "to": 2,
+      "freq": 716
+    },
+    {
+      "from": 13,
+      "to": 6,
+      "freq": 1195
+    },
+    {
+      "from": 3,
+      "to": 2,
+      "freq": 125
+    },
+    {
+      "from": 3,
+      "to": 5,
+      "freq": 294
+    },
+    {
+      "from": 3,
+      "to": 1,
+      "freq": 213
+    },
+    {
+      "from": 4,
+      "to": 4,
+      "freq": 2
+    },
+    {
+      "from": 14,
+      "to": 5,
+      "freq": 7
+    },
+    {
+      "from": 3,
+      "to": 14,
+      "freq": 9
+    },
+    {
+      "from": 2,
+      "to": 2,
+      "freq": 19
+    },
+    {
+      "from": 6,
+      "to": 15,
+      "freq": 13
+    },
+    {
+      "from": 15,
+      "to": 2,
+      "freq": 76
+    },
+    {
+      "from": 16,
+      "to": 1,
+      "freq": 95
+    },
+    {
+      "from": 0,
+      "to": 6,
+      "freq": 2
+    },
+    {
+      "from": 6,
+      "to": 13,
+      "freq": 2
+    },
+    {
+      "from": 15,
+      "to": 6,
+      "freq": 52
+    },
+    {
+      "from": 2,
+      "to": 1,
+      "freq": 121
+    },
+    {
+      "from": 17,
+      "to": 1,
+      "freq": 4
+    },
+    {
+      "from": 0,
+      "to": 13,
+      "freq": 1332
+    },
+    {
+      "from": 4,
+      "to": 3,
+      "freq": 2
+    },
+    {
+      "from": 14,
+      "to": 2,
+      "freq": 14
+    },
+    {
+      "from": 17,
+      "to": 4,
+      "freq": 3
+    },
+    {
+      "from": 17,
+      "to": 3,
+      "freq": 1
+    },
+    {
+      "from": 13,
+      "to": 16,
+      "freq": 71
+    },
+    {
+      "from": 18,
+      "to": 1,
+      "freq": 1
+    },
+    {
+      "from": 13,
+      "to": 19,
+      "freq": 2
+    },
+    {
+      "from": 3,
+      "to": 3,
+      "freq": 3
+    },
+    {
+      "from": 14,
+      "to": 6,
+      "freq": 16
+    },
+    {
+      "from": 13,
+      "to": 3,
+      "freq": 40
+    },
+    {
+      "from": 13,
+      "to": 15,
+      "freq": 97
+    },
+    {
+      "from": 13,
+      "to": 14,
+      "freq": 46
+    },
+    {
+      "from": 3,
+      "to": 6,
+      "freq": 31
+    },
+    {
+      "from": 13,
+      "to": 20,
+      "freq": 708
+    },
+    {
+      "from": 20,
+      "to": 16,
+      "freq": 19
+    },
+    {
+      "from": 20,
+      "to": 6,
+      "freq": 131
+    },
+    {
+      "from": 20,
+      "to": 2,
+      "freq": 314
+    },
+    {
+      "from": 13,
+      "to": 1,
+      "freq": 134
+    },
+    {
+      "from": 13,
+      "to": 21,
+      "freq": 2
+    },
+    {
+      "from": 0,
+      "to": 22,
+      "freq": 2318
+    },
+    {
+      "from": 22,
+      "to": 13,
+      "freq": 2274
+    },
+    {
+      "from": 15,
+      "to": 1,
+      "freq": 3
+    },
+    {
+      "from": 16,
+      "to": 21,
+      "freq": 1
+    },
+    {
+      "from": 21,
+      "to": 1,
+      "freq": 1
+    },
+    {
+      "from": 21,
+      "to": 20,
+      "freq": 1
+    },
+    {
+      "from": 5,
+      "to": 1,
+      "freq": 7
+    },
+    {
+      "from": 20,
+      "to": 1,
+      "freq": 1
+    },
+    {
+      "from": 22,
+      "to": 23,
+      "freq": 2
+    },
+    {
+      "from": 23,
+      "to": 13,
+      "freq": 6
+    }
+  ]
+}

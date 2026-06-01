@@ -1,0 +1,226 @@
+{
+  "nodes": [
+    {
+      "label": "▶",
+      "id": 0,
+      "freq": 1301
+    },
+    {
+      "label": "■",
+      "id": 1,
+      "freq": 1178
+    },
+    {
+      "label": "FIN",
+      "id": 2,
+      "freq": 87
+    },
+    {
+      "label": "RELEASE",
+      "id": 3,
+      "freq": 518
+    },
+    {
+      "label": "CODE OK",
+      "id": 4,
+      "freq": 476
+    },
+    {
+      "label": "BILLED",
+      "id": 5,
+      "freq": 135
+    },
+    {
+      "label": "NEW",
+      "id": 6,
+      "freq": 0
+    },
+    {
+      "label": "CHANGE DIAGN",
+      "id": 7,
+      "freq": 232
+    },
+    {
+      "label": "REOPEN",
+      "id": 8,
+      "freq": 15
+    },
+    {
+      "label": "CODE NOK",
+      "id": 9,
+      "freq": 17
+    },
+    {
+      "label": "SET STATUS",
+      "id": 10,
+      "freq": 0
+    },
+    {
+      "label": "DELETE",
+      "id": 11,
+      "freq": 35
+    },
+    {
+      "label": "STORNO",
+      "id": 12,
+      "freq": 6
+    },
+    {
+      "label": "REJECT",
+      "id": 13,
+      "freq": 7
+    },
+    {
+      "label": "EMPTY",
+      "id": 14,
+      "freq": 7
+    }
+  ],
+  "arcs": [
+    {
+      "from": 2,
+      "to": 3,
+      "freq": 518
+    },
+    {
+      "from": 3,
+      "to": 4,
+      "freq": 476
+    },
+    {
+      "from": 4,
+      "to": 5,
+      "freq": 135
+    },
+    {
+      "from": 5,
+      "to": 1,
+      "freq": 177
+    },
+    {
+      "from": 1,
+      "to": 1,
+      "freq": 474
+    },
+    {
+      "from": 0,
+      "to": 0,
+      "freq": 651
+    },
+    {
+      "from": 0,
+      "to": 6,
+      "freq": 650
+    },
+    {
+      "from": 6,
+      "to": 7,
+      "freq": 223
+    },
+    {
+      "from": 7,
+      "to": 2,
+      "freq": 30
+    },
+    {
+      "from": 6,
+      "to": 1,
+      "freq": 285
+    },
+    {
+      "from": 6,
+      "to": 2,
+      "freq": 42
+    },
+    {
+      "from": 4,
+      "to": 1,
+      "freq": 124
+    },
+    {
+      "from": 2,
+      "to": 1,
+      "freq": 51
+    },
+    {
+      "from": 8,
+      "to": 2,
+      "freq": 15
+    },
+    {
+      "from": 4,
+      "to": 8,
+      "freq": 10
+    },
+    {
+      "from": 3,
+      "to": 9,
+      "freq": 17
+    },
+    {
+      "from": 10,
+      "to": 1,
+      "freq": 3
+    },
+    {
+      "from": 6,
+      "to": 11,
+      "freq": 20
+    },
+    {
+      "from": 11,
+      "to": 1,
+      "freq": 50
+    },
+    {
+      "from": 7,
+      "to": 7,
+      "freq": 9
+    },
+    {
+      "from": 7,
+      "to": 11,
+      "freq": 8
+    },
+    {
+      "from": 5,
+      "to": 12,
+      "freq": 6
+    },
+    {
+      "from": 12,
+      "to": 13,
+      "freq": 7
+    },
+    {
+      "from": 13,
+      "to": 8,
+      "freq": 5
+    },
+    {
+      "from": 8,
+      "to": 11,
+      "freq": 7
+    },
+    {
+      "from": 7,
+      "to": 1,
+      "freq": 5
+    },
+    {
+      "from": 9,
+      "to": 14,
+      "freq": 7
+    },
+    {
+      "from": 14,
+      "to": 1,
+      "freq": 7
+    },
+    {
+      "from": 12,
+      "to": 1,
+      "freq": 2
+    }
+  ]
+}

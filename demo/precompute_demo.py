@@ -6,9 +6,14 @@ demo model we reuse the **final forecast window** already in ``predictions.npy``
 ``targets.npy`` (what actually happened). No model is re-run.
 
 For each pair this writes
-``demo/assets/<dataset>/<model>/{forecast_dfg.json, actual_dfg.json, metrics.json}``,
-reusing ``pmf_tsfm.er.dfg.dfg_to_json`` for DFG serialisation, the precomputed ER
-sweep for ER, and ``pmf_tsfm.utils.metrics.compute_metrics`` for MAE/RMSE.
+``demo/assets/<dataset>/<model>/{forecast_dfg.json, actual_dfg.json, metrics.json,
+forecast.svg, actual.svg, diff.svg}``, reusing ``pmf_tsfm.er.dfg.dfg_to_json`` for
+DFG serialisation, the precomputed ER sweep for ER,
+``pmf_tsfm.utils.metrics.compute_metrics`` for MAE/RMSE, and ``render`` for the SVGs.
+
+The JSON files stay the regenerable source of truth; the SVGs are pre-rendered so
+HF Spaces can serve the bundled path with no ``dot`` binary at runtime (the same
+``render`` code later serves user-submitted logs).
 
     uv run python demo/precompute_demo.py
 """
@@ -20,6 +25,7 @@ from pathlib import Path
 from typing import Any
 
 import numpy as np
+from render import dfg_json_to_svg, diff_svg
 
 from pmf_tsfm.er.dfg import dfg_to_json
 from pmf_tsfm.utils.metrics import compute_metrics
@@ -29,10 +35,27 @@ OUTPUTS_ROOT = REPO_ROOT / "outputs"
 ASSETS_ROOT = REPO_ROOT / "demo" / "assets"
 
 # demo model id -> on-disk model directory under outputs/zero_shot/<dataset>/
-MODEL_DIRS: dict[str, str] = {"chronos2": "chronos_2"}
+MODEL_DIRS: dict[str, str] = {
+    "chronos2": "chronos_2",
+    "moirai2": "moirai_2_0_small",
+    "timesfm2.5": "timesfm_2_5_200m",
+}
 
-# Slice-1 scope: one bundled dataset x one model. Later slices widen this list.
-BUNDLED: list[tuple[str, str]] = [("bpi2017", "chronos2")]
+# demo dataset id (lowercase) -> Capitalized on-disk dir under outputs/zero_shot/.
+# The ER path derives its Capitalized prefix from metadata, but the zero_shot
+# source dir must be looked up explicitly so the bundled path is correct on a
+# case-sensitive filesystem (e.g. HF Spaces), not just macOS's case-insensitive one.
+DATASET_DIRS: dict[str, str] = {
+    "bpi2017": "BPI2017",
+    "bpi2019_1": "BPI2019_1",
+    "sepsis": "Sepsis",
+    "hospital_billing": "Hospital_Billing",
+}
+
+# The full bundled matrix: every dataset by every demo model (4 * 3 = 12 pairs).
+BUNDLED: list[tuple[str, str]] = [
+    (dataset, model) for dataset in DATASET_DIRS for model in MODEL_DIRS
+]
 
 
 def frequencies_to_dfg_json(window: np.ndarray, feature_names: list[str]) -> dict[str, Any]:
@@ -77,7 +100,7 @@ def precompute_one(
         The asset directory that was written.
     """
     model_dir = MODEL_DIRS[model]
-    src_dir = outputs_root / "zero_shot" / dataset / model_dir
+    src_dir = outputs_root / "zero_shot" / DATASET_DIRS[dataset] / model_dir
 
     metadata = json.loads(next(src_dir.glob("*_metadata.json")).read_text())
     feature_names = metadata["feature_names"]
@@ -114,6 +137,12 @@ def precompute_one(
         json.dumps(actual_dfg, ensure_ascii=False, indent=2) + "\n"
     )
     (out_dir / "metrics.json").write_text(json.dumps(metrics, indent=2) + "\n")
+
+    # Pre-render the figures so HF Spaces serves them statically (no `dot` at
+    # runtime). The JSON above stays the regenerable source of truth.
+    (out_dir / "forecast.svg").write_text(dfg_json_to_svg(forecast_dfg))
+    (out_dir / "actual.svg").write_text(dfg_json_to_svg(actual_dfg))
+    (out_dir / "diff.svg").write_text(diff_svg(forecast_dfg, actual_dfg))
     return out_dir
 
 

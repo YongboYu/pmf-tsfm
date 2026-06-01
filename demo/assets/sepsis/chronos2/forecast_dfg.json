@@ -1,0 +1,26 @@
+{
+  "nodes": [
+    {
+      "label": "▶",
+      "id": 0,
+      "freq": 0
+    },
+    {
+      "label": "■",
+      "id": 1,
+      "freq": 1
+    },
+    {
+      "label": "Return ER",
+      "id": 2,
+      "freq": 0
+    }
+  ],
+  "arcs": [
+    {
+      "from": 2,
+      "to": 1,
+      "freq": 1
+    }
+  ]
+}
