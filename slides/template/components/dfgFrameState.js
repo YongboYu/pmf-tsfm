@@ -2,9 +2,9 @@
 // Maps a frame index to the derived view-state the component renders. No DOM, no Vue —
 // this is the deep module the component is a thin shell around.
 
-// sqrt scaling compresses the weight range so busy chain edges don't swamp the hero edge.
+// sqrt scaling compresses the weight range without letting busy chain edges swamp arrowheads.
 export const strokeWidthFor = (weight, maxFreq) =>
-  Number((0.5 + 1.6 * Math.sqrt(weight / maxFreq)).toFixed(2))
+  Number((0.55 + 1.15 * Math.sqrt(weight / maxFreq)).toFixed(2))
 
 const INK = '#0f172a'
 const NEUTRAL = '#475569'

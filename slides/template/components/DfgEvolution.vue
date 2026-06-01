@@ -2,7 +2,7 @@
 import { computed } from 'vue'
 import { dfgData } from './dfgData.js'
 import { frameState } from './dfgFrameState.js'
-import { edgeGeometry, sparkScale } from './dfgGeometry.js'
+import { arrowGeometry, edgeGeometry, sparkScale } from './dfgGeometry.js'
 
 // `frame` is the master index; slice #3 will bind it to Slidev v-click.
 const props = defineProps({
@@ -12,7 +12,20 @@ const props = defineProps({
 const state = computed(() => frameState(dfgData, props.frame))
 
 // Frame-independent trimmed geometry [x1,y1,x2,y2] for every edge, keyed by edge id.
-const edgeGeo = edgeGeometry(dfgData.nodes, dfgData.edges)
+// The hero edge is the one long diagonal into a wide box, so the shared radial end gap
+// leaves its arrowhead overlapping the (dashed, on the forecast frame) body at the box
+// border — pull just its end back to clear the Cancelled box.
+const edgeGeo = edgeGeometry(dfgData.nodes, dfgData.edges, 4.4, 5.8, { [dfgData.hero]: 14 })
+
+const edgeDraw = computed(() =>
+  Object.fromEntries(dfgData.edges.map((edge) => [
+    edge.id,
+    arrowGeometry(edgeGeo[edge.id], state.value.edges[edge.id].strokeWidth),
+  ])),
+)
+const heroGhostDraw = computed(() =>
+  arrowGeometry(edgeGeo[dfgData.hero], state.value.heroGhost.strokeWidth || 1),
+)
 
 // Workflow captions woven under each part of the figure (per render_diagram.js STEPS).
 // "weekly sublog" / "weekly snapshot" wording avoids the reserved term "window" (ER only).
@@ -124,36 +137,33 @@ const spark = computed(() => {
       <div class="wcol wcol-dfg">
         <div class="slot">
     <svg viewBox="0 0 100 104" width="100%" height="100%">
-      <defs>
-        <marker
-          v-for="m in [{ id: 'arrow', col: '#475569' }, { id: 'arrowA', col: dfgData.accent }]"
-          :key="m.id" :id="m.id" viewBox="0 0 10 10" refX="8" refY="5"
-          markerWidth="2.8" markerHeight="2.8" orient="auto-start-reverse"
-          markerUnits="userSpaceOnUse"
-        >
-          <path d="M0,0 L10,5 L0,10 z" :fill="m.col" />
-        </marker>
-      </defs>
-      <line
+      <g
         v-for="edge in dfgData.edges"
         :key="edge.id"
-        :data-edge="edge.id"
-        :data-forecast="state.edges[edge.id].isForecast"
-        :x1="edgeGeo[edge.id][0]" :y1="edgeGeo[edge.id][1]"
-        :x2="edgeGeo[edge.id][2]" :y2="edgeGeo[edge.id][3]"
-        fill="none" stroke-linecap="round"
-        :stroke-width="state.edges[edge.id].strokeWidth"
-        :stroke="state.edges[edge.id].stroke"
-        :marker-end="`url(#${state.edges[edge.id].marker})`"
-        :stroke-dasharray="state.edges[edge.id].dashed ? '2.4 1.8' : '0'"
-      />
+      >
+        <line
+          :data-edge="edge.id"
+          :data-forecast="state.edges[edge.id].isForecast"
+          :x1="edgeDraw[edge.id].shaft[0]" :y1="edgeDraw[edge.id].shaft[1]"
+          :x2="edgeDraw[edge.id].shaft[2]" :y2="edgeDraw[edge.id].shaft[3]"
+          fill="none" stroke-linecap="butt"
+          :stroke-width="state.edges[edge.id].strokeWidth"
+          :stroke="state.edges[edge.id].stroke"
+          :stroke-dasharray="state.edges[edge.id].dashed ? '2.4 1.8' : '0'"
+        />
+        <path
+          :data-edge-head="edge.id"
+          :d="edgeDraw[edge.id].headPath"
+          :fill="state.edges[edge.id].stroke"
+        />
+      </g>
       <!-- Held-out-truth ghost over the hero edge, forecast frame only. -->
       <line
         v-if="state.heroGhost.visible"
         data-testid="hero-ghost"
-        :x1="edgeGeo[dfgData.hero][0]" :y1="edgeGeo[dfgData.hero][1]"
-        :x2="edgeGeo[dfgData.hero][2]" :y2="edgeGeo[dfgData.hero][3]"
-        fill="none" stroke="#94a3b8" stroke-linecap="round" opacity="0.6"
+        :x1="heroGhostDraw.shaft[0]" :y1="heroGhostDraw.shaft[1]"
+        :x2="heroGhostDraw.shaft[2]" :y2="heroGhostDraw.shaft[3]"
+        fill="none" stroke="#94a3b8" stroke-linecap="butt" opacity="0.6"
         :stroke-width="state.heroGhost.strokeWidth"
       />
       <!-- Hero-edge weight readout, offset from the edge midpoint. -->
@@ -167,12 +177,12 @@ const spark = computed(() => {
       <g v-for="node in dfgData.nodes" :key="node.id" :data-node="node.id">
         <template v-if="node.kind === 'activity'">
           <rect
-            :x="node.x - 10.5" :y="node.y - 3.6" width="21" height="7.2" rx="2.2"
+            :x="node.x - 12" :y="node.y - 3.6" width="24" height="7.2" rx="2.2"
             fill="#ffffff" stroke="#cbd5e1" stroke-width="0.5"
           />
           <text
             :x="node.x" :y="node.y + 1.3" text-anchor="middle"
-            style="font-size: 3.4px" fill="#0f172a"
+            style="font-size: 3.2px" fill="#0f172a"
           >{{ node.label }}</text>
         </template>
         <circle
@@ -233,7 +243,7 @@ const spark = computed(() => {
       >{{ spark.valLabel.text }}</text>
     </svg>
         </div>
-        <div data-testid="step-3" class="cap">{{ STEPS[2] }}</div>
+        <div data-testid="step-3" class="cap cap-left">{{ STEPS[2] }}</div>
       </div>
     </div>
 
@@ -275,6 +285,9 @@ const spark = computed(() => {
   justify-content: center;
   gap: 6px;
 }
+.wcol-spark {
+  justify-content: flex-start;
+}
 .warrow {
   display: flex;
   align-items: center;
@@ -290,7 +303,7 @@ const spark = computed(() => {
   max-height: 160px;
 }
 .slot-spark {
-  flex: 1;
+  flex: 0 0 62%;
   min-height: 0;
 }
 .cap {
@@ -298,6 +311,11 @@ const spark = computed(() => {
   color: #475569;
   text-align: center;
   line-height: 1.35;
+}
+/* Step ③ mirrors step ①: left-aligned to the column edge, not centred under the plot. */
+.cap-left {
+  text-align: left;
+  white-space: nowrap;
 }
 .spark-title {
   font-size: 11px;
