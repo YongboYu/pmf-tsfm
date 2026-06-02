@@ -107,17 +107,19 @@ def _fmt(value: float) -> str:
     return f"{value:.3f}" if math.isfinite(value) else "n/a"
 
 
-def _render_panes(result: dict[str, Any]) -> tuple[str, str, str, str, str]:
+def _render_panes(result: dict[str, Any]) -> tuple[str, str, str, str, str, str]:
     """Assemble the side-by-side outputs from a resolved forecast result.
 
     The SVGs are pre-rendered at precompute time (no ``dot`` at runtime); the app
-    only wraps them in a scrollable pane.
+    only wraps them in a scrollable pane. The strip pairs the forecast ER with the
+    truth-DFG ER baseline so the gap between them reads as the forecast's ER error.
     """
     metrics = result["metrics"]
     return (
         _scrollable(result["forecast_svg"]),
         _scrollable(result["actual_svg"]),
         _fmt(metrics["er"]),
+        _fmt(metrics["truth_er"]),
         _fmt(metrics["mae"]),
         _fmt(metrics["rmse"]),
     )
@@ -128,11 +130,11 @@ def _render_diff(result: dict[str, Any]) -> str:
     return _scrollable(result["diff_svg"])
 
 
-def load(dataset: str, model: str) -> tuple[str, str, str, str, str]:
-    """Resolve one bundled forecast into the five side-by-side UI outputs.
+def load(dataset: str, model: str) -> tuple[str, str, str, str, str, str]:
+    """Resolve one bundled forecast into the six side-by-side UI outputs.
 
     Returns:
-        ``(forecast_pane_html, actual_pane_html, er, mae, rmse)``.
+        ``(forecast_pane_html, actual_pane_html, er, truth_er, mae, rmse)``.
     """
     return _render_panes(forecast_bundled(dataset, model))
 
@@ -176,11 +178,12 @@ def build() -> gr.Blocks:
             gr.Markdown("### Diff — forecast vs actual future")
             diff_pane = gr.HTML(elem_classes=["dfg-pane"])
         with gr.Row():
-            er = gr.Textbox(label="ER", interactive=False)
+            er = gr.Textbox(label="ER — forecast", interactive=False)
+            truth_er = gr.Textbox(label="ER — truth (baseline)", interactive=False)
             mae = gr.Textbox(label="MAE", interactive=False)
             rmse = gr.Textbox(label="RMSE", interactive=False)
 
-        outputs = [forecast_pane, actual_pane, er, mae, rmse]
+        outputs = [forecast_pane, actual_pane, er, truth_er, mae, rmse]
         inputs = [dataset, model]
 
         def refresh(dataset: str, model: str) -> tuple[Any, ...]:

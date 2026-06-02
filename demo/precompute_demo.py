@@ -21,18 +21,30 @@ HF Spaces can serve the bundled path with no ``dot`` binary at runtime (the same
 from __future__ import annotations
 
 import json
+from functools import cache
 from pathlib import Path
 from typing import Any
 
 import numpy as np
+import pandas as pd
 from render import dfg_json_to_svg, diff_svg
 
-from pmf_tsfm.er.dfg import dfg_to_json
+from pmf_tsfm.er.automaton import compute_er
+from pmf_tsfm.er.dfg import (
+    build_truth_dfg,
+    dfg_to_json,
+    extract_sublog,
+    extract_traces,
+    load_event_log,
+    prepare_log,
+)
 from pmf_tsfm.utils.metrics import compute_metrics
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 OUTPUTS_ROOT = REPO_ROOT / "outputs"
 ASSETS_ROOT = REPO_ROOT / "demo" / "assets"
+# XES event logs (lowercase-named), the same source the ER sweep parses.
+LOG_DIR = REPO_ROOT / "data" / "processed_logs"
 
 # demo model id -> on-disk model directory under outputs/zero_shot/<dataset>/
 MODEL_DIRS: dict[str, str] = {
@@ -81,12 +93,48 @@ def frequencies_to_dfg_json(window: np.ndarray, feature_names: list[str]) -> dic
     return dfg_to_json(dfg)
 
 
+def truth_er_from_sublog(sublog: pd.DataFrame) -> float:
+    """Truth-DFG ER of one window: ER of ``build_truth_dfg`` against its own traces.
+
+    This is the canonical baseline (fitting ratio ≈ 1.0) the forecast ER is judged
+    against — the truth DFG, with its artificial ▶/■ closure, near-perfectly explains
+    the week that actually happened. Reuses the ER sweep's own utilities so the value
+    matches the paper's per-window truth ER (which the sweep computes but never saves).
+
+    Returns ``nan`` when the window has no traces or no DF relations (``compute_er``
+    already degrades gracefully there).
+    """
+    truth_dfg = dfg_to_json(build_truth_dfg(sublog))
+    er, _, _ = compute_er(truth_dfg, extract_traces(sublog))
+    return float(er)
+
+
+@cache
+def _prepared_log(log_path: Path) -> pd.DataFrame:
+    """Load + prepare one XES log, cached so the 12-pair sweep parses only 4 files."""
+    return prepare_log(load_event_log(log_path))
+
+
+def truth_er_for_window(log_path: Path, window: str) -> float:
+    """Truth-DFG ER baseline for the final forecast window of one log.
+
+    ``window`` is the ``"YYYY-MM-DD_YYYY-MM-DD"`` string the ER sweep stores. The
+    inclusive end-of-day boundary mirrors ``evaluate_er_all`` so the extracted
+    sublog (and thus the ER) matches the held-out week the demo displays.
+    """
+    ws, we = (pd.Timestamp(d, tz="UTC") for d in window.split("_"))
+    we_eod = we + pd.Timedelta(days=1) - pd.Timedelta(microseconds=1)
+    sublog = extract_sublog(_prepared_log(log_path), ws, we_eod)
+    return truth_er_from_sublog(sublog)
+
+
 def precompute_one(
     dataset: str,
     model: str,
     *,
     outputs_root: Path,
     assets_root: Path,
+    log_dir: Path = LOG_DIR,
 ) -> Path:
     """Precompute the bundled assets for one dataset × demo model.
 
@@ -95,6 +143,7 @@ def precompute_one(
         model:        demo model id (e.g. ``"chronos2"``).
         outputs_root: root of the existing ``outputs/`` artifacts.
         assets_root:  root under which ``<dataset>/<model>/`` assets are written.
+        log_dir:      dir of XES logs (``<dataset>.xes``) for the truth-ER baseline.
 
     Returns:
         The asset directory that was written.
@@ -121,8 +170,12 @@ def precompute_one(
         outputs_root / "er" / "zero_shot" / prefix / model_dir / f"{prefix}_{model_dir}_er.json"
     )
     er_windows = json.loads(er_path.read_text())["windows"]
+    # Truth-DFG ER baseline on the same held-out final window, so the demo can show
+    # how much better the truth DFG explains that week than the forecast does.
+    truth_er = truth_er_for_window(log_dir / f"{dataset}.xes", er_windows[-1]["window"])
     metrics = {
         "er": float(er_windows[-1]["pred_er"]),
+        "truth_er": truth_er,
         "mae": float(final["MAE_mean"]),
         "rmse": float(final["RMSE_mean"]),
     }
