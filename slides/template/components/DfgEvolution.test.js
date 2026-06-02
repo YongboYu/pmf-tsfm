@@ -25,11 +25,11 @@ describe('DfgEvolution — frame choreography', () => {
     }
   })
 
-  it('accumulates one sparkline point per frame (i+1)', async () => {
+  it('reveals one week (7 daily points) of the sparkline per frame', async () => {
     const wrapper = mount(DfgEvolution, { props: { frame: 0 } })
     for (let i = 0; i < 4; i++) {
       await wrapper.setProps({ frame: i })
-      expect(wrapper.findAll('[data-testid="spark-point"]')).toHaveLength(i + 1)
+      expect(wrapper.findAll('[data-testid="spark-point"]')).toHaveLength((i + 1) * 7)
     }
   })
 
@@ -144,6 +144,19 @@ describe('DfgEvolution — frame choreography', () => {
     }
   })
 
+  it('frames the daily series as primary and the weekly DFG as its Σ-aggregate, not weekly-first extraction', () => {
+    const wrapper = mount(DfgEvolution, { props: { frame: 0 } })
+    const step1 = wrapper.get('[data-testid="step-1"]').text().toLowerCase()
+    const step2 = wrapper.get('[data-testid="step-2"]').text()
+
+    // ① the primary extraction is the daily series, not a weekly sublog
+    expect(step1).toContain('daily')
+    expect(step1).not.toContain('sublog')
+    // ② the weekly DFG reads as the Σ-aggregate of the daily counts
+    expect(step2).toContain('Σ')
+    expect(step2.toLowerCase()).toContain('daily')
+  })
+
   it('slides the event-log band right one constant week-step per frame', async () => {
     const wrapper = mount(DfgEvolution, { props: { frame: 0 } })
     const translateX = () => {
@@ -161,18 +174,40 @@ describe('DfgEvolution — frame choreography', () => {
     }
   })
 
-  it('accumulates the observed sparkline and draws the dashed forecast segment only at the end', async () => {
+  it('accumulates the daily observed line and draws the 7-day dashed forecast tail only at the end', async () => {
     const wrapper = mount(DfgEvolution, { props: { frame: 0 } })
-    const obsCount = () =>
-      wrapper.get('[data-testid="spark-line"]').attributes('points').trim().split(/\s+/).length
+    const pointCount = (sel) => {
+      const el = wrapper.find(sel)
+      if (!el.exists()) return 0
+      return el.attributes('points').trim().split(/\s+/).length
+    }
     const forecastSeg = () => wrapper.find('[data-testid="spark-forecast"]')
 
-    // observed polyline grows one point per observed frame; the forecast point is NOT on it
-    const expectedObs = [1, 2, 3, 3] // t₁..t₃ observed; t₄ forecast keeps the 3 observed
+    // observed polyline grows one week (7 daily points) per observed frame; the 7 forecast
+    // days are NOT on it — they land as the dashed accent tail on the forecast frame.
+    const expectedObs = [7, 14, 21, 21] // t₁..t₃ observed; t₄ forecast keeps the 21 observed
     for (let i = 0; i < 4; i++) {
       await wrapper.setProps({ frame: i })
-      expect(obsCount()).toBe(expectedObs[i])
+      expect(pointCount('[data-testid="spark-line"]')).toBe(expectedObs[i])
       expect(forecastSeg().exists()).toBe(i === 3)
     }
+    // the forecast horizon is exactly the 7 daily prediction steps
+    expect(pointCount('[data-testid="spark-forecast"]')).toBe(7)
+  })
+
+  it('shows the Σ rollup readout only on the forecast frame, matching the weekly forecast-DFG arc', async () => {
+    const wrapper = mount(DfgEvolution, { props: { frame: 0 } })
+    const sum = () => wrapper.find('[data-testid="spark-sum"]')
+
+    // observed frames carry no rollup readout
+    for (const i of [0, 1, 2]) {
+      await wrapper.setProps({ frame: i })
+      expect(sum().exists()).toBe(false)
+    }
+    // forecast frame announces the 7 daily forecasts summing to the weekly arc (≈316)
+    await wrapper.setProps({ frame: 3 })
+    expect(sum().exists()).toBe(true)
+    expect(sum().text()).toContain('Σ')
+    expect(sum().text()).toContain('316')
   })
 })

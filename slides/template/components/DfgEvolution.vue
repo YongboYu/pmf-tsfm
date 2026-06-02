@@ -28,12 +28,14 @@ const heroGhostDraw = computed(() =>
 )
 
 // Workflow captions woven under each part of the figure (per render_diagram.js STEPS).
-// "weekly sublog" / "weekly snapshot" wording avoids the reserved term "window" (ER only).
+// Daily-first framing, faithful to the pipeline: the daily DF counts are the PRIMARY extracted
+// artifact (one series per edge), and each week's DFG is their Σ-aggregate — not a weekly
+// sublog extracted first. Avoid the reserved term "window" (ER only).
 const STEPS = [
-  '① Event log → weekly sublog',
-  '② Each week → a time-indexed DFG',
-  '③ Each DF edge → a univariate time series',
-  '④ Forecast next week → forecasted DFG',
+  '① Event log → daily DF counts',
+  '② A week\'s DFG = Σ of 7 daily counts',
+  '③ Each DF edge → a daily time series',
+  '④ Forecast 7 days → sum → next week\'s DFG arc',
 ]
 
 // Event-log slice motif (per render_diagram.js buildLog). The log is tiled into one column-
@@ -64,35 +66,55 @@ const weekLabel = computed(() =>
   (dfgData.frames[props.frame].label.split(' · ')[1] || 'week').replace(' (forecast)', ''),
 )
 
-// Hero-edge sparkline geometry (per render_diagram.js buildSpark). Frame-independent scales;
-// the data-centred y-range shows the gentle weekly wiggle without faking a dramatic drift.
+// Hero-edge sparkline geometry (per render_diagram.js buildSpark). The figure is faithful to
+// the paper's temporal pipeline: each DF edge is a DAILY series, the forecast is 7 daily steps,
+// and those 7 sum (Σ) into the next week's DFG arc. So the x-axis is days — one 7-day group per
+// frame — not weeks. Frame-independent scales; the data-centred y-range shows the gentle daily
+// wiggle without faking a dramatic drift.
+const DAYS_PER_WEEK = 7
 const SPARK = (() => {
   const dims = { W: 200, H: 140, padL: 26, padR: 12, padT: 16, padB: 24 }
-  const vals = dfgData.frames.map((f) => f.weights[dfgData.hero])
+  // Flatten the per-frame daily series into one continuous daily timeline.
+  const vals = dfgData.frames.flatMap((f) => f.dailyHero)
   const { X, Y } = sparkScale(vals, dims)
-  return { ...dims, vals, X, Y, n: dfgData.frames.length }
+  // Day index at the centre of each frame's 7-day group — anchors the t₁..t₄ week ticks.
+  const weekTicks = dfgData.frames.map((_, w) => w * DAYS_PER_WEEK + Math.floor(DAYS_PER_WEEK / 2))
+  return { ...dims, vals, X, Y, n: dfgData.frames.length, weekTicks }
 })()
 
-// Accumulating sparkline state for the current frame: observed polyline (forecast point is
-// NOT on it), the dashed forecast segment (last frame only), dots, and the value readout.
+// Accumulating sparkline state for the current frame: each frame reveals its week's 7 daily
+// points. Observed days feed the solid line (the 7 forecast days are NOT on it); the forecast
+// frame lands them as a dashed accent tail of exactly 7 points, and the Σ readout shows those
+// 7 daily forecasts summing to the weekly forecast-DFG arc.
 const spark = computed(() => {
   const i = props.frame
-  const { vals, X, Y, n } = SPARK
+  const { vals, X, Y } = SPARK
   const obs = []
+  const forecast = []
   const dots = []
-  for (let k = 0; k <= i; k++) {
-    const isF = dfgData.frames[k].kind === 'forecast'
-    dots.push({ cx: X(k), cy: Y(vals[k]), isF })
-    if (!isF) obs.push(`${X(k)},${Y(vals[k])}`)
+  for (let w = 0; w <= i; w++) {
+    const isF = dfgData.frames[w].kind === 'forecast'
+    for (let d = 0; d < DAYS_PER_WEEK; d++) {
+      const k = w * DAYS_PER_WEEK + d
+      const pt = `${X(k)},${Y(vals[k])}`
+      dots.push({ cx: X(k), cy: Y(vals[k]), isF })
+      ;(isF ? forecast : obs).push(pt)
+    }
   }
-  const isLastForecast = i === n - 1 && dfgData.frames[i].kind === 'forecast'
-  const forecastPoints = isLastForecast
-    ? `${X(i - 1)},${Y(vals[i - 1])} ${X(i)},${Y(vals[i])}`
+  const isForecastFrame = dfgData.frames[i].kind === 'forecast'
+  const sumLabel = isForecastFrame
+    ? (() => {
+        const total = dfgData.frames[i].dailyHero.reduce((a, b) => a + b, 0)
+        const last = (i + 1) * DAYS_PER_WEEK - 1
+        return { x: X(last) - 2, y: Y(vals[last]) - 8, fill: dfgData.accent, text: `Σ ≈ ${total}` }
+      })()
     : null
-  const valLabel = isLastForecast
-    ? { x: X(i) - 2, y: Y(vals[i]) - 6, anchor: 'end', fill: dfgData.accent, text: `≈${vals[i]}` }
-    : { x: X(i) + 5, y: Y(vals[i]) - 5, anchor: 'start', fill: '#475569', text: `${vals[i]}` }
-  return { obsPoints: obs.join(' '), forecastPoints, dots, valLabel }
+  return {
+    obsPoints: obs.join(' '),
+    forecastPoints: forecast.length ? forecast.join(' ') : null,
+    dots,
+    sumLabel,
+  }
 })
 </script>
 
@@ -203,10 +225,11 @@ const spark = computed(() => {
 
       <!-- ③ per-edge time series -->
       <div class="wcol wcol-spark">
-        <div class="spark-title">O_Sent → O_Cancelled, per week</div>
+        <div class="spark-title">O_Sent → O_Cancelled, per day</div>
         <div class="slot slot-spark">
-    <!-- Accumulating hero-edge sparkline: observed line grows one point per frame; the
-         held-out forecast lands as a dashed accent segment on the final frame. -->
+    <!-- Accumulating hero-edge daily sparkline: each frame reveals its week's 7 daily points;
+         the 7-day forecast horizon lands as a dashed accent tail, summing (Σ) to the weekly
+         forecast-DFG arc on the final frame. -->
     <svg
       data-testid="sparkline" :viewBox="`0 0 ${SPARK.W} ${SPARK.H}`"
       width="100%" height="100%" preserveAspectRatio="xMidYMin meet"
@@ -219,9 +242,11 @@ const spark = computed(() => {
         :x1="SPARK.padL" :y1="SPARK.padT" :x2="SPARK.padL" :y2="SPARK.H - SPARK.padB"
         stroke="#cbd5e1" stroke-width="1"
       />
+      <!-- One week tick per frame, centred under its 7-day group — the bridge to the weekly DFG. -->
       <text
         v-for="(f, k) in dfgData.frames" :key="k"
-        :x="SPARK.X(k)" :y="SPARK.H - 6" text-anchor="middle" style="font-size: 8px" fill="#94a3b8"
+        :x="SPARK.X(SPARK.weekTicks[k])" :y="SPARK.H - 6" text-anchor="middle"
+        style="font-size: 8px" fill="#94a3b8"
       >t{{ k + 1 }}</text>
       <polyline
         data-testid="spark-line" fill="none" stroke="#0f172a" stroke-width="2"
@@ -230,17 +255,20 @@ const spark = computed(() => {
       <polyline
         v-if="spark.forecastPoints" data-testid="spark-forecast" fill="none"
         :stroke="dfgData.accent" stroke-width="2" stroke-dasharray="4 3"
-        stroke-linecap="round" :points="spark.forecastPoints"
+        stroke-linejoin="round" stroke-linecap="round" :points="spark.forecastPoints"
       />
+      <!-- Small per-day dots keep the line reading as a daily series; forecast days in accent. -->
       <circle
         v-for="(d, k) in spark.dots" :key="k" data-testid="spark-point"
-        :cx="d.cx" :cy="d.cy" :r="d.isF ? 3.2 : 3"
+        :cx="d.cx" :cy="d.cy" :r="d.isF ? 1.5 : 1.1"
         :fill="d.isF ? dfgData.accent : '#0f172a'"
       />
+      <!-- Σ readout: the 7 daily forecasts summing to the weekly forecast-DFG arc (≈316). -->
       <text
-        :x="spark.valLabel.x" :y="spark.valLabel.y" :text-anchor="spark.valLabel.anchor"
-        style="font-size: 9px" font-weight="700" :fill="spark.valLabel.fill"
-      >{{ spark.valLabel.text }}</text>
+        v-if="spark.sumLabel" data-testid="spark-sum"
+        :x="spark.sumLabel.x" :y="spark.sumLabel.y" text-anchor="end"
+        style="font-size: 10px" font-weight="700" :fill="spark.sumLabel.fill"
+      >{{ spark.sumLabel.text }}</text>
     </svg>
         </div>
         <div data-testid="step-3" class="cap cap-left">{{ STEPS[2] }}</div>
