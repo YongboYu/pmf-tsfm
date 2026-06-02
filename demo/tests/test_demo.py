@@ -294,7 +294,7 @@ ACTUAL_DFG = {
     ],
 }
 
-METRICS = {"er": 1.5127795943816802, "mae": 3.21, "rmse": 4.56}
+METRICS = {"er": 1.5127795943816802, "truth_er": 0.8765432109876543, "mae": 3.21, "rmse": 4.56}
 
 
 # Minimal valid pre-rendered SVGs, distinct per pane so the panes differ.
@@ -348,9 +348,9 @@ def test_forecast_bundled_reads_committed_assets(asset_dir):
 
 
 def test_forecast_bundled_metrics_are_accuracy(asset_dir):
-    """Bundled metrics expose ER / MAE / RMSE (genuine accuracy, ADR-0004)."""
+    """Bundled metrics expose forecast ER, truth-ER baseline, MAE, RMSE (ADR-0004)."""
     metrics = forecast_bundled("bpi2017", "chronos2", 7)["metrics"]
-    assert set(metrics) == {"er", "mae", "rmse"}
+    assert set(metrics) == {"er", "truth_er", "mae", "rmse"}
     assert all(isinstance(v, (int, float)) for v in metrics.values())
 
 
@@ -375,6 +375,39 @@ def test_frequencies_to_dfg_json_has_single_start_end():
     assert {a["freq"] for a in dfg["arcs"]} == {3, 6}  # summed weights, no artificial 1s
 
 
+def _sublog(rows):
+    """A tiny sublog DataFrame in the columns build_truth_dfg / extract_traces expect."""
+    import pandas as pd
+
+    return pd.DataFrame(
+        rows, columns=["case:concept:name", "concept:name", "time:timestamp"]
+    ).astype({"time:timestamp": "datetime64[ns, UTC]"})
+
+
+def test_truth_er_from_sublog_is_zero_for_a_single_deterministic_trace():
+    """The truth DFG replays its own only trace perfectly → zero surprisal (ER 0)."""
+    from precompute_demo import truth_er_from_sublog
+
+    sublog = _sublog(
+        [
+            ("c1", "A", "2020-01-01T00:00:00+00:00"),
+            ("c1", "B", "2020-01-01T01:00:00+00:00"),
+        ]
+    )
+    er = truth_er_from_sublog(sublog)
+    assert isinstance(er, float)
+    assert er == 0.0
+
+
+def test_truth_er_from_sublog_is_nan_for_an_empty_window():
+    """A window with no events yields nan (no crash) — the n/a baseline case."""
+    import math
+
+    from precompute_demo import truth_er_from_sublog
+
+    assert math.isnan(truth_er_from_sublog(_sublog([])))
+
+
 def _write_synthetic_outputs(root, *, cap_dir="TESTDS", model_dir="chronos_2"):
     """A minimal stand-in for outputs/zero_shot + outputs/er for one dataset × model.
 
@@ -394,8 +427,39 @@ def _write_synthetic_outputs(root, *, cap_dir="TESTDS", model_dir="chronos_2"):
     np.save(src / f"{cap_dir}_{model_dir}_targets.npy", arr)  # preds == targets → MAE/RMSE = 0
     er_dir = root / "er" / "zero_shot" / cap_dir / model_dir
     er_dir.mkdir(parents=True)
+    # Real er.json windows carry a date string; the final one drives the truth-ER
+    # baseline (precompute extracts that window's sublog from the XES log).
     (er_dir / f"{cap_dir}_{model_dir}_er.json").write_text(
-        json.dumps({"windows": [{"pred_er": 0.9}, {"pred_er": 1.23}]})
+        json.dumps(
+            {
+                "windows": [
+                    {"window": "2019-12-30_2020-01-05", "pred_er": 0.9},
+                    {"window": "2020-01-01_2020-01-01", "pred_er": 1.23},
+                ]
+            }
+        )
+    )
+
+
+def _patch_log_loader(monkeypatch):
+    """Stub the XES loader so precompute's truth-ER path runs without a real log.
+
+    Real ``data/processed_logs/*.xes`` are gitignored (absent in CI), so the
+    precompute smoke tests inject a tiny A→B log whose one event sits in the
+    synthetic final window (2020-01-01) → a deterministic truth ER of 0.0.
+    """
+    import precompute_demo
+
+    precompute_demo._prepared_log.cache_clear()
+    monkeypatch.setattr(
+        precompute_demo,
+        "load_event_log",
+        lambda _path: _sublog(
+            [
+                ("c1", "A", "2020-01-01T00:00:00+00:00"),
+                ("c1", "B", "2020-01-01T01:00:00+00:00"),
+            ]
+        ),
     )
 
 
@@ -404,11 +468,16 @@ def test_precompute_one_emits_valid_assets(tmp_path, monkeypatch):
     import precompute_demo
 
     monkeypatch.setitem(precompute_demo.DATASET_DIRS, "testds", "TESTDS")
+    _patch_log_loader(monkeypatch)
     outputs_root = tmp_path / "outputs"
     _write_synthetic_outputs(outputs_root)
 
     out_dir = precompute_one(
-        "testds", "chronos2", outputs_root=outputs_root, assets_root=tmp_path / "assets"
+        "testds",
+        "chronos2",
+        outputs_root=outputs_root,
+        assets_root=tmp_path / "assets",
+        log_dir=tmp_path / "logs",
     )
 
     forecast_dfg = json.loads((out_dir / "forecast_dfg.json").read_text())
@@ -418,15 +487,16 @@ def test_precompute_one_emits_valid_assets(tmp_path, monkeypatch):
     labels = {n["label"] for n in forecast_dfg["nodes"]}
     assert "▶" in labels and "■" in labels  # ▶/■ markers
     assert all(isinstance(a["freq"], int) and a["freq"] >= 0 for a in forecast_dfg["arcs"])
-    assert set(metrics) == {"er", "mae", "rmse"}
-    assert metrics["er"] == 1.23  # ER of the final window
+    assert set(metrics) == {"er", "truth_er", "mae", "rmse"}
+    assert metrics["er"] == 1.23  # forecast ER of the final window
+    assert metrics["truth_er"] == 0.0  # truth-DFG baseline on the same final window
     assert metrics["mae"] == 0.0 and metrics["rmse"] == 0.0
     # The pre-rendered SVG figures sit alongside the regenerable JSON source.
     for name in ("forecast.svg", "actual.svg", "diff.svg"):
         assert "<svg" in (out_dir / name).read_text()
 
 
-def test_precompute_matrix_emits_all_twelve(tmp_path):
+def test_precompute_matrix_emits_all_twelve(tmp_path, monkeypatch):
     """Precompute over the full BUNDLED matrix writes valid assets for every pair.
 
     Builds a synthetic ``outputs/`` for each (dataset, model) pair — using the
@@ -441,6 +511,7 @@ def test_precompute_matrix_emits_all_twelve(tmp_path):
     assert len({d for d, _ in precompute_demo.BUNDLED}) == 4  # four datasets
     assert len({m for _, m in precompute_demo.BUNDLED}) == 3  # three models
 
+    _patch_log_loader(monkeypatch)
     outputs_root = tmp_path / "outputs"
     assets_root = tmp_path / "assets"
     for dataset, model in precompute_demo.BUNDLED:
@@ -452,7 +523,13 @@ def test_precompute_matrix_emits_all_twelve(tmp_path):
 
     written = set()
     for dataset, model in precompute_demo.BUNDLED:
-        out_dir = precompute_one(dataset, model, outputs_root=outputs_root, assets_root=assets_root)
+        out_dir = precompute_one(
+            dataset,
+            model,
+            outputs_root=outputs_root,
+            assets_root=assets_root,
+            log_dir=tmp_path / "logs",
+        )
         written.add((dataset, model))
 
         forecast_dfg = json.loads((out_dir / "forecast_dfg.json").read_text())
@@ -463,7 +540,7 @@ def test_precompute_matrix_emits_all_twelve(tmp_path):
             assert {"nodes", "arcs"} <= set(dfg)
             labels = {n["label"] for n in dfg["nodes"]}
             assert "▶" in labels and "■" in labels  # ▶/■ markers
-        assert set(metrics) == {"er", "mae", "rmse"}
+        assert set(metrics) == {"er", "truth_er", "mae", "rmse"}
         for name in ("forecast.svg", "actual.svg", "diff.svg"):
             assert "<svg" in (out_dir / name).read_text()
 
@@ -477,15 +554,30 @@ def test_precompute_matrix_emits_all_twelve(tmp_path):
 
 
 def test_app_load_produces_twin_panes_and_metrics(asset_dir):
-    """app.load wires forecast_bundled → twin SVG panes + ER/MAE/RMSE strip."""
+    """app.load wires forecast_bundled → twin SVG panes + forecast/truth ER + MAE/RMSE."""
     pytest.importorskip("gradio")
     import app
 
-    forecast_html, actual_html, er, mae, rmse = app.load("bpi2017", "chronos2")
+    forecast_html, actual_html, er, truth_er, mae, rmse = app.load("bpi2017", "chronos2")
     assert "<svg" in forecast_html and "<svg" in actual_html
     # The two panes show distinct DFGs (forecast vs actual-future).
     assert forecast_html != actual_html
-    assert (er, mae, rmse) == ("1.513", "3.210", "4.560")
+    # The truth-ER baseline sits beside the forecast ER in the strip.
+    assert (er, truth_er, mae, rmse) == ("1.513", "0.877", "3.210", "4.560")
+
+
+def test_app_strip_carries_forecast_and_truth_er_boxes(asset_dir):
+    """The metrics strip labels the forecast ER and the truth-ER baseline distinctly."""
+    pytest.importorskip("gradio")
+    import app
+
+    labels = {
+        getattr(c, "label", None)
+        for c in app.build().blocks.values()
+        if type(c).__name__ == "Textbox"
+    }
+    assert "ER — forecast" in labels
+    assert "ER — truth (baseline)" in labels
 
 
 def test_app_builds_blocks(asset_dir):

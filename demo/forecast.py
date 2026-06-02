@@ -33,7 +33,7 @@ def forecast_bundled(
 
     Returns:
         ``{"forecast_dfg": <dfg json>, "actual_dfg": <dfg json>,
-           "metrics": {"er": float, "mae": float, "rmse": float},
+           "metrics": {"er": float, "truth_er": float, "mae": float, "rmse": float},
            "forecast_svg": str, "actual_svg": str, "diff_svg": str}`` — the JSON
         DFGs (the regenerable source of truth) alongside the pre-rendered figures
         so the served path needs no ``dot`` binary at runtime.
