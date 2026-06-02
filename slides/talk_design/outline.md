@@ -42,8 +42,9 @@ For brief / hard constraints / spoken lines, see `../SLIDES.md`.
 **Audience Q answered:** "How does PMF become a forecasting problem?"
 **Transition in:** *"Both questions need data. PPM uses case prefixes. PMF uses something different."*
 **Slide content:**
-- Workflow diagram: event log → time-windowed sublogs → time-indexed DFGs →
-  each DF edge becomes a univariate time series
+- Workflow diagram: event log → daily DF counts (one univariate series per DF edge) →
+  forecast 7 daily steps → Σ over the horizon → next week's DFG
+  (each week's DFG is the Σ-aggregate of daily counts, not a weekly-extracted object)
 - **Embedded DFG-evolution animation** (10–15s gif/Manim): DFG at t₁, t₂, t₃ →
   forecasted DFG at t₄ with predicted edges highlighted in accent color
 - One sentence: *"Each DF edge becomes a univariate time series — like website

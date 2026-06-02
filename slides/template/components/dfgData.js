@@ -37,6 +37,9 @@ export const dfgData = {
         sent__cancelled: 346, sent__returned: 477, returned__accepted: 394,
         accepted__end: 465, cancelled__end: 483,
       },
+      // Daily hero (sent__cancelled) series for this week; sums to weights.sent__cancelled
+      // (the paper bins daily and sums the horizon into the weekly DFG arc).
+      dailyHero: [48, 50, 49, 51, 47, 52, 49],
     },
     {
       label: 't₂ · Oct 09',
@@ -47,6 +50,7 @@ export const dfgData = {
         sent__cancelled: 314, sent__returned: 475, returned__accepted: 412,
         accepted__end: 353, cancelled__end: 412,
       },
+      dailyHero: [46, 44, 45, 43, 47, 45, 44],
     },
     {
       label: 't₃ · Oct 16',
@@ -57,6 +61,7 @@ export const dfgData = {
         sent__cancelled: 316, sent__returned: 436, returned__accepted: 382,
         accepted__end: 306, cancelled__end: 435,
       },
+      dailyHero: [45, 46, 44, 47, 45, 44, 45],
     },
     {
       label: 't₄ · Oct 23 (forecast)',
@@ -67,6 +72,8 @@ export const dfgData = {
         sent__cancelled: 316, sent__returned: 436, returned__accepted: 382,
         accepted__end: 306, cancelled__end: 435,
       },
+      // 7 daily forecast steps (prediction_length: 7); their Σ is the weekly forecast-DFG arc.
+      dailyHero: [46, 45, 45, 44, 46, 45, 45],
       truth: {
         start__create: 903, create__created: 903, created__sent: 823,
         sent__cancelled: 315, sent__returned: 497, returned__accepted: 343,
