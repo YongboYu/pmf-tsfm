@@ -253,3 +253,6 @@ data/hpc_sync/
 .agents/
 .claude/
 skills-lock.json
+
+# Local idea / todo inbox (personal, machine-specific)
+TodoList/
