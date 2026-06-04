@@ -275,6 +275,103 @@ def test_diff_svg_embeds_legend():
     assert FORECAST_COLOUR in svg and ACTUAL_COLOUR in svg
 
 
+# A pair exercising every signed-relative-error row on one render. Signed error is
+# (forecast - actual) / actual, integer-rounded:
+#   X->Y matched over  : 745 / 558 -> +34%
+#   Y->Z matched under : 300 / 558 -> -46%
+#   Z->W matched equal : 500 / 500 ->   0%
+#   W->V added         :   0 / 200 -> -100% (it happened, the forecast missed it)
+#   V->X removed       : 400 /   0 ->  —    (predicted but never happened; ratio undefined)
+RELERR_FORECAST = {
+    "nodes": [
+        {"label": "X", "id": 0},
+        {"label": "Y", "id": 1},
+        {"label": "Z", "id": 2},
+        {"label": "W", "id": 3},
+        {"label": "V", "id": 4},
+    ],
+    "arcs": [
+        {"from": 0, "to": 1, "freq": 745},
+        {"from": 1, "to": 2, "freq": 300},
+        {"from": 2, "to": 3, "freq": 500},
+        {"from": 4, "to": 0, "freq": 400},
+    ],
+}
+RELERR_ACTUAL = {
+    "nodes": [
+        {"label": "X", "id": 0},
+        {"label": "Y", "id": 1},
+        {"label": "Z", "id": 2},
+        {"label": "W", "id": 3},
+        {"label": "V", "id": 4},
+    ],
+    "arcs": [
+        {"from": 0, "to": 1, "freq": 558},
+        {"from": 1, "to": 2, "freq": 558},
+        {"from": 2, "to": 3, "freq": 500},
+        {"from": 3, "to": 4, "freq": 200},
+    ],
+}
+
+# The signed-error % is colour-coded by direction so over/under reads at a glance.
+OVER_COLOUR = "#c2185b"  # magenta — forecast over-shot the actual (positive)
+UNDER_COLOUR = "#6a1b9a"  # purple — forecast under-shot the actual (negative)
+# graphviz serialises a leading ASCII "-" in HTML-like labels as the numeric entity
+# &#45; in the emitted SVG (it renders as a minus); match either form.
+MINUS = r"(?:-|&#45;)"
+
+
+def test_diff_svg_arc_label_shows_over_forecast_percentage():
+    """A matched arc whose forecast over-shot the actual shows a signed ``+NN%``
+    in the over-forecast colour, after the two raw weights."""
+    svg = diff_svg(RELERR_FORECAST, RELERR_ACTUAL)
+    # X->Y: forecast 745 vs actual 558 -> +34%, over-forecast (magenta).
+    assert re.search(rf'fill="{OVER_COLOUR}"[^>]*>\+34%<', svg)
+
+
+def test_diff_svg_arc_label_shows_under_forecast_percentage():
+    """A matched arc whose forecast under-shot the actual shows a negative
+    ``-NN%`` in the under-forecast colour."""
+    svg = diff_svg(RELERR_FORECAST, RELERR_ACTUAL)
+    # Y->Z: forecast 300 vs actual 558 -> -46%, under-forecast (teal).
+    assert re.search(rf'fill="{UNDER_COLOUR}"[^>]*>{MINUS}46%<', svg)
+
+
+def test_diff_svg_arc_label_shows_zero_percent_when_exact():
+    """A matched arc whose forecast equals the actual shows a neutral ``0%`` —
+    not signed, not in an over/under colour."""
+    svg = diff_svg(RELERR_FORECAST, RELERR_ACTUAL)
+    # Z->W: forecast 500 vs actual 500 -> 0%.
+    assert re.search(r">0%<", svg)
+    # 0% is neutral: it is not painted in either direction colour.
+    assert not re.search(rf'fill="{OVER_COLOUR}"[^>]*>0%<', svg)
+    assert not re.search(rf'fill="{UNDER_COLOUR}"[^>]*>0%<', svg)
+
+
+def test_diff_svg_added_arc_shows_minus_100_percent():
+    """An added arc (it happened, forecast = 0) is a complete under-shot: -100%."""
+    svg = diff_svg(RELERR_FORECAST, RELERR_ACTUAL)
+    # W->V: forecast 0 vs actual 200 -> -100%, under-forecast (teal).
+    assert re.search(rf'fill="{UNDER_COLOUR}"[^>]*>{MINUS}100%<', svg)
+
+
+def test_diff_svg_removed_arc_shows_dash_when_ratio_undefined():
+    """A removed arc (predicted but actual = 0) has an undefined ratio: show an
+    em-dash, never a raw inf/nan or a bare ``%``."""
+    svg = diff_svg(RELERR_FORECAST, RELERR_ACTUAL)
+    # V->X: forecast 400 vs actual 0 -> undefined -> em-dash, in neutral grey.
+    assert re.search(r'fill="#555555"[^>]*>—<', svg)
+    assert "inf" not in svg.lower() and "nan" not in svg.lower()
+
+
+def test_diff_svg_legend_names_the_percentage_key():
+    """The legend's edge-numbers key names the over/under signed-error percentage,
+    showing the two direction colours so the reader can decode an arc."""
+    svg = diff_svg(RELERR_FORECAST, RELERR_ACTUAL)
+    assert "over" in svg and "under" in svg
+    assert OVER_COLOUR in svg and UNDER_COLOUR in svg
+
+
 # ---------------------------------------------------------------------------
 # forecast.forecast_bundled
 # ---------------------------------------------------------------------------
