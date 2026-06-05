@@ -5,3 +5,6 @@ dist
 .vite-inspect
 .remote-assets
 components.d.ts
+
+# throwaway theme/palette prototype (not part of the build)
+prototype/

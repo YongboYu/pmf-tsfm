@@ -376,8 +376,8 @@ def fig_df_complexity():
     angles = np.linspace(0, 2 * np.pi, n, endpoint=False).tolist()
     angles += angles[:1]
     fig, ax = plt.subplots(figsize=(7.5, 7.5), subplot_kw=dict(polar=True))
-    palette = ["#1d4ee8", "#0f9d8c", "#e0760a", "#9b4dd1"]
-    for (ds, vals), col in zip(M.TABLE3_COMPLEXITY.items(), palette):
+    for ds, vals in M.TABLE3_COMPLEXITY.items():
+        col = M.DATASET_COLORS[ds]
         v = vals + vals[:1]
         ax.plot(angles, v, color=col, lw=1.8, label=M.DATASET_LABELS[ds])
         ax.fill(angles, v, color=col, alpha=0.08)
