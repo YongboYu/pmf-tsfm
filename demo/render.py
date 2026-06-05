@@ -32,6 +32,17 @@ _FORECAST_COLOUR = "#1e88e5"  # blue
 _ACTUAL_COLOUR = "#2e7d32"  # green
 _SEP_COLOUR = "#bdbdbd"  # faint separator between the two numbers
 
+# After the two numbers each arc also carries the forecast's signed relative error
+# vs the actual — (forecast - actual) / actual as an integer percent — so the reader
+# sees the *magnitude* of the over/under-shoot, not just the raw pair. It is colour
+# coded by direction: magenta = over-forecast (positive), teal = under-forecast
+# (negative); 0% and the undefined case (actual = 0) stay neutral. The pair avoids
+# the edge-class palette (amber added / red removed) so the signal cannot be
+# mistaken for an edge colour.
+_OVER_COLOUR = "#c2185b"  # magenta — forecast over-shot the actual
+_UNDER_COLOUR = "#6a1b9a"  # purple — forecast under-shot the actual (off the blue/green axis)
+_NEUTRAL_COLOUR = "#555555"  # 0% (exact) or — (undefined: actual = 0)
+
 # Embedded legend rows: (line-sample HTML, meaning). The sample is a short glyph
 # in that class's colour — a solid rule for matched, dashes for the changed
 # classes — so a first-time reader can map line colour/style to meaning. The
@@ -49,12 +60,35 @@ _LEGEND_ROWS = [
 ]
 
 
+def _relerr_label(forecast_freq: int, actual_freq: int) -> tuple[str, str]:
+    """Signed relative error of the forecast vs the actual, as ``(text, colour)``.
+
+    ``(forecast - actual) / actual`` rounded to an integer percent with an explicit
+    sign: positive = the forecast over-shot (magenta), negative = under-shot (teal),
+    ``0%`` = exact (neutral). When ``actual == 0`` the ratio is undefined (the
+    forecast predicted a relation that never happened), so we show an em-dash rather
+    than a raw ``inf`` — mirroring the ``n/a`` convention in ``app._fmt``.
+    """
+    if actual_freq == 0:
+        return "&#8212;", _NEUTRAL_COLOUR
+    pct = round((forecast_freq - actual_freq) / actual_freq * 100)
+    if pct > 0:
+        return f"+{pct}%", _OVER_COLOUR
+    if pct < 0:
+        return f"{pct}%", _UNDER_COLOUR
+    return "0%", _NEUTRAL_COLOUR
+
+
 def _arc_label(forecast_freq: int, actual_freq: int) -> str:
-    """HTML-like edge label: forecast weight (blue) · actual weight (green)."""
+    """HTML-like edge label: forecast (blue) | actual (green) (signed error %)."""
+    relerr_text, relerr_colour = _relerr_label(forecast_freq, actual_freq)
     return (
         f'<<FONT COLOR="{_FORECAST_COLOUR}">{forecast_freq}</FONT>'
         f'<FONT COLOR="{_SEP_COLOUR}">&#160;|&#160;</FONT>'
-        f'<FONT COLOR="{_ACTUAL_COLOUR}">{actual_freq}</FONT>>'
+        f'<FONT COLOR="{_ACTUAL_COLOUR}">{actual_freq}</FONT>'
+        f'<FONT COLOR="{_SEP_COLOUR}">&#160;(</FONT>'
+        f'<FONT COLOR="{relerr_colour}">{relerr_text}</FONT>'
+        f'<FONT COLOR="{_SEP_COLOUR}">)</FONT>>'
     )
 
 
@@ -145,6 +179,11 @@ def _add_legend(graph: graphviz.Digraph) -> None:
         f'<FONT COLOR="{_FORECAST_COLOUR}">forecast</FONT>'
         f'<FONT COLOR="{_SEP_COLOUR}">&#160;|&#160;</FONT>'
         f'<FONT COLOR="{_ACTUAL_COLOUR}">actual</FONT>'
+        f'<FONT COLOR="{_SEP_COLOUR}">&#160;(</FONT>'
+        f'<FONT COLOR="{_OVER_COLOUR}">over</FONT>'
+        '<FONT COLOR="#555555">/</FONT>'
+        f'<FONT COLOR="{_UNDER_COLOUR}">under</FONT>'
+        '<FONT COLOR="#555555"> %)</FONT>'
     )
     # The three diff classes form an aligned 2-column grid: line sample | meaning.
     class_rows = "".join(
