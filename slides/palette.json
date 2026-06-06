@@ -1,0 +1,41 @@
+{
+  "_comment": "Single source of truth for the CAiSE 2026 deck colour set. KU Leuven house-style base; hybrid figure strategy (baselines vs TSFMs = two groups; per-family hues only on family-comparison slides). The family trio is colour-vision-deficiency verified (Machado 2009): the full 5-line plot set (truth + baseline + 3 families) stays >=39 apart under deuteranopia/protanopia/tritanopia and grayscale. Consumed by slides/template/style.css (deck) and slides/scripts/figure_manifest.py (figures). Keep style.css :root in sync with this file.",
+
+  "ink": "#102a43",
+  "neutral": "#486581",
+  "neutral_soft": "#93a4b8",
+  "surface": "#ffffff",
+  "surface_alt": "#f4f7fb",
+  "hairline": "#dde5ee",
+
+  "brand": "#00407a",
+  "brand_strong": "#1d8db0",
+  "accent": "#dd8a2e",
+
+  "truth": "#111111",
+  "baseline": "#778496",
+  "tsfm": "#00407a",
+
+  "family": {
+    "chronos": "#1b6fb0",
+    "moirai":  "#57c0ae",
+    "timesfm": "#4c3a78"
+  },
+
+  "ft_shades": {
+    "_comment": "Within-family light->dark ramps for the fine-tuning slope (S8 left), derived from the family hues.",
+    "Chronos-Bolt-small": "#6ba6d8",
+    "Chronos-Bolt-base":  "#1b6fb0",
+    "Chronos-2":          "#0e4e86",
+    "MOIRAI-1.1-R-small": "#8fd6c9",
+    "MOIRAI-1.1-R-large": "#2e8e7e"
+  },
+
+  "dataset": {
+    "_comment": "Categorical colours for the 4 event logs (backup DF-complexity radar). A separate dimension from the model palette.",
+    "BPI2017":          "#00407a",
+    "BPI2019_1":        "#dd8a2e",
+    "Sepsis":           "#1d8db0",
+    "Hospital_Billing": "#8a5ba6"
+  }
+}

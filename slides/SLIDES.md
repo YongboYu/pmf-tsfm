@@ -27,11 +27,19 @@ If an attendee remembers ONE sentence walking out:
 - Detailed PEFT theory beyond "LoRA = adapters on attention"
 
 ## Visual identity
-- Primary: KU Leuven blue (use actual brand color, replace placeholder)
-- Accent: single contrast color reserved for "our method" highlights
-- Fonts: Slidev defaults (Inter + JetBrains Mono)
-- Diagrams: clean, monochrome with one accent. No 3D, no shadows, no clipart.
+- **Colour set is locked** — single source of truth in `palette.json` (mirrored to the deck in
+  `template/style.css` `:root`, and read by `scripts/figure_manifest.py`). Keep the two in sync.
+- Primary: KU Leuven blue `#00407A` (brand/headings/TSFM group). Accent: orange `#DD8A2E`,
+  reserved for "our method"/attention — never a model colour; put **ink** text on it, not white.
+- Figure strategy = **hybrid**: headline slides use two groups (baselines gray `#778496` vs TSFMs
+  one blue); per-family hues only on family-comparison slides.
+- Family trio (CVD-verified, Machado 2009 — 5-line worst-case 54): Chronos `#1B6FB0` (azure),
+  MOIRAI `#57C0AE` (teal), TimesFM `#4C3A78` (deep indigo). Decoupled from brand so Chronos is its
+  own colour. Multi-line plots also carry redundant cues (dash + markers); bars carry direct labels.
+- Fonts: Slidev defaults (Inter + JetBrains Mono).
+- Diagrams: clean, minimal, calm. No 3D, no shadows, no clipart.
 - Animations: short (≤15s), purposeful, never decorative.
+- Logo: `template/public/logos/kuleuven-liris.png` (official KU Leuven · LIRIS horizontal lockup).
 
 ## Hard constraints
 - Max 5 bullets per slide; max 12 words per bullet

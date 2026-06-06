@@ -1,0 +1,35 @@
+/* ============================================================================
+   CAiSE 2026 deck — colour tokens (single source of truth).
+   Slidev auto-loads this file from the project root and applies it globally,
+   so these custom properties are available to every slide and component
+   (shared CSS must be global, never in a slide-scoped <style>).
+
+   Canonical values live in slides/palette.json — keep this :root block in sync.
+   KU Leuven house-style base · hybrid figure strategy · CVD-verified family trio.
+   ========================================================================== */
+:root {
+  /* structure & neutrals (cool slate, harmonised with KU Leuven blue) */
+  --ink: #102a43;          /* primary text, dark structural lines   (14.6:1 on white) */
+  --neutral: #486581;      /* secondary text, axis labels            (6.1:1) */
+  --neutral-soft: #93a4b8; /* rules, gridlines, ghost edges      decorative only (2.6:1) */
+  --surface: #ffffff;
+  --surface-alt: #f4f7fb;
+  --hairline: #dde5ee;
+
+  /* brand & accent */
+  --brand: #00407a;        /* KU Leuven blue — headings, TSFM group  (white text ok) */
+  --brand-strong: #1d8db0; /* emphasis / links / chrome          large text only (3.8:1) */
+  --accent: #dd8a2e;       /* ATTENTION only — arrows, "our method"; use INK text on it */
+
+  /* data encodings */
+  --truth: #111111;        /* ground-truth line */
+  --baseline: #778496;     /* baselines group (gray) — CVD-verified vs families */
+  --tsfm: #00407a;         /* TSFM group in the 2-group headline view (= brand) */
+
+  /* per-family hues (family-comparison slides only) — CVD-safe trio, 5-line worst-case 54.
+     Decoupled from --brand so Chronos reads as its own colour, not the chrome navy.
+     Label contrast: white text on Chronos/TimesFM, INK text on MOIRAI. */
+  --family-chronos: #1b6fb0;  /* vivid azure */
+  --family-moirai:  #57c0ae;  /* teal */
+  --family-timesfm: #4c3a78;  /* deep indigo (dark anchor) */
+}

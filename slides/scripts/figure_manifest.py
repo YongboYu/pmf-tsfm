@@ -15,7 +15,13 @@ Provenance notes (verified 2026-05-25):
   * 'multivariate' (_mul) variants are deliberately excluded (univariate per Yu 2025).
 """
 
+import json
 from pathlib import Path
+
+# --- palette (single source of truth) ----------------------------------------
+# Canonical colour set shared with the deck (slides/template/style.css). Loaded
+# from slides/palette.json so figures and slides never drift apart.
+PALETTE = json.loads((Path(__file__).resolve().parent.parent / "palette.json").read_text())
 
 # --- roots -------------------------------------------------------------------
 # Canonical experiment outputs live OUTSIDE the slides repo, as a sibling of code/.
@@ -33,6 +39,8 @@ DATASET_LABELS = {
     "Sepsis": "Sepsis",
     "Hospital_Billing": "Hospital Billing",
 }
+# Categorical colours per event log (backup DF-complexity radar) — from palette.json.
+DATASET_COLORS = {k: v for k, v in PALETTE["dataset"].items() if not k.startswith("_")}
 
 # --- drift edge (beats 3 / 7b) ----------------------------------------------
 # Confirmed: feature index 3 == "O_Sent (mail and online) -> O_Cancelled" across
@@ -43,20 +51,15 @@ DRIFT_EDGE_INDEX = 3
 DRIFT_EDGE_NAME = "O_Sent → O_Cancelled"
 DRIFT_HORIZON_INDEX = -1  # last day
 
-# --- style (SLIDES.md: monochrome + single accent; no 3D/shadows) -----------
-ACCENT = (
-    "#1d4ee8"  # placeholder accent; SLIDES.md calls for KU Leuven blue -- swap when brand color set
-)
-BASELINE_GRAY = "#9aa0a6"
-TRUTH_LINE = "#111111"
+# --- style (KU Leuven house-style; CVD-verified family trio; from palette.json) -
+ACCENT = PALETTE["accent"]  # attention-only highlight (KU Leuven orange)
+BASELINE_GRAY = PALETTE["baseline"]
+TRUTH_LINE = PALETTE["truth"]
 TARGET_GRAY = "#444444"
 
-# Per-family colors for the headline bars (baselines gray, TSFMs accent family).
-FAMILY_COLORS = {
-    "chronos": "#1d4ee8",
-    "moirai": "#0f9d8c",
-    "timesfm": "#e0760a",
-}
+# Per-family colours for family-comparison slides (timeline, drift reveal, FT slope).
+# Headline 2-group bars use BASELINE_GRAY vs PALETTE["tsfm"] instead.
+FAMILY_COLORS = PALETTE["family"]
 
 # --- headline models: zero-shot MAE bars (7a), ER bars (9), drift (7b) -------
 # display label -> (kind, results-subdir, file-key)
@@ -101,15 +104,9 @@ FT_MODELS = {
 }
 FT_STAGES = ["zs", "lora", "full"]
 FT_STAGE_LABELS = {"zs": "Zero-shot", "lora": "LoRA", "full": "Full-FT"}
-# Distinct shade per model, grouped by family hue (blue = Chronos, teal = MOIRAI),
+# Distinct shade per model, grouped by family hue (azure = Chronos, teal = MOIRAI),
 # so the 5 lines stay tellable apart (family color alone collapses 3 Chronos into one).
-FT_MODEL_COLORS = {
-    "Chronos-Bolt-small": "#8fb0f7",
-    "Chronos-Bolt-base": "#3b6fe0",
-    "Chronos-2": "#13208a",
-    "MOIRAI-1.1-R-small": "#6fd0c0",
-    "MOIRAI-1.1-R-large": "#0a7d6e",
-}
+FT_MODEL_COLORS = {k: v for k, v in PALETTE["ft_shades"].items() if not k.startswith("_")}
 
 
 def family_of(label: str) -> str:
