@@ -176,9 +176,16 @@ TABLE3_COMPLEXITY = {
     "Hospital_Billing": [0.603, 0.260, 0.137, 0.171, 0.483, 0.620, 0.457],
 }
 
-# --- paper Table 4 MAE -- transcribed, used ONLY to verify the results CSVs --
-# (TSFM rows must match results within rounding; baseline rows are expected to differ)
-TABLE4_MAE_CHECK = {
+# --- paper Table 4 MAE (camera-ready) -- the PLOT SOURCE for the headline MAE bars.
+# Slide numbers must be paper-faithful (SLIDES.md hard rule). The results/ re-run baselines
+# differ materially from the camera-ready table (esp. XGBoost Sepsis .169 vs the re-run's ~.094,
+# also XGBoost on every log + Naive on Hospital), which would understate the baselines and distort
+# the "TSFMs beat both baselines on every log" claim. So we PLOT these paper values and cross-check
+# the results CSVs in make_figures (baseline deltas are expected and printed). TSFM rows match the
+# results within rounding. Best (lower) baseline is Naive Seasonal on all four logs.
+TABLE4_MAE = {
+    "Seasonal-Naive": {"BPI2017": 8.30, "BPI2019_1": 14.47, "Sepsis": 0.117, "Hospital_Billing": 1.77},
+    "XGBoost": {"BPI2017": 8.50, "BPI2019_1": 14.70, "Sepsis": 0.169, "Hospital_Billing": 2.67},
     "Chronos-2": {"BPI2017": 7.25, "BPI2019_1": 11.39, "Sepsis": 0.090, "Hospital_Billing": 1.39},
     "MOIRAI-2.0": {"BPI2017": 6.87, "BPI2019_1": 10.99, "Sepsis": 0.084, "Hospital_Billing": 1.39},
     "TimesFM-2.5": {"BPI2017": 6.87, "BPI2019_1": 10.75, "Sepsis": 0.096, "Hospital_Billing": 1.42},

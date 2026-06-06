@@ -61,6 +61,17 @@ chrome element, nothing else:
 - **Callout** — `components/Callout.vue`, a clean accent box (ink text on `--accent`); the ONLY
   pointing accent element, so attention-orange stays meaningful.
 
+**Guided-attention reveal (convention):** direct the eye with `<Callout v-click>` — figure and text
+render at step 0, the Callout fades in on click. Default to ONE callout; use a second only when the
+slide carries two distinct key messages, revealed **in sequence** (`v-click="1"`, `v-click="2"`) so
+attention lands on one at a time (e.g. the ER slide: "Forecast ≫ reuse" then "TSFMs ≈ baselines").
+The callout text should restate the slide's message — an aggregate stat matching the headline (MAE
+slide: a plain pill, no pointer) or a pointer at the bar it describes. `@slidev/rough-notation`
+(`v-mark`) stays rejected as too informal. Absolute-position over a figure by wrapping it in
+`<div class="relative">` + a `<div class="absolute" style="...">`. **Text on the pill is always `--ink`,
+never white** (ink-on-accent ≈ 5.4:1, passes WCAG AA; white-on-accent ≈ 2.7:1, fails) — see the palette
+rule above.
+
 Layouts in `template/layouts/`: `assertion-evidence`, `two-col-evidence`, `cover`.
 
 ### Type scale (px @ 1280 canvas → ≈ projected @ 1920)
@@ -79,6 +90,12 @@ Line-height 1.6; page margin 52 / 92 / 56. `.dense` (18) / `.dense--xs` (16) esc
 figure panels. Figures: matplotlib matched to Inter with graceful fallback (`scripts/make_figures.py`).
 Speaker notes: per-slide Slidev `<!-- [S-xx] … -->` notes **plus** the verbatim
 `talk_design/manuscript.md` (same `[S-xx]` anchors keep them in sync).
+
+**Math (KaTeX):** equations render in `--ink` at the body scale (inline `$…$` inherits 23px); display
+`$$…$$` is left-aligned with the evidence column (`.ae-body .katex-display` in `style.css` overrides
+KaTeX's centre default). Every equation pairs with a worked example — the ER slide (`ER ≈ bits/trace`
+beside Truth 1.86 → MOIRAI-2.0 2.52 → Training 5.83) is the reference exemplar. KaTeX ships with
+Slidev; no plugin install needed.
 
 ## Hard constraints
 - Max 5 bullets per slide; max 12 words per bullet

@@ -5,11 +5,17 @@ Reads from the authoritative sources pinned in figure_manifest.py and writes PNG
 slides/template/public/figures/. Idempotent: re-running overwrites in place.
 
 Sourcing (see manifest header for provenance):
-  * MAE bars, FT slope, RMSE table  -> results/ comprehensive_evaluation CSVs (machine precise)
-  * Drift pair                      -> results/ .npy arrays (only source of per-window series)
+  * MAE bars                        -> paper Table 4 (TABLE4_MAE), cross-checked vs results/ CSVs.
+        Baselines on results/ are a re-run that differs from camera-ready (esp. XGBoost Sepsis);
+        the slide must be paper-faithful (SLIDES.md), so we plot the paper and print result deltas.
+  * FT slope, RMSE table            -> results/ comprehensive_evaluation CSVs (machine precise).
+        RMSE is results-only — the paper reports MAE (Table 4); RMSE is a backup/verbal claim, so
+        its baselines carry the same re-run caveat (flagged in the slide caption).
+  * Drift pair                      -> results/ .npy arrays (only source of per-window series;
+        XGBoost line is the re-run — matches paper Fig 1 qualitatively, no paper machine data).
   * ER bars, DF-complexity radar    -> transcribed paper Tables 7 / 3 (no clean machine source)
 
-Each scalar chart cross-checks TSFM values against the paper tables and prints any delta.
+MAE/FT/RMSE cross-check TSFM values against the paper tables and print any delta.
 
     python slides/scripts/make_figures.py [--only mae_bars,drift,...]
 """
@@ -117,12 +123,14 @@ def fig_mae_bars():
     for ax, ds in zip(axes, M.DATASETS):
         vals = []
         for label, kind, subdir, _key in M.HEADLINE:
-            v = _read_mae(_root_for(kind), subdir, ds)
+            # PLOT the paper Table 4 value (paper-faithful per SLIDES.md), then cross-check the
+            # results CSV and print any delta (baseline deltas are expected — see manifest note).
+            v = M.TABLE4_MAE[label][ds]
             vals.append(v)
-            # sanity-gate TSFMs against paper Table 4 (wide tol: catch wiring errors, not rounding)
-            chk = M.TABLE4_MAE_CHECK.get(label, {}).get(ds)
-            if chk is not None and abs(v - chk) > max(0.08 * chk, 0.05):
-                DELTAS.append(f"MAE {label}/{ds}: results {v:.3f} vs paper~{chk} (check wiring)")
+            res = _read_mae(_root_for(kind), subdir, ds)
+            tol = 0.08 * v if label not in M.BASELINE_LABELS else 0.0  # tight for TSFMs
+            if abs(res - v) > max(tol, 0.05):
+                DELTAS.append(f"MAE {label}/{ds}: plotted paper {v:.3f} vs results {res:.3f}")
         colors = [
             M.BASELINE_GRAY if lab in M.BASELINE_LABELS else M.FAMILY_COLORS[M.family_of(lab)]
             for lab in labels
