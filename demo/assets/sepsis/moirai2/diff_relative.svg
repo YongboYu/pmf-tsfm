@@ -27,28 +27,19 @@
 <!-- 0&#45;&gt;1 -->
 <g id="edge1" class="edge">
 <title>0&#45;&gt;1</title>
-<path fill="none" stroke="#9e9e9e" d="M50.33,-134.4C50.33,-112.33 50.33,-73.94 50.33,-47.54"/>
-<polygon fill="#9e9e9e" stroke="#9e9e9e" points="53.83,-47.87 50.33,-37.87 46.83,-47.87 53.83,-47.87"/>
-<text text-anchor="start" x="50.33" y="-58.2" font-family="Times,serif" font-size="14.00" fill="#1e88e5">1</text>
-<text text-anchor="start" x="57.08" y="-58.2" font-family="Times,serif" font-size="14.00" fill="#bdbdbd"> | </text>
-<text text-anchor="start" x="67.58" y="-58.2" font-family="Times,serif" font-size="14.00" fill="#2e7d32">4</text>
-<text text-anchor="start" x="74.33" y="-58.2" font-family="Times,serif" font-size="14.00" fill="#bdbdbd"> (</text>
-<text text-anchor="start" x="82.58" y="-58.2" font-family="Times,serif" font-size="14.00" fill="#6a1b9a">&#45;75%</text>
-<text text-anchor="start" x="112.58" y="-58.2" font-family="Times,serif" font-size="14.00" fill="#bdbdbd">)</text>
+<path fill="none" stroke="#ffb300" stroke-width="2.5" stroke-dasharray="5,2" d="M50.33,-134.4C50.33,-113.03 50.33,-76.35 50.33,-50.08"/>
+<polygon fill="#ffb300" stroke="#ffb300" stroke-width="2.5" points="53.83,-50.14 50.33,-40.14 46.83,-50.14 53.83,-50.14"/>
+<text text-anchor="start" x="50.33" y="-57.2" font-family="Times,serif" font-size="14.00" fill="#0c8599">&#45;100%</text>
 </g>
 <!-- _legend -->
 <g id="node3" class="node">
 <title>_legend</title>
 <text text-anchor="start" x="243.95" y="-195.7" font-family="Times,serif" font-weight="bold" font-size="14.00">Legend</text>
-<text text-anchor="start" x="132.08" y="-172.2" font-family="Times,serif" font-size="14.00" fill="#555555">edge numbers: </text>
-<text text-anchor="start" x="216.08" y="-172.2" font-family="Times,serif" font-size="14.00" fill="#1e88e5">forecast</text>
-<text text-anchor="start" x="258.83" y="-172.2" font-family="Times,serif" font-size="14.00" fill="#bdbdbd"> | </text>
-<text text-anchor="start" x="269.33" y="-172.2" font-family="Times,serif" font-size="14.00" fill="#2e7d32">actual</text>
-<text text-anchor="start" x="301.58" y="-172.2" font-family="Times,serif" font-size="14.00" fill="#bdbdbd"> (</text>
-<text text-anchor="start" x="309.83" y="-172.2" font-family="Times,serif" font-size="14.00" fill="#c2185b">over</text>
-<text text-anchor="start" x="333.83" y="-172.2" font-family="Times,serif" font-size="14.00" fill="#555555">/</text>
-<text text-anchor="start" x="337.58" y="-172.2" font-family="Times,serif" font-size="14.00" fill="#6a1b9a">under</text>
-<text text-anchor="start" x="368.33" y="-172.2" font-family="Times,serif" font-size="14.00" fill="#555555"> %)</text>
+<text text-anchor="start" x="132.08" y="-172.2" font-family="Times,serif" font-size="14.00" fill="#555555">edge label: </text>
+<text text-anchor="start" x="195.08" y="-172.2" font-family="Times,serif" font-size="14.00" fill="#e8590c">over</text>
+<text text-anchor="start" x="219.08" y="-172.2" font-family="Times,serif" font-size="14.00" fill="#555555"> / </text>
+<text text-anchor="start" x="230.33" y="-172.2" font-family="Times,serif" font-size="14.00" fill="#0c8599">under</text>
+<text text-anchor="start" x="261.08" y="-172.2" font-family="Times,serif" font-size="14.00" fill="#555555">&#45;forecast %</text>
 <text text-anchor="start" x="132.08" y="-147.7" font-family="Times,serif" font-size="14.00" fill="#9e9e9e">─────</text>
 <text text-anchor="start" x="187.83" y="-147.7" font-family="Times,serif" font-size="14.00">matched</text>
 <text text-anchor="start" x="132.08" y="-124.2" font-family="Times,serif" font-size="14.00" fill="#ffb300">– – –</text>
