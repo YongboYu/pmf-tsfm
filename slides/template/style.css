@@ -114,6 +114,12 @@
 /* caption (figure sublabels) */
 .caption { font-size: 14px; color: var(--neutral-soft); }
 
+/* KaTeX — equations sit in --ink at the body scale (inline math inherits 23px).
+   Display equations left-align with the evidence column (KaTeX centres by default).
+   Every equation pairs with a worked example (ER bits/trace is the reference exemplar). */
+.ae-body .katex { color: var(--ink); }
+.ae-body .katex-display { text-align: left; margin: 6px 0 14px; }
+
 /* ---- chrome: page number (content slides only) ---- */
 .pageno {
   position: absolute;

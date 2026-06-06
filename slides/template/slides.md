@@ -298,14 +298,18 @@ Here's what happens when you point them at DF time series."
 -->
 
 ---
+layout: assertion-evidence
+locator: Results
+assertion: Zero-shot TSFMs beat both baselines on every log
+---
 
-# Results — MAE across 4 event logs
+<img src="/figures/results-mae-bars.png" class="block mx-auto w-full max-h-[380px] object-contain rounded-lg" alt="Zero-shot MAE across 4 event logs — TSFMs vs Seasonal-Naive and XGBoost baselines" />
 
-<img src="/figures/results-mae-bars.png" class="block mx-auto rounded-lg w-full max-h-[420px] object-contain" alt="Zero-shot MAE across 4 event logs — TSFMs vs Seasonal-Naive and XGBoost baselines" />
-
-<div class="mt-4 text-xs opacity-70 text-center">
-Two strongest baselines from our prior benchmark (Yu 2025) — full ranking on backup.
+<div class="text-center mt-3" v-click>
+  <Callout>−21% mean MAE vs best baseline · 3 models × 4 logs</Callout>
 </div>
+
+<div class="caption mt-2 text-center">Two strongest baselines from our prior benchmark (Yu 2025) — full ranking on backup.</div>
 
 <!--
 Q: Does Q1 hold — do zero-shot TSFMs beat the baselines?
@@ -403,30 +407,36 @@ Don't moralize — let the visual do it.
 -->
 
 ---
+layout: two-col-evidence
+locator: Evaluation
+assertion: TSFMs reach ER parity — not better
+---
 
-# Process-aware evaluation — Entropic Relevance
+::left::
 
-<div class="grid grid-cols-2 gap-6">
-
-<div>
-<div class="text-xs opacity-70 mb-1 text-center">ER (lower = better process model) · Hospital Billing</div>
-<img src="/figures/er-hospital-billing.png" class="block mx-auto rounded-lg w-full max-h-[320px] object-contain" alt="Hospital Billing ER — reusing the historical (Training) model is far worse than any forecast" />
-<div class="mt-2 text-xs opacity-60 text-center italic">
-ER = bits-per-trace cost of encoding the log; in-bar % = traces the forecasted model fits
-</div>
-</div>
-
-<div class="pt-6 space-y-4">
-
-<div>TSFMs <strong>match</strong> baselines on ER — not better.</div>
-
-<div>Reusing the historical model (Training) is worst — every forecast beats it.</div>
-
-<div class="font-semibold" style="color: #1d4ed8">The bottleneck has moved from forecasting accuracy to process-aware representation.</div>
-
+<div class="relative">
+  <img src="/figures/er-hospital-billing.png" class="block w-full max-h-[340px] object-contain rounded-lg" alt="Hospital Billing ER — reusing the historical (Training) model is far worse than any forecast" />
+  <div class="absolute" style="left: 34%; top: 26%" v-click="1">
+    <Callout dir="left">Forecast ≫ reuse</Callout>
+  </div>
+  <div class="absolute" style="left: 52%; top: 40%" v-click="2">
+    <Callout dir="down">TSFMs ≈ baselines</Callout>
+  </div>
 </div>
 
-</div>
+<div class="caption mt-3">ER = bits-per-trace · Hospital Billing · in-bar % = traces the forecasted model fits.</div>
+
+::right::
+
+$$\mathrm{ER}(L,M) \approx \text{bits to encode one trace}$$
+
+<div class="dense">Hospital Billing — lower is better:</div>
+
+- **Truth** — 1.86 *(ideal floor)*
+- **Forecasts** — 2.1–2.5 *(baselines & TSFMs alike)*
+- **Training** — 5.83 *(reuse the old model — worst)*
+
+<div class="mt-5 font-semibold" style="color: var(--brand)">The bottleneck has moved from forecasting accuracy to process-aware representation.</div>
 
 <!--
 Q: Does the forecasting win translate to a better process model?
@@ -576,10 +586,14 @@ hideInToc: true
 
 # Backup · Full RMSE table
 
-<img src="/figures/rmse-full.png" class="block mx-auto rounded-lg w-full max-h-[440px] object-contain" alt="Full zero-shot RMSE table — all model variants × 4 logs; confirms the MAE ranking" />
+<img src="/figures/rmse-full.png" class="block mx-auto rounded-lg w-full max-h-[420px] object-contain" alt="Full zero-shot RMSE table — all model variants × 4 logs; confirms the MAE ranking" />
+
+<div class="caption mt-2 text-center">RMSE from our re-run (paper reports MAE, Table 4); baselines may differ slightly from camera-ready.</div>
 
 <!--
 Q&A defense: when asked "does RMSE tell the same story?" — yes, point at this.
+Provenance: RMSE has no paper table (paper Table 4 is MAE); built from results/ CSVs, so its
+baselines carry the re-run delta flagged in make_figures.py. Story (TSFMs win) unchanged.
 -->
 
 ---
