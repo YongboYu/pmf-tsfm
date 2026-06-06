@@ -1,4 +1,9 @@
-# One Gradio app delivers GUI + REST + MCP; packaged as a single self-hostable GUI+CLI image
+# One Gradio app delivers GUI + REST + MCP; one codebase, two packagings
+
+> **Amended (PRD #112, HF-deployment grilling).** The original decision called the hosted Space, the
+> talk-recording build, and the self-host image the *identical* Docker artifact. That is softened to
+> **"one codebase, two packagings"** — see the Amendment section below. The "one Gradio app, three
+> surfaces (GUI + REST + MCP)" core stands unchanged.
 
 We want the work usable by humans, scripts, *and* modern agents without building and maintaining
 separate services. A Gradio app launched with `mcp_server=True` simultaneously exposes a **GUI**, an
@@ -23,3 +28,21 @@ and a tool others self-host on their own logs/hardware (no caps). A Claude **Ski
   accuracy metrics (ER/MAE/RMSE) are a **GUI-only** reproducibility concern. `mcp_server=True` is
   flipped on only *after* the GUI tracer-bullet slice — building the GUI does **not** block on the
   MCP contract, as long as the forecast functions are written agent-clean from the start.
+
+## Amendment — one codebase, two packagings (PRD #112)
+
+The "*identical* Docker artifact for Space + talk + self-host" turned out to over-constrain the
+hosted path. The **HF Space is a Gradio-SDK Space** (`app.py` + `requirements.txt` at the Space root,
+serve-time deps gradio-only per ADR-0005) — *not* a hand-built Docker image. That is the simplest
+gradio-only host **and** the native home for ZeroGPU (ADR-0001), which the live-upload slice needs;
+ZeroGPU is far more fragile on Docker-SDK Spaces.
+
+So the same `demo/` codebase ships as **two packagings**, not one:
+
+1. the **Gradio-SDK HF Space** — the hosted runtime (GUI now; REST/MCP via `mcp_server=True`; ZeroGPU
+   for the live path);
+2. a **self-host Docker image** (GUI default entrypoint + Hydra CLI) — built from the same code for
+   talk-recording and others self-hosting with no caps. **Future work**, not built in PRD #112.
+
+"One codebase, every surface" holds; "one *identical artifact*" does not. The CLI / PyPI / Claude
+Skill remain the recorded destination and remain future work.
