@@ -12,6 +12,8 @@ These tests pin the *serve-time* contract the Hugging Face Space relies on:
 
 from __future__ import annotations
 
+import ast
+import importlib.util
 import re
 import subprocess
 import sys
@@ -79,14 +81,13 @@ def test_readme_has_valid_hf_space_frontmatter():
     )
 
 
-def test_serve_path_imports_without_precompute_deps():
-    # In a fresh interpreter with only demo/ on the path (no src/), importing the serve path
-    # (app → forecast) must succeed and must NOT have pulled in the precompute-time modules.
-    # Run in a subprocess so the in-process suite (which imports render/precompute_demo) can't
-    # pollute the module table. This guards ADR-0005 against a stray `import render` at serve time.
+def _assert_clean_serve_import(import_stmt: str) -> None:
+    # In a fresh interpreter with only demo/ on the path (no src/), importing the serve path must
+    # succeed and must NOT have pulled in the precompute-time modules. Run in a subprocess so the
+    # in-process suite (which imports render/precompute_demo) can't pollute the module table.
     code = (
         f"import sys; sys.path.insert(0, {str(DEMO)!r}); "
-        "import app, forecast; "
+        f"{import_stmt}; "
         "bad = [m for m in ('render', 'precompute_demo', 'graphviz', 'pmf_tsfm') "
         "if m in sys.modules]; "
         "assert not bad, bad"
@@ -95,6 +96,16 @@ def test_serve_path_imports_without_precompute_deps():
         [sys.executable, "-c", code], capture_output=True, text=True
     )
     assert result.returncode == 0, result.stderr
+
+
+def test_serve_path_imports_without_precompute_deps():
+    # forecast.py is the gradio-free serve core — always checkable, incl. in CI (no gradio there).
+    # This guards ADR-0005 against a stray `import render` (which would drag in graphviz).
+    _assert_clean_serve_import("import forecast")
+    # app.py is the other half of the serve path but imports gradio; only check it where gradio
+    # is installed (locally / on the Space), matching the demo suite's gradio-optional convention.
+    if importlib.util.find_spec("gradio") is not None:
+        _assert_clean_serve_import("import app, forecast")
 
 
 # The serve artifacts every bundled dataset x model combo must ship (ADR-0002/0005).
@@ -109,12 +120,37 @@ _ASSET_FILES = (
 )
 
 
+def _app_string_list(name: str) -> list[str]:
+    """Read a module-level ``name: list[str] = [...]`` literal from app.py without importing it.
+
+    Importing app.py would pull in gradio, which is absent in CI; the dropdown choices are plain
+    string literals, so we lift them straight from the source instead.
+    """
+    tree = ast.parse((DEMO / "app.py").read_text())
+    for node in tree.body:
+        target = None
+        if isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name):
+            target = node.target.id
+        elif (
+            isinstance(node, ast.Assign)
+            and len(node.targets) == 1
+            and isinstance(node.targets[0], ast.Name)
+        ):
+            target = node.targets[0].id
+        if target == name and isinstance(node.value, (ast.List, ast.Tuple)):
+            return [el.value for el in node.value.elts if isinstance(el, ast.Constant)]
+    raise AssertionError(f"{name} list literal not found in app.py")
+
+
 def test_every_offered_combo_has_committed_assets():
-    import app  # the dropdown choices are the source of truth for what must be served
+    # The dropdown choices are the source of truth for what must be served.
+    datasets = _app_string_list("DATASETS")
+    models = _app_string_list("MODELS")
+    assert datasets and models, "could not read DATASETS/MODELS from app.py"
 
     missing = []
-    for dataset in app.DATASETS:
-        for model in app.MODELS:
+    for dataset in datasets:
+        for model in models:
             for fname in _ASSET_FILES:
                 path = DEMO / "assets" / dataset / model / fname
                 if not path.is_file():
