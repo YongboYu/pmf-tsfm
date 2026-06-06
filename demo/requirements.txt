@@ -1,0 +1,6 @@
+# Serve-time dependencies for the bundled forecast explorer HF Space.
+# Gradio-only by design (ADR-0005): the app serves precomputed assets incl. pre-rendered SVGs,
+# so the runtime needs no graphviz `dot` binary and no GPU. Precompute-time deps (graphviz,
+# pmf_tsfm, numpy, pandas) must never appear here — they belong to demo/precompute_demo.py only.
+# Pin matches the README frontmatter `sdk_version`.
+gradio==6.16.0

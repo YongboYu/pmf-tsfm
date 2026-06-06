@@ -1,0 +1,67 @@
+name: Deploy demo to HF Space
+
+# Sync the bundled forecast explorer to its Hugging Face Gradio-SDK Space (PRD #112, slice 1 #113).
+# Only the gradio-only serve-time subset of demo/ is published, so the Space needs no graphviz
+# binary and no GPU (ADR-0005). Precompute-time code, tests, and handoff notes stay out of the Space.
+#
+# One-time setup (HITL): create the Space, set the `HF_TOKEN` repo secret (write-scoped), and set the
+# `HF_SPACE_ID` repo variable (e.g. "YongboYu/pmf-forecasting-explorer").
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "demo/**"
+      - ".github/workflows/deploy-demo.yml"
+  workflow_dispatch: {}
+
+concurrency:
+  group: deploy-demo
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Hugging Face Hub client
+        run: pip install --upgrade "huggingface_hub>=0.25"
+
+      - name: Stage the serve-time subset
+        # Explicit allow-list: only what the running app reads. Anything not copied here never
+        # reaches the Space, keeping the runtime gradio-only.
+        run: |
+          set -euo pipefail
+          rm -rf _space && mkdir -p _space
+          cp demo/app.py demo/forecast.py demo/requirements.txt demo/README.md _space/
+          cp -r demo/static demo/assets _space/
+          echo "Staged for the Space:"
+          find _space -maxdepth 2 -type f | sort
+
+      - name: Push to the HF Space
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          HF_SPACE_ID: ${{ vars.HF_SPACE_ID }}
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import os
+          from huggingface_hub import HfApi
+
+          api = HfApi(token=os.environ["HF_TOKEN"])
+          space_id = os.environ["HF_SPACE_ID"]
+          api.upload_folder(
+              folder_path="_space",
+              repo_id=space_id,
+              repo_type="space",
+              commit_message=f"Sync demo from {os.environ.get('GITHUB_SHA', 'main')[:8]}",
+              # Purge anything on the Space that is no longer in the staged subset.
+              delete_patterns="*",
+          )
+          print(f"Deployed to https://huggingface.co/spaces/{space_id}")
+          PY
