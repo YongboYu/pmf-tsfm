@@ -33,3 +33,122 @@
   --family-moirai:  #57c0ae;  /* teal */
   --family-timesfm: #4c3a78;  /* deep indigo (dark anchor) */
 }
+
+/* ============================================================================
+   CAiSE 2026 deck — Assertion-Evidence type scale + zone styling.
+   Appended below the :root palette (the SINGLE SOURCE OF TRUTH above — do not
+   edit it). Logical canvas = 1280px (canvasWidth in slides.md headmatter), so
+   these px render as designed and scale to the projector. Body floor = 24px
+   (~36px projected @1920). Inter everywhere; JetBrains Mono = the section
+   locator's sole use. These rules are GLOBAL (unscoped) on purpose so they
+   reach markdown slotted into the custom layouts — Slidev layout <style scoped>
+   would not (the slot keeps the page's scope, per slidev-style-block gotcha).
+
+   Slide skeleton: locator -> assertion headline -> accent rule + gap -> evidence
+   -> page number. To DROP the accent bar for the final version, delete the one
+   `.rule` block below — no layout impact.
+   ========================================================================== */
+
+/* ---- base: Assertion-Evidence content slide ---- */
+.ae-slide {
+  font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  color: var(--ink);
+  font-size: 23px;          /* body — legible end (~34px projected @1920) */
+  line-height: 1.6;
+  padding: 52px 92px 56px;
+  position: relative;
+}
+
+/* ---- zone 1: section locator (the ONLY JetBrains Mono use) ----
+   Navy pill: same --brand navy family as the headline, distinguished by shape +
+   inversion (white text on navy) rather than a separate hue — keeps the slide's
+   colour consistent while still giving the locator a clear "section tag" identity. */
+.locator {
+  display: inline-block;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-weight: 600;
+  font-size: 17px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #fff;
+  background: var(--brand);
+  padding: 5px 12px;
+  border-radius: 6px;
+  margin: 0 0 18px;
+}
+
+/* ---- zone 2: assertion headline (the claim — absorbs the old takeaway) ---- */
+.ae-slide h1,
+.assertion {
+  font-weight: 700;
+  font-size: 37px;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+  color: var(--brand);
+  margin: 0;
+}
+/* droppable structural accent rule — delete this block to remove the bar */
+.assertion .rule,
+.ae-slide .rule {
+  display: block;
+  width: 56px;
+  height: 4px;
+  margin-top: 16px;
+  border-radius: 2px;
+  background: var(--accent);
+}
+
+/* ---- zone 3: evidence body ---- */
+.ae-body { margin-top: 22px; }
+.ae-body h2 { font-weight: 600; font-size: 26px; color: var(--brand); margin: 0 0 10px; }
+.ae-body ul { list-style: none; padding-left: 0; margin: 0; display: flex; flex-direction: column; gap: 14px; }
+.ae-body li { position: relative; padding-left: 22px; color: var(--neutral); }
+.ae-body li::before { content: "–"; position: absolute; left: 0; color: var(--neutral-soft); }
+.ae-body strong, .ae-body b { color: var(--ink); }
+.ae-body em { font-style: italic; color: var(--neutral); }
+
+/* dense escape hatch for tight figure panels */
+.dense, .dense li, .dense p { font-size: 18px; }
+.dense--xs, .dense--xs li, .dense--xs p { font-size: 16px; }
+
+/* caption (figure sublabels) */
+.caption { font-size: 14px; color: var(--neutral-soft); }
+
+/* ---- chrome: page number (content slides only) ---- */
+.pageno {
+  position: absolute;
+  right: 92px;
+  bottom: 22px;
+  font-size: 14px;
+  color: var(--neutral-soft);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---- two-column evidence ---- */
+.ae-cols { display: grid; grid-template-columns: 1fr 1fr; margin-top: 22px; }
+.ae-cols .ae-col { padding-right: 40px; }
+.ae-cols .ae-col + .ae-col { padding-left: 40px; border-left: 1px solid var(--hairline); }
+.ae-collabel { font-weight: 600; font-size: 16px; letter-spacing: 0.02em; margin-bottom: 12px; color: var(--neutral); }
+.ae-lead { font-weight: 600; font-size: 23px; color: var(--ink); margin: 0 0 12px; }
+
+/* ---- cover ---- */
+.ae-cover {
+  font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  color: var(--ink);
+  height: 100%;
+  padding: 0 110px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  position: relative;
+  background:
+    radial-gradient(1100px 500px at 78% -8%, #eaf1f8 0%, rgba(234,241,248,0) 60%),
+    var(--surface);
+}
+.ae-cover h1 { font-size: 56px; font-weight: 700; line-height: 1.08; letter-spacing: -0.015em; color: var(--brand); max-width: 1000px; margin: 0; }
+.ae-cover .cover-eyebrow { font-family: 'JetBrains Mono', ui-monospace, monospace; font-weight: 600; font-size: 20px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--brand-strong); margin-bottom: 22px; }
+.ae-cover .cover-bar { width: 72px; height: 5px; background: var(--accent); border-radius: 3px; margin: 26px 0; }
+.ae-cover .cover-authors { font-size: 23px; font-weight: 500; color: var(--ink); }
+.ae-cover .cover-affil { font-size: 19px; color: var(--neutral); margin-top: 6px; }
+.ae-cover .cover-logo { position: absolute; left: 110px; bottom: 48px; height: 54px; }
+.ae-cover .cover-venue { position: absolute; right: 110px; bottom: 54px; text-align: right; font-size: 17px; color: var(--neutral); line-height: 1.5; }

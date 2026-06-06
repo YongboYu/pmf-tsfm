@@ -28,14 +28,55 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
-# --- global style: clean, mono + accent, no chartjunk ------------------------
+# --- deck font: match the Slidev deck (Inter) when installed, else fall back --
+from matplotlib import font_manager as _fm
+
+
+def _deck_font() -> str:
+    """Return Inter if matplotlib can find it, else a clean sans fallback.
+
+    The deck is set in Inter; figures should echo it. If Inter is not installed
+    on this machine we degrade gracefully (no crash) and warn once.
+    """
+    available = {f.name for f in _fm.fontManager.ttflist}
+    for name in ("Inter", "Inter Variable"):
+        if name in available:
+            return name
+    # Fall back to DejaVu Sans, NOT a system sans like Helvetica Neue: DejaVu has
+    # full glyph coverage (incl. the U+2192 arrow used in DF edge names), whereas
+    # Helvetica Neue drops it and renders missing-glyph boxes. To get true deck
+    # matching everywhere, install Inter (or bundle its TTFs and register them here).
+    print(
+        "[make_figures] Inter not found in matplotlib's font cache; using DejaVu "
+        "Sans. Install/bundle Inter for figures that match the deck font exactly.",
+        file=sys.stderr,
+    )
+    return "DejaVu Sans"
+
+
+_DECK_FONT = _deck_font()
+_INK = M.PALETTE["ink"]
+_NEUTRAL = M.PALETTE["neutral"]
+
+# --- global style: clean, Inter + accent, no chartjunk -----------------------
 plt.rcParams.update(
     {
         "figure.dpi": 200,
         "savefig.dpi": 200,
         "savefig.bbox": "tight",
-        "font.size": 11,
-        "axes.titlesize": 12,
+        "font.family": "sans-serif",
+        "font.sans-serif": [_DECK_FONT, "DejaVu Sans"],
+        "font.size": 12,
+        "axes.titlesize": 13,
+        "axes.labelsize": 12,
+        "xtick.labelsize": 11,
+        "ytick.labelsize": 11,
+        "legend.fontsize": 11,
+        "text.color": _INK,
+        "axes.labelcolor": _INK,
+        "axes.edgecolor": _NEUTRAL,
+        "xtick.color": _NEUTRAL,
+        "ytick.color": _NEUTRAL,
         "axes.spines.top": False,
         "axes.spines.right": False,
         "axes.grid": True,

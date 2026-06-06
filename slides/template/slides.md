@@ -5,27 +5,31 @@ info: |
   CAiSE 2026 presentation — pmf-tsfm
   Yongbo Yu, Jari Peeperkorn, Johannes De Smedt, Jochen De Weerdt
   KU Leuven · LIRIS
-class: text-center
 transition: slide-left
 duration: 20min
 mdc: true
+canvasWidth: 1280
+fonts:
+  sans: Inter
+  mono: JetBrains Mono
+  weights: '400,500,600,700'
+layout: cover
+eyebrow: CAiSE 2026 · Process mining
+logo: /logos/kuleuven-liris.png
+venue: |
+  arXiv:2512.07624
+  CAiSE 2026
 ---
 
 # Time Series Foundation Models<br/>for Process Model Forecasting
 
-<div class="opacity-80 text-lg mt-8">
-Yongbo Yu · Jari Peeperkorn · Johannes De Smedt · Jochen De Weerdt
-</div>
+<div class="cover-bar"></div>
 
-<div class="opacity-60 text-base mt-4">
-KU Leuven · Research Center for Information Systems Engineering (LIRIS)
-</div>
-
-<div class="opacity-50 text-sm mt-12">
-CAiSE 2026
-</div>
+<div class="cover-authors">Yongbo Yu · Jari Peeperkorn · Johannes De Smedt · Jochen De Weerdt</div>
+<div class="cover-affil">KU Leuven · Research Center for Information Systems Engineering (LIRIS)</div>
 
 <!--
+[S-01]
 OPENING ANCHOR LINE (rehearse cold):
 "I'm going to show you something that took me a while to believe:
 the best forecaster for your process model isn't one you trained —
@@ -35,36 +39,38 @@ Pause. Let it land. Then advance.
 -->
 
 ---
-layout: two-cols-header
+layout: two-col-evidence
+locator: Positioning
+assertion: PMF forecasts the whole process model — PPM forecasts a single case
 ---
-
-# PMF vs PPM
 
 ::left::
 
-**PPM** — case-level
+<div class="ae-collabel">PPM · case-level</div>
+<div class="ae-lead">One ongoing case → its future.</div>
 
-- One ongoing case → next event, remaining time, outcome
+- Next event · remaining time · outcome
 - *"Will **this** loan application be cancelled?"*
-- Horizon: rest of one case
+- Horizon: the rest of one case
 
 ::right::
 
-**PMF** — system-level
+<div class="ae-collabel">PMF · system-level</div>
+<div class="ae-lead">A window of the log → the next process model.</div>
 
-- A window of the log → next process model
-- *"Across all applications next week, how often does 'offer sent → offer cancelled' fire?"*
-- Horizon: short-term system future (a week or a month)
-
-<div class="absolute bottom-8 left-0 right-0 text-center opacity-70 text-sm">
-Same event log. Different question. PMF tells you where the process is heading.
-</div>
+- How often each transition fires next week
+- *"How often does **offer sent → cancelled** fire?"*
+- Horizon: the near-term system future
 
 <!--
+[S-02]
 Q: What is PMF and why should I care?
 
-60s budget. PMF horizon is calibrated as weeks-to-months range; this paper uses 7-day experimental horizon.
-After landing the contrast, transition: "Both questions need data.
+The old "same log, different question" takeaway is now ABSORBED INTO THE ASSERTION
+HEADLINE — deliver it in speech, don't put it back on the slide.
+
+60s budget. PMF horizon is calibrated as weeks-to-months range; this paper uses 7-day
+experimental horizon. After landing the contrast, transition: "Both questions need data.
 PPM uses case prefixes. PMF uses something different — let me show you."
 -->
 

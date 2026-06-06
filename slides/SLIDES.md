@@ -36,10 +36,49 @@ If an attendee remembers ONE sentence walking out:
 - Family trio (CVD-verified, Machado 2009 — 5-line worst-case 54): Chronos `#1B6FB0` (azure),
   MOIRAI `#57C0AE` (teal), TimesFM `#4C3A78` (deep indigo). Decoupled from brand so Chronos is its
   own colour. Multi-line plots also carry redundant cues (dash + markers); bars carry direct labels.
-- Fonts: Slidev defaults (Inter + JetBrains Mono).
+- Fonts: **Inter** (headings + body) + **JetBrains Mono** (the section-locator pill ONLY). Set via
+  the `fonts:` headmatter in `slides.md`; `canvasWidth: 1280` so the px scale below renders as designed.
 - Diagrams: clean, minimal, calm. No 3D, no shadows, no clipart.
 - Animations: short (≤15s), purposeful, never decorative.
 - Logo: `template/public/logos/kuleuven-liris.png` (official KU Leuven · LIRIS horizontal lockup).
+
+### Slide template — Assertion-Evidence (locked)
+Research-backed structure (Alley & Neeley, Penn State). Every content slide is three zones + one
+chrome element, nothing else:
+
+> **locator (navy pill) → assertion headline → accent rule + gap → evidence → page number**
+
+- **Section locator** — generic act/section name (e.g. `Results`). Navy **pill**: `--brand` fill,
+  white text, JetBrains Mono, rounded — same navy family as the headline (consistent), set apart by
+  shape + inversion. Navigation only, never a slide summary. **No section-divider slides** — the
+  persistent locator carries orientation.
+- **Assertion headline** — ONE sentence stating the slide's claim; `--brand`. **Absorbs the old
+  "takeaway"** — no separate takeaway strip or footnote.
+- **Accent rule** — short `--accent` underline + gap between headline and evidence; *structural*, not
+  attention. **Droppable**: delete the single `.assertion .rule` block in `style.css` (no layout impact).
+- **Evidence** — figure / table / minimal text.
+- **Chrome** — page number only (`$nav.currentPage / $nav.total`; never hardcode the slide count).
+- **Callout** — `components/Callout.vue`, a clean accent box (ink text on `--accent`); the ONLY
+  pointing accent element, so attention-orange stays meaningful.
+
+Layouts in `template/layouts/`: `assertion-evidence`, `two-col-evidence`, `cover`.
+
+### Type scale (px @ 1280 canvas → ≈ projected @ 1920)
+| element | px | proj | notes |
+|---|---|---|---|
+| cover title | 56 | 84 | cover only |
+| assertion headline | 37 | 55 | L — not XL |
+| sub-head (h2) | 26 | 39 | |
+| column lead | 23 | 34 | |
+| **body / bullets** | **23** | **~34** | legibility-tuned default |
+| locator pill (mono) | 17 | 25 | |
+| caption | 14 | 21 | |
+| page number | 14 | 21 | |
+
+Line-height 1.6; page margin 52 / 92 / 56. `.dense` (18) / `.dense--xs` (16) escape hatches for tight
+figure panels. Figures: matplotlib matched to Inter with graceful fallback (`scripts/make_figures.py`).
+Speaker notes: per-slide Slidev `<!-- [S-xx] … -->` notes **plus** the verbatim
+`talk_design/manuscript.md` (same `[S-xx]` anchors keep them in sync).
 
 ## Hard constraints
 - Max 5 bullets per slide; max 12 words per bullet
