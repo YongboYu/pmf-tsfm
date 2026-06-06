@@ -243,8 +243,11 @@ def test_diff_svg_absolute_labels_arcs_with_bicolour_forecast_actual():
     assert re.search(rf'fill="{ACTUAL_COLOUR}"[^>]*>2<', svg)
     # The arrow join is gone — colour carries the forecast/actual distinction.
     assert "→" not in svg
-    # No relative % rides the absolute view: only the raw pair.
-    assert "%" not in svg
+    # No relative change-% rides the absolute view: the over/under direction colours
+    # are emitted only by the relative label, so their absence proves no % label is
+    # present. (Checking for a bare "%" is too blunt — some graphviz versions emit a
+    # "%" in the SVG boilerplate, unrelated to any arc label.)
+    assert OVER_COLOUR not in svg and UNDER_COLOUR not in svg
 
 
 def _stroke_width(svg, colour):
