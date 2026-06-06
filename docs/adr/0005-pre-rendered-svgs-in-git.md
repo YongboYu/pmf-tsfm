@@ -25,3 +25,21 @@ regenerable source of truth**; the SVGs are a derived, committed artifact.
   can replace the committed SVGs without touching the asset contract.
 - This supersedes the "no SVG blobs in git" wording in PRD #65; that PRD is closed, so the decision
   lives here.
+
+## Amendment (slice 3b, #115): the live tab brings `dot` + model libs at serve time
+
+Pre-rendering only covers the **bundled** path, whose assets are known ahead of time. The **live
+upload** tab (#115) forecasts an arbitrary uploaded log on ZeroGPU and must render *its* DFGs at
+request time — there is nothing to pre-render. So the Space's serve-time deps are no longer
+gradio-only: `requirements.txt` now also carries `graphviz` (+ a `packages.txt` for the system `dot`
+binary), `numpy`/`pandas`/`pm4py`, `torch`/`chronos-forecasting`, and the `spaces` GPU shim.
+
+The original reasoning still holds for the bundled path, and two invariants preserve its spirit:
+
+- **The bundled path stays pre-rendered and import-pure.** `import forecast` pulls in none of
+  graphviz/render/`pmf_tsfm`; the bundled tab serves committed SVGs with no `dot` at its request time.
+- **The Space never installs `pmf_tsfm`.** The live path reuses only lean, vendored demo modules
+  (`dfg_build`, `log_to_series`, `forecast_live`) — not the package's heavy model/uni2ts/wandb tree.
+  `precompute_demo.py` (which does import `pmf_tsfm`) is kept off the Space.
+
+Both invariants are pinned by `demo/tests/test_deploy.py`.

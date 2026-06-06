@@ -1,11 +1,14 @@
 name: Deploy demo to HF Space
 
-# Sync the bundled forecast explorer to its Hugging Face Gradio-SDK Space (PRD #112, slice 1 #113).
-# Only the gradio-only serve-time subset of demo/ is published, so the Space needs no graphviz
-# binary and no GPU (ADR-0005). Precompute-time code, tests, and handoff notes stay out of the Space.
+# Sync the Process Model Forecasting explorer to its Hugging Face Gradio-SDK Space (PRD #112).
+# Only the serve-time subset of demo/ is published. The bundled path stays GPU-free (precomputed
+# assets); the live path (slice 3b, #115) adds the lean, vendored modules it imports — render +
+# dfg_build + dfg_diff + log_to_series + upload_guard + forecast_live — plus packages.txt (the
+# graphviz `dot` binary). The precompute module stays OUT (it imports pmf_tsfm, absent on the
+# Space); tests and handoff notes stay out too.
 #
-# One-time setup (HITL): create the Space, set the `HF_TOKEN` repo secret (write-scoped), and set the
-# `HF_SPACE_ID` repo variable (e.g. "YongboYu/pmf-forecasting-explorer").
+# One-time setup (HITL): create the Space, set the `HF_TOKEN` repo secret (write-scoped), set the
+# `HF_SPACE_ID` repo variable, and upgrade the Space to ZeroGPU (PRO) hardware for the live tab.
 
 on:
   push:
@@ -34,11 +37,15 @@ jobs:
 
       - name: Stage the serve-time subset
         # Explicit allow-list: only what the running app reads. Anything not copied here never
-        # reaches the Space, keeping the runtime gradio-only.
+        # reaches the Space. The bundled path needs app + forecast + assets; the live path adds the
+        # vendored modules forecast_live imports (render, dfg_build, dfg_diff, log_to_series,
+        # upload_guard) + packages.txt. The precompute module is excluded (it imports pmf_tsfm).
         run: |
           set -euo pipefail
           rm -rf _space && mkdir -p _space
-          cp demo/app.py demo/forecast.py demo/requirements.txt demo/README.md _space/
+          cp demo/app.py demo/forecast.py demo/forecast_live.py demo/upload_guard.py \
+             demo/log_to_series.py demo/dfg_build.py demo/dfg_diff.py demo/render.py \
+             demo/requirements.txt demo/packages.txt demo/README.md _space/
           cp -r demo/static demo/assets _space/
           echo "Staged for the Space:"
           find _space -maxdepth 2 -type f | sort

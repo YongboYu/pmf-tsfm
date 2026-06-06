@@ -15,6 +15,7 @@ forecast_live.py
 from __future__ import annotations
 
 import numpy as np
+import pandas as pd
 import pytest
 from upload_guard import UploadRejected, check_upload
 
@@ -125,6 +126,95 @@ def test_drift_report_uses_recent_not_actual_vocabulary():
         and "er" not in stable
         and not (blob.count("mae") or blob.count("rmse"))
     )
+
+
+# --- _live_windows (the seam: preprocess + forecast) ------------------------
+
+
+@pytest.fixture
+def stub_live_seam(monkeypatch):
+    """Stand in for the two halves of the seam: the log→series converter and the
+    Chronos-2 call. A 5-day series over 3 relations; the forecast is a constant 9.0."""
+    import forecast_live
+
+    cols = ["▶ -> A", "A -> B", "B -> ■"]
+    frame = pd.DataFrame(
+        [[1, 2, 1], [1, 1, 1], [0, 3, 0], [2, 2, 2], [1, 0, 1]],
+        columns=cols,
+        index=pd.date_range("2020-01-01", periods=5),
+    )
+    monkeypatch.setattr(forecast_live, "log_to_df_series", lambda log, **k: frame)
+    monkeypatch.setattr(
+        forecast_live,
+        "_chronos2_forecast",
+        lambda context, horizon: np.full((horizon, context.shape[1]), 9.0),
+    )
+    return frame
+
+
+def test_live_windows_forecasts_from_end_and_tails_the_recent_window(tmp_path, stub_live_seam):
+    """Both windows are ``(horizon, F)`` in one feature space: the forecast from the log
+    end, and the actual last ``horizon`` days (the recent past)."""
+    from forecast_live import _live_windows
+
+    forecast_window, last_known_window, feature_names = _live_windows(
+        tmp_path / "x.xes", "chronos2", 2
+    )
+
+    assert feature_names == list(stub_live_seam.columns)
+    assert forecast_window.shape == (2, 3) and last_known_window.shape == (2, 3)
+    # last-known = the recent tail of the series; forecast = the model's true-future call.
+    np.testing.assert_array_equal(last_known_window, stub_live_seam.to_numpy()[-2:])
+    np.testing.assert_array_equal(forecast_window, np.full((2, 3), 9.0))
+
+
+def test_live_windows_rejects_log_with_too_little_history(tmp_path, monkeypatch):
+    """A log spanning fewer than ``horizon + 1`` days can't anchor the forecast — rejected."""
+    import forecast_live
+
+    frame = pd.DataFrame(
+        [[1, 1]], columns=["A -> B", "B -> ■"], index=pd.date_range("2020-01-01", periods=1)
+    )
+    monkeypatch.setattr(forecast_live, "log_to_df_series", lambda log, **k: frame)
+    with pytest.raises(UploadRejected, match="day"):
+        forecast_live._live_windows(tmp_path / "x.xes", "chronos2", 7)
+
+
+def test_warm_up_loads_the_model_on_the_given_device(monkeypatch):
+    """warm_up eagerly loads Chronos-2 on the requested device (HF ZeroGPU guidance:
+    load at module level on cuda, not lazily inside the GPU call)."""
+    import forecast_live
+
+    captured = {}
+    monkeypatch.setattr(
+        forecast_live, "_load_chronos2", lambda device=None: captured.update(device=device)
+    )
+    forecast_live.warm_up("cuda")
+    assert captured == {"device": "cuda"}
+
+
+def test_live_windows_rejects_unwired_model_before_preprocessing(tmp_path, monkeypatch):
+    """Only chronos2 is wired this slice; a gated model is rejected before any work runs."""
+    import forecast_live
+
+    def _boom(*a, **k):
+        raise AssertionError("preprocessing ran for an unwired model")
+
+    monkeypatch.setattr(forecast_live, "log_to_df_series", _boom)
+    with pytest.raises(UploadRejected, match="chronos2"):
+        forecast_live._live_windows(tmp_path / "x.xes", "moirai2", 7)
+
+
+def test_forecast_live_runs_through_the_real_seam(tmp_path, stub_live_seam):
+    """End-to-end through the *real* _live_windows (only the converter + model mocked):
+    the bundle assembles and still carries drift, never accuracy."""
+    from forecast_live import forecast_live
+
+    bundle = forecast_live(_log_of_size(tmp_path, 10), "chronos2", horizon=2)
+
+    assert set(bundle) == _LIVE_BUNDLE_KEYS
+    assert "metrics" not in bundle
+    assert "<svg" in bundle["forecast_svg"]
 
 
 # --- forecast_live ----------------------------------------------------------

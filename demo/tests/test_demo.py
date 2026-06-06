@@ -281,6 +281,32 @@ def test_diff_svg_embeds_legend():
     assert FORECAST_COLOUR in svg and ACTUAL_COLOUR in svg
 
 
+def test_diff_svg_defaults_to_accuracy_framing():
+    """The default framing is accuracy, so the bundled path's legend is untouched."""
+    svg = diff_svg(DRIFT_FORECAST, DRIFT_ACTUAL)
+    assert "actual" in svg
+    assert "last-known window" not in svg
+
+
+def test_diff_svg_drift_framing_relabels_legend_off_accuracy():
+    """framing='drift' (the live upload) speaks of the last-known window and the recent
+    past — never 'actual' or forecast-accuracy wording (ADR-0004: an upload is not scored)."""
+    svg = diff_svg(DRIFT_FORECAST, DRIFT_ACTUAL, framing="drift")
+    # graphviz serialises the hyphen in "last-known" as the &#45; entity; match either form.
+    assert "known window" in svg  # the comparison's true nature (last-known window)
+    assert "recent past" in svg  # the diff-class wording is drift-framed
+    # the accuracy vocabulary is gone
+    assert "actual" not in svg
+    assert "missed it" not in svg and "did not happen" not in svg
+
+
+def test_diff_svg_relative_drift_caption_is_change_from_recent_past():
+    """The relative drift view reads '% change from recent past', not over/under-forecast %."""
+    svg = diff_svg(DRIFT_FORECAST, DRIFT_ACTUAL, mode="relative", framing="drift")
+    assert "recent past" in svg
+    assert "forecast %" not in svg  # the accuracy caption "over/under-forecast %" is gone
+
+
 # A pair exercising every signed-relative-error row on one render. Signed error is
 # (forecast - actual) / actual, integer-rounded:
 #   X->Y matched over  : 745 / 558 -> +34%
@@ -738,7 +764,8 @@ def test_app_head_inlines_vendored_pan_zoom(asset_dir):
 
 
 def test_app_panes_carry_dfg_pane_class(asset_dir):
-    """All four SVG panes carry the `dfg-pane` class so JS can target them."""
+    """Every SVG pane carries the `dfg-pane` class so JS can target them — four on the
+    bundled tab and four on the live tab."""
     pytest.importorskip("gradio")
     import app
 
@@ -747,7 +774,9 @@ def test_app_panes_carry_dfg_pane_class(asset_dir):
         for c in app.build().blocks.values()
         if getattr(c, "elem_classes", None) and "dfg-pane" in c.elem_classes
     ]
-    assert len(panes) == 4  # forecast, actual-future, diff absolute, diff relative
+    # bundled: forecast, actual-future, diff abs, diff rel; live: forecast, last-known,
+    # drift abs, drift rel.
+    assert len(panes) == 8
 
 
 @pytest.fixture
@@ -788,3 +817,88 @@ def test_app_load_diff_produces_both_overlays(drift_asset_dir):
         assert "#9e9e9e" in diff_html and "#ffb300" in diff_html and "#e53935" in diff_html
     # The two panes are distinct documents (absolute vs relative).
     assert absolute_html != relative_html
+
+
+# ---------------------------------------------------------------------------
+# app.py — the live upload tab (slice 3b, #115). The GUI glue over forecast_live;
+# the ZeroGPU forecast itself is stubbed (real inference is post-merge, on hardware).
+# ---------------------------------------------------------------------------
+
+_LIVE_STUB_BUNDLE = {
+    "forecast_svg": "<svg>forecast</svg>",
+    "comparison_svg": "<svg>last-known</svg>",
+    "diff_absolute_svg": "<svg>diff-abs</svg>",
+    "diff_relative_svg": "<svg>diff-rel</svg>",
+    "drift": {
+        "added": [{"from": "A", "to": "C", "forecast_freq": 3, "recent_freq": 0}],
+        "removed": [{"from": "A", "to": "D", "forecast_freq": 0, "recent_freq": 2}],
+        "stable": [{"from": "A", "to": "B", "forecast_freq": 5, "recent_freq": 4}],
+    },
+}
+
+
+def test_app_builds_both_tabs():
+    """The app exposes the bundled explorer and the live upload tab side by side."""
+    gr = pytest.importorskip("gradio")
+    import app
+
+    tabs = [c for c in app.build().blocks.values() if isinstance(c, gr.Tab)]
+    labels = {t.label for t in tabs}
+    assert {"Bundled explorer", "Live upload (your log)"} <= labels
+
+
+def test_run_live_renders_panes_and_drift_on_success(monkeypatch):
+    """A successful upload yields the twin panes, both drift overlays, and a drift tally."""
+    pytest.importorskip("gradio")
+    import app
+
+    monkeypatch.setattr(app, "_run_live", lambda log_path, model: _LIVE_STUB_BUNDLE)
+    status, forecast, comparison, diff_abs, diff_rel, summary = app.run_live("up.xes", "chronos2")
+
+    assert "✅" in status
+    for html in (forecast, comparison, diff_abs, diff_rel):
+        assert "<svg" in html
+    # Drift, never accuracy: the tally counts added/dropped and disclaims accuracy.
+    assert "adds" in summary and "drops" in summary
+    assert "not accuracy" in summary.lower()
+    assert "mae" not in summary.lower() and "rmse" not in summary.lower()
+
+
+def test_run_live_surfaces_upload_rejection_with_blank_panes(monkeypatch):
+    """A guard rejection shows a clear message and leaves the panes blank (no stale graph)."""
+    pytest.importorskip("gradio")
+    import app
+    from upload_guard import UploadRejected
+
+    def _reject(log_path, model):
+        raise UploadRejected("log is 40.0 MB; the upload cap is 25.0 MB.")
+
+    monkeypatch.setattr(app, "_run_live", _reject)
+    status, *panes = app.run_live("big.xes", "chronos2")
+
+    assert "rejected" in status.lower() and "cap" in status
+    assert panes == ["", "", "", "", ""]
+
+
+def test_run_live_prompts_when_no_file_uploaded():
+    """Pressing Forecast with no upload prompts for a log rather than reaching the GPU."""
+    pytest.importorskip("gradio")
+    import app
+
+    status, *panes = app.run_live(None, "chronos2")
+    assert "Upload" in status
+    assert panes == ["", "", "", "", ""]
+
+
+def test_run_live_reports_unexpected_failure_without_crashing(monkeypatch):
+    """Any non-guard failure is surfaced as a message, not an uncaught exception."""
+    pytest.importorskip("gradio")
+    import app
+
+    def _boom(log_path, model):
+        raise RuntimeError("graphviz exploded")
+
+    monkeypatch.setattr(app, "_run_live", _boom)
+    status, *panes = app.run_live("up.xes", "chronos2")
+    assert "Could not forecast" in status
+    assert panes == ["", "", "", "", ""]

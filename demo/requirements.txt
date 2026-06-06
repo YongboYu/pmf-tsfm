@@ -1,6 +1,21 @@
-# Serve-time dependencies for the bundled forecast explorer HF Space.
-# Gradio-only by design (ADR-0005): the app serves precomputed assets incl. pre-rendered SVGs,
-# so the runtime needs no graphviz `dot` binary and no GPU. Precompute-time deps (graphviz,
-# pmf_tsfm, numpy, pandas) must never appear here — they belong to demo/precompute_demo.py only.
-# Pin matches the README frontmatter `sdk_version`.
+# Serve-time dependencies for the Process Model Forecasting explorer HF Space.
+#
+# Two tabs, two needs (ADR-0005, amended for slice 3b / #115):
+#   * Bundled explorer — serves precomputed assets incl. pre-rendered SVGs; needs only
+#     gradio. GPU-free, no `dot` binary required for that path.
+#   * Live upload — preprocesses + forecasts an uploaded log on ZeroGPU and renders its
+#     DFGs at request time, so it pulls in graphviz, the model libs (Chronos-2), and the
+#     `spaces` GPU shim. `pmf_tsfm` is deliberately NOT installed — the live path reuses
+#     only the lean, vendored demo modules (dfg_build / log_to_series / forecast_live).
+#
+# The gradio pin must match the README frontmatter `sdk_version`. graphviz also needs the
+# system `dot` binary — see packages.txt.
 gradio==6.16.0
+spaces>=0.30
+graphviz>=0.20
+numpy>=1.24
+pandas>=2.2.3
+pm4py>=2.7.12.4
+torch>=2.2
+chronos-forecasting>=1.4.0
+boto3>=1.28  # Chronos-2 loads from an s3:// checkpoint (configs/model/chronos/chronos2.yaml)

@@ -43,21 +43,56 @@ _OVER_COLOUR = "#e8590c"  # orange — forecast over-shot the actual (warm = too
 _UNDER_COLOUR = "#0c8599"  # teal — forecast under-shot the actual (cool = too little)
 _NEUTRAL_COLOUR = "#555555"  # 0% (exact) or — (undefined: actual = 0)
 
-# Embedded legend rows: (line-sample HTML, meaning). The sample is a short glyph
-# in that class's colour — a solid rule for matched, dashes for the changed
-# classes — so a first-time reader can map line colour/style to meaning. The
-# samples are padded to a similar visual width so the column stays aligned.
-_LEGEND_ROWS = [
-    (f'<FONT COLOR="{_MATCHED_COLOUR}">&#9472;&#9472;&#9472;&#9472;&#9472;</FONT>', "matched"),
-    (
-        f'<FONT COLOR="{_ADDED_COLOUR}">&#8211; &#8211; &#8211;</FONT>',
-        "happened &#8212; forecast missed it",
-    ),
-    (
-        f'<FONT COLOR="{_REMOVED_COLOUR}">&#8211; &#8211; &#8211;</FONT>',
-        "forecast predicted it &#8212; did not happen",
-    ),
-]
+# The diff colours partition arcs the same way in either framing — only what each
+# class *means in words* changes with the comparison's nature:
+#
+# * "accuracy" (bundled, ADR-0004): the comparison is the **actual future**, so a
+#   forecast-only arc is an over-prediction and an actual-only arc was missed.
+# * "drift" (live upload): the comparison is the **last-known window**, so there is no
+#   truth to be right or wrong about — a forecast-only arc is one the forecast
+#   *introduces* vs the recent past, an actual-only arc one it *drops*. Never accuracy.
+#
+# ``dfg_diff(forecast, comparison)`` keys "added" = comparison-only (amber) and
+# "removed" = forecast-only (red); the wording below follows that orientation.
+_FRAMINGS: dict[str, dict[str, str]] = {
+    "accuracy": {
+        "comparison": "actual",
+        "matched": "matched",
+        "added": "happened &#8212; forecast missed it",
+        "removed": "forecast predicted it &#8212; did not happen",
+        "relative_caption": "-forecast %",
+        "over": "over",
+        "under": "under",
+    },
+    "drift": {
+        "comparison": "last-known window",
+        "matched": "unchanged vs recent past",
+        "added": "in recent past, not the forecast",
+        "removed": "in the forecast, not recent past",
+        "relative_caption": " than recent past, %",
+        "over": "higher",
+        "under": "lower",
+    },
+}
+
+
+def _legend_rows(framing: str) -> list[tuple[str, str]]:
+    """Embedded legend rows ``(line-sample HTML, meaning)`` for a framing.
+
+    The sample is a short glyph in that class's colour — a solid rule for matched,
+    dashes for the changed classes — so a first-time reader can map line colour/style
+    to meaning. The samples are padded to a similar visual width so the column stays
+    aligned. The *meanings* are framing-specific (accuracy vs drift).
+    """
+    words = _FRAMINGS[framing]
+    return [
+        (
+            f'<FONT COLOR="{_MATCHED_COLOUR}">&#9472;&#9472;&#9472;&#9472;&#9472;</FONT>',
+            words["matched"],
+        ),
+        (f'<FONT COLOR="{_ADDED_COLOUR}">&#8211; &#8211; &#8211;</FONT>', words["added"]),
+        (f'<FONT COLOR="{_REMOVED_COLOUR}">&#8211; &#8211; &#8211;</FONT>', words["removed"]),
+    ]
 
 
 def _relerr_label(forecast_freq: int, actual_freq: int) -> tuple[str, str]:
@@ -117,26 +152,39 @@ def dfg_json_to_svg(dfg: dict[str, Any]) -> str:
 
 
 def diff_svg(
-    forecast_dfg: dict[str, Any], actual_dfg: dict[str, Any], mode: str = "absolute"
+    forecast_dfg: dict[str, Any],
+    actual_dfg: dict[str, Any],
+    mode: str = "absolute",
+    framing: str = "accuracy",
 ) -> str:
-    """Render the forecast/actual diff as one colour-coded overlay SVG.
+    """Render the forecast/comparison diff as one colour-coded overlay SVG.
 
     Arcs are partitioned by :func:`dfg_diff.dfg_diff` and drawn with the same line
-    styling in either mode:
+    styling regardless of ``mode``/``framing``:
 
     * **matched** — solid grey,
-    * **added** (it happened, the forecast missed it) — amber dashed,
-    * **removed** (the forecast predicted it, it did not happen) — red dashed.
+    * **added** (comparison-only) — amber dashed,
+    * **removed** (forecast-only) — red dashed.
 
     ``mode`` selects only what each arc's *text* shows:
 
-    * ``"absolute"`` — the raw ``forecast (blue) | actual (green)`` pair,
-    * ``"relative"`` — the bare signed change % (orange over / teal under).
+    * ``"absolute"`` — the raw ``forecast (blue) | comparison (green)`` pair,
+    * ``"relative"`` — the bare signed change % (warm up / cool down).
+
+    ``framing`` selects only the legend *wording*, so an upload is never read as
+    accuracy (ADR-0004):
+
+    * ``"accuracy"`` (bundled) — the comparison is the actual future: ``actual`` /
+      ``over/under-forecast %`` / "happened — forecast missed it".
+    * ``"drift"`` (live upload) — the comparison is the last-known window:
+      ``last-known window`` / ``% change from recent past`` / "in recent past, not
+      the forecast". No truth, no accuracy.
 
     Args:
         forecast_dfg: The forecast DFG (``{"nodes": [...], "arcs": [...]}``).
-        actual_dfg:   The actual-future DFG, same shape.
+        actual_dfg:   The comparison DFG (actual-future or last-known window), same shape.
         mode:         ``"absolute"`` (default) or ``"relative"``.
+        framing:      ``"accuracy"`` (default) or ``"drift"``.
 
     Returns:
         An ``<svg>`` document as a string.
@@ -178,40 +226,42 @@ def diff_svg(
                 **styling[diff_class],
             )
 
-    _add_legend(graph, mode)
+    _add_legend(graph, mode, framing)
     return graph.pipe(format="svg").decode("utf-8")
 
 
-def _add_legend(graph: graphviz.Digraph, mode: str = "absolute") -> None:
+def _add_legend(graph: graphviz.Digraph, mode: str = "absolute", framing: str = "accuracy") -> None:
     """Embed a compact key as a single HTML-table node in its own cluster.
 
     The table has two parts: an edge-label key explaining what the arc text means in
-    this ``mode`` (the forecast/actual number pair, or the over/under change %), and
-    one row per diff class pairing a line sample with its meaning. A single table
-    keeps the legend tight instead of sprawling.
+    this ``mode`` (the forecast/comparison number pair, or the signed change %), and
+    one row per diff class pairing a line sample with its meaning. Both the key and the
+    rows are ``framing``-specific (accuracy vs drift). A single table keeps the legend
+    tight instead of sprawling.
     """
+    words = _FRAMINGS[framing]
     # The edge-label key spans the full width on its own row, so it does not widen
     # the line-sample column and throw the grid off. It is mode-specific: the
     # absolute view explains the bicolour number pair, the relative view the % axis.
     if mode == "relative":
         label_key = (
             '<FONT COLOR="#555555">edge label: </FONT>'
-            f'<FONT COLOR="{_OVER_COLOUR}">over</FONT>'
+            f'<FONT COLOR="{_OVER_COLOUR}">{words["over"]}</FONT>'
             '<FONT COLOR="#555555"> / </FONT>'
-            f'<FONT COLOR="{_UNDER_COLOUR}">under</FONT>'
-            '<FONT COLOR="#555555">-forecast %</FONT>'
+            f'<FONT COLOR="{_UNDER_COLOUR}">{words["under"]}</FONT>'
+            f'<FONT COLOR="#555555">{words["relative_caption"]}</FONT>'
         )
     else:
         label_key = (
             '<FONT COLOR="#555555">edge numbers: </FONT>'
             f'<FONT COLOR="{_FORECAST_COLOUR}">forecast</FONT>'
             f'<FONT COLOR="{_SEP_COLOUR}">&#160;|&#160;</FONT>'
-            f'<FONT COLOR="{_ACTUAL_COLOUR}">actual</FONT>'
+            f'<FONT COLOR="{_ACTUAL_COLOUR}">{words["comparison"]}</FONT>'
         )
     # The three diff classes form an aligned 2-column grid: line sample | meaning.
     class_rows = "".join(
         f'<TR><TD ALIGN="LEFT">{sample}</TD><TD ALIGN="LEFT">{meaning}</TD></TR>'
-        for sample, meaning in _LEGEND_ROWS
+        for sample, meaning in _legend_rows(framing)
     )
     table = (
         '<<TABLE BORDER="0" CELLBORDER="0" CELLSPACING="3">'
