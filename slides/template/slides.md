@@ -14,11 +14,11 @@ fonts:
   mono: JetBrains Mono
   weights: '400,500,600,700'
 layout: cover
-eyebrow: CAiSE 2026 · Process mining
+eyebrow: CAiSE 2026
 logo: /logos/kuleuven-liris.png
 venue: |
   arXiv:2512.07624
-  CAiSE 2026
+  10 June · Verona, Italy
 ---
 
 # Time Series Foundation Models<br/>for Process Model Forecasting
@@ -26,7 +26,14 @@ venue: |
 <div class="cover-bar"></div>
 
 <div class="cover-authors">Yongbo Yu · Jari Peeperkorn · Johannes De Smedt · Jochen De Weerdt</div>
-<div class="cover-affil">KU Leuven · Research Center for Information Systems Engineering (LIRIS)</div>
+
+<style>
+/* eyebrow lives in cover.vue (child component): a plain .cover-eyebrow selector won't reach it —
+   pierce with :deep(). Defeats the global text-transform: uppercase so "CAiSE" keeps its lowercase i. */
+:deep(.cover-eyebrow) { text-transform: none !important; }
+/* nudge the kicker+title+author block up (cover layout is centred by default) */
+.ae-cover { justify-content: flex-start; padding-top: 175px; }
+</style>
 
 <!--
 [S-01]
@@ -39,69 +46,241 @@ Pause. Let it land. Then advance.
 -->
 
 ---
+layout: assertion-evidence
+locator: Process mining today
+assertion: Process discovery gives one static model, but processes drift
+---
+
+<div class="grid items-stretch mt-4" style="grid-template-columns: 30% 70%; gap: 20px; height: 380px">
+
+  <!-- LEFT 30% — event log (data): two slices, row-aligned with the two DFGs they feed -->
+  <div style="display: grid; grid-template-rows: 1fr 1fr; gap: 14px; min-height: 0; position: relative">
+    <div class="s2log-ell" style="position: absolute; left: 48%; top: 50%; transform: translate(-50%, -50%)">⋮</div>
+    <div style="display: flex; flex-direction: column; justify-content: center; min-height: 0">
+      <div class="s2log-title">Event log (data)</div>
+      <table class="s2log">
+        <colgroup><col style="width: 30%" /><col style="width: 36%" /><col style="width: 34%" /></colgroup>
+        <thead><tr><th>Case</th><th>Activity</th><th>Timestamp</th></tr></thead>
+        <tbody>
+          <tr><td>App 6528</td><td>Create Offer</td><td>Oct 02 09:12</td></tr>
+          <tr><td>App 6528</td><td>Created</td><td>Oct 02 09:13</td></tr>
+          <tr><td>App 6531</td><td>Sent</td><td>Oct 02 10:05</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div style="display: flex; flex-direction: column; justify-content: center; min-height: 0">
+      <table class="s2log">
+        <colgroup><col style="width: 30%" /><col style="width: 36%" /><col style="width: 34%" /></colgroup>
+        <tbody>
+          <tr><td>App 9043</td><td>Accepted</td><td>Oct 16 14:20</td></tr>
+          <tr><td>App 9043</td><td>Cancelled</td><td>Oct 16 15:02</td></tr>
+          <tr><td>App 9047</td><td>Sent</td><td>Oct 16 16:48</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- RIGHT 70% — two stacked weekly DFGs, each fed by a slice of the log -->
+  <div style="display: grid; grid-template-columns: 44px 1fr; grid-template-rows: 1fr 1fr; gap: 14px; min-height: 0">
+    <div class="s2conn">→</div>
+    <div class="border border-gray-200 rounded-lg px-3 py-1 relative" style="min-height: 0">
+      <DfgSnapshot :frame="0" title="early week's DFG" hero-edge="accepted__end" :revealed="$clicks > 0" />
+      <div v-click="1" style="position: absolute; left: 81%; top: 72%; white-space: nowrap">
+        <Callout dir="up">465</Callout>
+      </div>
+    </div>
+    <div class="s2conn">→</div>
+    <div class="border border-gray-200 rounded-lg px-3 py-1 relative" style="min-height: 0">
+      <DfgSnapshot :frame="2" title="later week's DFG" hero-edge="accepted__end" :revealed="$clicks > 0" />
+      <div v-click="1" style="position: absolute; left: 81%; top: 72%; white-space: nowrap">
+        <Callout dir="up">306 (−34%)</Callout>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="mt-6" style="max-width: 1180px; margin-left: auto; margin-right: auto">
+  <p style="font-size: 20px; color: #334155; line-height: 1.5; margin: 0 0 12px; white-space: nowrap">
+    A <strong style="color: var(--brand)">Directly-Follows Graph (DFG)</strong>: nodes are activities, arrows are directly-follows relations with counts.
+  </p>
+  <p style="font-size: 20px; color: #334155; line-height: 1.5; margin: 0">
+    <strong style="color: var(--brand)">Process discovery</strong> returns one static snapshot — <strong style="color: var(--brand)">Process Model Forecasting (PMF)</strong> predicts the next.
+  </p>
+</div>
+
+<style>
+.s2log { width: 100%; border-collapse: collapse; font-size: 16px; color: #0f172a; table-layout: fixed }
+.s2log th { text-align: left; font-weight: 700; color: #64748b; border-bottom: 1.5px solid #cbd5e1; padding: 4px 6px; font-size: 13px; text-transform: uppercase; letter-spacing: .02em }
+.s2log td { padding: 5px 6px; border-bottom: 1px solid #eef2f6; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; background: #fbedd8 }
+.s2log-title { font-size: 16px; font-weight: 700; color: var(--brand); text-align: center; margin-bottom: 6px }
+.s2log-ell { color: #475569; text-align: center; font-size: 32px; line-height: 0.6; font-weight: 800 }
+.s2conn { display: flex; align-items: center; justify-content: center; font-size: 2rem; line-height: 1; color: var(--accent); font-weight: 800 }
+</style>
+
+<!--
+[S-02]
+Q: Why isn't a discovered model enough?
+
+Process discovery extracts a process model from event-log data — here a Directly-Follows
+Graph (DFG): nodes are activities, arrows count directly-follows relations.
+Same BPI2017 offer process, two periods: same representation, but the counts move
+(Accepted → End falls 465 → 306). The process drifted. PMF starts here — learn those
+temporal changes and forecast the next DFG.
+
+Transition out: "If the model drifts, the natural question is HOW — and that splits into
+two very different prediction problems." → S3 (PMF vs PPM)
+-->
+
+---
 layout: two-col-evidence
-locator: Positioning
-assertion: PMF forecasts the whole process model — PPM forecasts a single case
+locator: Predictive process mining
+assertion: PPM forecasts one case — PMF the whole process model
 ---
 
 ::left::
 
-<div class="ae-collabel">PPM · case-level</div>
+<div class="ae-collabel">Predictive Process Monitoring (PPM) · case-level</div>
 <div class="ae-lead">One ongoing case → its future.</div>
 
-- Next event · remaining time · outcome
-- *"Will **this** loan application be cancelled?"*
-- Horizon: the rest of one case
+<div class="s3-trace">
+  <span class="s3-pill">Create</span>
+  <span class="s3-arrow">→</span>
+  <span class="s3-pill">Assess</span>
+  <span class="s3-arrow">→</span>
+  <span class="s3-pill s3-pill-q">?</span>
+</div>
+
+<div class="s3-tasks">
+  <div class="s3-task">
+    <span class="s3-task-label">Next event</span>
+    <span class="s3-task-q">"What does <strong>this</strong> applicant do next?"</span>
+  </div>
+  <div class="s3-task">
+    <span class="s3-task-label">Remaining time</span>
+    <span class="s3-task-q">"How long until <strong>this</strong> case is decided?"</span>
+  </div>
+  <div class="s3-task">
+    <span class="s3-task-label">Outcome</span>
+    <span class="s3-task-q">"Will <strong>this</strong> loan application be cancelled?"</span>
+  </div>
+</div>
+
+<div class="s3-horizon">Horizon — the rest of one case</div>
 
 ::right::
 
-<div class="ae-collabel">PMF · system-level</div>
-<div class="ae-lead">A window of the log → the next process model.</div>
+<div class="ae-collabel">Process Model Forecasting (PMF) · system-level</div>
+<div class="ae-lead">A log window → the next process model.</div>
 
-- How often each transition fires next week
-- *"How often does **offer sent → cancelled** fire?"*
-- Horizon: the near-term system future
+<div class="s3-flow">
+  <span class="s3-pill">Log window</span>
+  <span class="s3-arrow">→</span>
+  <div class="s3-dfg">
+    <svg viewBox="0 0 84 64" width="116" height="88">
+      <line x1="12" y1="32" x2="40" y2="16" stroke="#475569" stroke-width="2" />
+      <line x1="12" y1="32" x2="40" y2="48" stroke="#475569" stroke-width="2" />
+      <line x1="40" y1="16" x2="70" y2="32" stroke="#475569" stroke-width="2" />
+      <line x1="40" y1="48" x2="70" y2="32" stroke="#475569" stroke-width="2" />
+      <circle cx="12" cy="32" r="5" fill="var(--brand)" />
+      <circle cx="40" cy="16" r="5" fill="var(--brand)" />
+      <circle cx="40" cy="48" r="5" fill="var(--brand)" />
+      <circle cx="70" cy="32" r="5" fill="var(--brand)" />
+    </svg>
+    <div class="s3-dfg-cap">DFG now</div>
+  </div>
+  <span class="s3-arrow">→</span>
+  <div class="s3-dfg">
+    <svg viewBox="0 0 84 64" width="116" height="88">
+      <line x1="12" y1="32" x2="40" y2="16" stroke="#475569" stroke-width="2" />
+      <line x1="12" y1="32" x2="40" y2="48" stroke="#475569" stroke-width="2" />
+      <line x1="40" y1="16" x2="70" y2="32" stroke="#475569" stroke-width="2" />
+      <line x1="40" y1="48" x2="70" y2="32" stroke="var(--accent)" stroke-width="2" />
+      <circle cx="12" cy="32" r="5" fill="var(--brand)" />
+      <circle cx="40" cy="16" r="5" fill="var(--brand)" />
+      <circle cx="40" cy="48" r="5" fill="var(--accent)" />
+      <circle cx="70" cy="32" r="5" fill="var(--brand)" />
+    </svg>
+    <div class="s3-dfg-cap">next week's DFG</div>
+  </div>
+</div>
+
+<div class="s3-ask">"How often does <strong>offer sent → cancelled</strong> occur?"</div>
+<div class="s3-horizon">Horizon — the near-term system future</div>
+
+<style>
+.s3-trace, .s3-flow { display: flex; align-items: center; gap: 10px; margin: 20px 0 14px; flex-wrap: wrap; }
+.s3-pill { display: inline-flex; align-items: center; justify-content: center; border: 1px solid var(--hairline); border-radius: 999px; padding: 7px 15px; font-size: 18px; font-weight: 600; color: var(--ink); background: #fff; white-space: nowrap; }
+.s3-pill-q { border-color: var(--brand); color: var(--brand); font-weight: 800; min-width: 36px; }
+.s3-arrow { color: var(--neutral); font-size: 18px; font-weight: 700; }
+.s3-tasks { display: flex; flex-direction: column; gap: 16px; margin: 20px 0 24px; }
+.s3-task { display: flex; flex-direction: column; gap: 2px; }
+.s3-task-label { font-size: 16px; font-weight: 600; letter-spacing: 0.03em; text-transform: uppercase; color: var(--neutral); }
+.s3-task-q { font-size: 23px; font-style: italic; color: var(--ink); }
+.s3-task-q strong { color: var(--brand); font-weight: 800; }
+.s3-ask { font-size: 23px; font-style: italic; color: var(--ink); margin: 40px 0 30px; }
+.s3-ask strong { font-style: normal; color: var(--brand); }
+.s3-horizon { font-size: 17px; font-weight: 600; letter-spacing: 0.02em; color: var(--neutral); margin-top: 12px; }
+.s3-dfg { display: flex; flex-direction: column; align-items: center; flex: 0 0 auto; }
+.s3-dfg-cap { font-size: 14px; font-weight: 600; text-align: center; color: var(--neutral); margin-top: 4px; }
+</style>
 
 <!--
-[S-02]
-Q: What is PMF and why should I care?
+[S-03]
+Q: PMF vs the PPM I already know?
 
-The old "same log, different question" takeaway is now ABSORBED INTO THE ASSERTION
-HEADLINE — deliver it in speech, don't put it back on the slide.
+Same loan log, two different prediction problems. PPM is case-level: take ONE ongoing
+application and predict its future — the next event, the remaining time, or the outcome
+("will THIS loan be cancelled?"). Horizon = the rest of that one case.
 
-60s budget. PMF horizon is calibrated as weeks-to-months range; this paper uses 7-day
-experimental horizon. After landing the contrast, transition: "Both questions need data.
-PPM uses case prefixes. PMF uses something different — let me show you."
+PMF is system-level: take a WINDOW of the whole log, and forecast the next process model —
+how often each transition fires next, e.g. how often "offer sent → cancelled" occurs across
+ALL cases. Horizon = the near-term system future (conceptually weeks-to-months; the 7-day
+experimental horizon is setup detail for S11 — don't say it here).
+
+Same event log, different question. (Absorbed into the assertion — deliver in speech.)
+
+60s. Transition out: "Both need data, but PMF needs something different — let me show you
+the pipeline."
 -->
 
 ---
-clicks: 3
+layout: assertion-evidence
+locator: Pipeline
+assertion: Each directly-follows edge becomes a time series we forecast
+clicks: 2
 ---
 
 <script setup>
 import { frameForClicks } from './components/frameForClicks.js'
-import { dfgData } from './components/dfgData.js'
 </script>
 
-# From event log to DF time series
-
-<div class="mt-2" style="height: 360px">
-  <DfgEvolution :frame="frameForClicks($clicks, dfgData.frames.length)" />
+<div style="font-size:21px; color:var(--ink); margin-top:8px">
+directly-follows (DF) relations = one transition A→B — we aggregate it <strong>daily</strong> and forecast <strong>7 days</strong> ahead.
 </div>
 
-<div class="mt-3 text-sm opacity-70 text-center">
-Each DF edge becomes a univariate time series — we aggregate <strong>daily</strong>, forecast <strong>7 days</strong> ahead.
+<div class="mt-3" style="height: 392px">
+  <DfgPipeline :frame="frameForClicks($clicks, 3)" />
 </div>
 
 <!--
+[S-04]
 Q: How does PMF become a forecasting problem?
 
-Transition in: "Both questions need data. PPM uses case prefixes. PMF uses something different — let me show you."
+Transition IN (from S3): "Both need data, but PMF needs something different — let me show you the pipeline."
 
-60s. Land "DF time series" hard — it's the term the rest of the talk depends on.
-The animation does heavy lifting; don't talk over it.
+DF is introduced here (full term "directly-follows (DF) relations"); DFG is already known from S2 —
+use the abbreviation. Let the THREE CLICKS carry it; don't talk over them:
+  • click 0 — event log → one daily count series per DF edge (the navy "past" window; 3 arcs shown,
+    the point being we forecast ALL arcs, not just the hero).
+  • click 1 — forecast the next 7 days for every arc (amber tail; the "future" window).
+  • click 2 — sum each arc's 7 daily forecasts → the reassembled, FORECASTED DFG (≈316 vs held-out 315).
 
-Transition out: "So we have a forecasting problem. Why isn't it already solved?"
+Keep it to "aggregate daily, forecast 7 days ahead." Do NOT mention stride / expanding window /
+60-20-20 here — that's S11. "past/future" are a conceptual history→horizon motif, not the
+experimental window.
+
+Transition OUT (to S5): "So it's a forecasting problem. Why isn't it already solved?"
 -->
 
 ---

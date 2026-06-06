@@ -106,23 +106,34 @@ Slidev; no plugin install needed.
 
 ## Locked outline
 
-| # | Beat | Time | Visual |
-|---|---|---|---|
-| 1 | PMF vs PPM (concrete examples, calibrated 7-day horizon) | 60s | Side-by-side comparison |
-| 2 | PMF workflow → DF time series | 60s | Workflow diagram + DFG-evolution animation (10–15s gif/Manim) |
-| 3 | Where PMF stands (3 findings from Yu 2025) | 75s | BPI2017 drift plot, ground truth + XGBoost only |
-| 4 | Why TSFMs (explicitly NOT LLMs) | 60s | LLM-vs-TSFM panel + "no event logs in pretraining, to our knowledge" |
-| 5 | Three questions this talk answers (plain English) | 30s | Text scaffold |
-| 6 | Method: 3 families + 3 settings | 45s | Release-timeline visual (2023→2026), settings strip, "univariate throughout" |
-| 7 | Results bars + drift callback | 3 min | MAE bars (4 panels) → BPI2017 callback with TSFM revealed |
-| 8 | Fine-tuning + timing | 3 min 15s | 3-pt slope chart (ZS→LoRA→FT, colored by dataset) + log-scale compute bars |
-| 9 | ER: bottleneck has moved | 1 min 30s | Compact ER bars + reframe text |
-| 10 | Signals + artifact strip | 2 min | 3 signals (hybrid synthesis) + GitHub/demo/HPC strip |
-| 11 | Demo (pre-recorded screencast) | 2–3 min | Load log → pick TSFM → render forecasted DFG |
-| | Buffer | ~1 min |  |
-| | **Total** | **~20 min** |  |
+**v3 (2026-06-06)** — 19 content slides + backups, for the 20-min talk slot. Reopened from the
+11-beat v2 via a `grill-with-docs` pass against `talk_design/revision_comments.md`. Timing is
+indicative (~17 min content + ~2–3 min demo + buffer). One **key message** per slide.
 
-Full beat-by-beat content lives in `talk_design/outline.md`.
+| # | Slide | Time | Visual |
+|---|---|---|---|
+| 1 | Title (+ KU Leuven logo) | — | Cover |
+| 2 | **[NEW]** Process discovery → static model, but processes drift | 60s | Two-period DFG snapshots (first vs last week) |
+| 3 | PMF vs PPM (same loan-app; PPM = outcome + remaining time) | 60s | Visual side-by-side (case-trace vs system-DFG) |
+| 4 | PMF = forecasting DF time series | 60s | Woven pipeline — DF series **stack** (middle) → DFG (right) |
+| 5 | DF series are hard | 45s | Two truth-only series: drift + sparsity/intermittency |
+| 6 | **[NEW]** Complexity + small data | 60s | 7-metric complexity (highlight transition/shifting/non-Gaussianity) + stats table; qualitative "vs 21 benchmarks (Li 2025)" annotation |
+| 7 | What is a TSFM (vs LLM) | 45s | LLM↔TSFM panel; define zero-shot + fine-tuning |
+| 8 | Why TSFMs for PMF | 45s | Overfitting → pretrained bet; "no event logs in pretraining, to our knowledge" |
+| 9 | Three questions | 30s | Scaffold: zero-shot / fine-tuning / better forecasted DFG |
+| 10 | The candidates | 45s | Release timeline (3 families) + settings strip (ZS · LoRA · full-FT) |
+| 11 | **[NEW]** Experimental setup | 45s | Expanding-window schematic; stride = 1, 7-day horizon |
+| 12 | **[KEY]** Zero-shot TSFMs beat both baselines on every log | 2 min | Grouped **2-colour** MAE bars + %Δ callout (pumps in on click) |
+| 13 | Drift + sparsity, revealed | 75s | The two S5 plots, now with TSFM line |
+| 14 | Fine-tuning isn't necessary | 90s | Slope ZS→LoRA→full-FT (**drop Chronos-2**); timing in text |
+| 15 | ER: two findings | 90s | ER bars + two sequential callouts (forecast ≫ no-forecast; TSFMs ≈ baselines) |
+| 16 | **[NEW]** Discussion: bottleneck moved + limitations/future | 60s | Process-aware representation; sharp limits |
+| 17 | Takeaways | 75s | Practitioner pitch + scientific signals ("four logs is not a paradigm") |
+| 18 | Artifacts (+ demo) | 2–3 min | GitHub · demo URL · MPS/CUDA/HPC matrix · recording (placeholder) · QR |
+| 19 | Thank you | — | End |
+| B1–B7 | Backups | — | Baseline ranking · RMSE · hyperparams · complexity · Sepsis · horizon · multivariate |
+
+Full beat-by-beat content lives in `talk_design/outline.md` (v3).
 
 ## Spoken anchor lines (rehearse cold)
 

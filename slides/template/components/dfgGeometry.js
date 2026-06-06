@@ -15,16 +15,16 @@ export function trim(x1, y1, x2, y2, gapStart, gapEnd) {
 }
 
 // Frame-independent trimmed geometry [x1, y1, x2, y2] for every edge, keyed by edge id.
-// `endGaps` overrides the end gap per edge id — used to pull the long diagonal hero edge
-// back far enough to clear its wide target box (a global gapEnd bump would erase the short
-// vertical edges instead).
-export function edgeGeometry(nodes, edges, gapStart = 4.4, gapEnd = 5.8, endGaps = {}) {
+// `endGaps`/`startGaps` override the end/start gap per edge id — e.g. to pull the long diagonal
+// hero edge back far enough to clear its wide target box, or to let an edge leaving the small
+// start dot touch it (a global gap sized for the wide activity boxes would float off the dot).
+export function edgeGeometry(nodes, edges, gapStart = 4.4, gapEnd = 5.8, endGaps = {}, startGaps = {}) {
   const byId = Object.fromEntries(nodes.map((n) => [n.id, n]))
   return Object.fromEntries(
     edges.map((e) => {
       const s = byId[e.source]
       const t = byId[e.target]
-      return [e.id, trim(s.x, s.y, t.x, t.y, gapStart, endGaps[e.id] ?? gapEnd)]
+      return [e.id, trim(s.x, s.y, t.x, t.y, startGaps[e.id] ?? gapStart, endGaps[e.id] ?? gapEnd)]
     }),
   )
 }
