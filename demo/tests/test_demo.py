@@ -230,10 +230,11 @@ FORECAST_COLOUR = "#1e88e5"  # blue
 ACTUAL_COLOUR = "#2e7d32"  # green
 
 
-def test_diff_svg_labels_arcs_with_bicolour_forecast_actual():
-    """Each arc shows its forecast weight and actual weight as two distinctly
-    coloured numbers (forecast = blue, actual = green) — no "→" join."""
-    svg = diff_svg(DRIFT_FORECAST, DRIFT_ACTUAL)
+def test_diff_svg_absolute_labels_arcs_with_bicolour_forecast_actual():
+    """In the (default) absolute mode each arc shows its forecast weight and actual
+    weight as two distinctly coloured numbers (forecast = blue, actual = green) —
+    no "→" join and no relative % (that is the relative view's job)."""
+    svg = diff_svg(DRIFT_FORECAST, DRIFT_ACTUAL)  # mode defaults to "absolute"
     # matched A->B: forecast 4 (blue), actual 9 (green).
     assert re.search(rf'fill="{FORECAST_COLOUR}"[^>]*>4<', svg)
     assert re.search(rf'fill="{ACTUAL_COLOUR}"[^>]*>9<', svg)
@@ -242,6 +243,11 @@ def test_diff_svg_labels_arcs_with_bicolour_forecast_actual():
     assert re.search(rf'fill="{ACTUAL_COLOUR}"[^>]*>2<', svg)
     # The arrow join is gone — colour carries the forecast/actual distinction.
     assert "→" not in svg
+    # No relative change-% rides the absolute view: the over/under direction colours
+    # are emitted only by the relative label, so their absence proves no % label is
+    # present. (Checking for a bare "%" is too blunt — some graphviz versions emit a
+    # "%" in the SVG boilerplate, unrelated to any arc label.)
+    assert OVER_COLOUR not in svg and UNDER_COLOUR not in svg
 
 
 def _stroke_width(svg, colour):
@@ -314,8 +320,9 @@ RELERR_ACTUAL = {
 }
 
 # The signed-error % is colour-coded by direction so over/under reads at a glance.
-OVER_COLOUR = "#c2185b"  # magenta — forecast over-shot the actual (positive)
-UNDER_COLOUR = "#6a1b9a"  # purple — forecast under-shot the actual (negative)
+# The pair is a warm/cool diverging axis kept off the amber/red arc-class colours.
+OVER_COLOUR = "#e8590c"  # orange — forecast over-shot the actual (positive)
+UNDER_COLOUR = "#0c8599"  # teal — forecast under-shot the actual (negative)
 # graphviz serialises a leading ASCII "-" in HTML-like labels as the numeric entity
 # &#45; in the emitted SVG (it renders as a minus); match either form.
 MINUS = r"(?:-|&#45;)"
@@ -324,15 +331,15 @@ MINUS = r"(?:-|&#45;)"
 def test_diff_svg_arc_label_shows_over_forecast_percentage():
     """A matched arc whose forecast over-shot the actual shows a signed ``+NN%``
     in the over-forecast colour, after the two raw weights."""
-    svg = diff_svg(RELERR_FORECAST, RELERR_ACTUAL)
-    # X->Y: forecast 745 vs actual 558 -> +34%, over-forecast (magenta).
+    svg = diff_svg(RELERR_FORECAST, RELERR_ACTUAL, mode="relative")
+    # X->Y: forecast 745 vs actual 558 -> +34%, over-forecast (orange).
     assert re.search(rf'fill="{OVER_COLOUR}"[^>]*>\+34%<', svg)
 
 
 def test_diff_svg_arc_label_shows_under_forecast_percentage():
     """A matched arc whose forecast under-shot the actual shows a negative
     ``-NN%`` in the under-forecast colour."""
-    svg = diff_svg(RELERR_FORECAST, RELERR_ACTUAL)
+    svg = diff_svg(RELERR_FORECAST, RELERR_ACTUAL, mode="relative")
     # Y->Z: forecast 300 vs actual 558 -> -46%, under-forecast (teal).
     assert re.search(rf'fill="{UNDER_COLOUR}"[^>]*>{MINUS}46%<', svg)
 
@@ -340,7 +347,7 @@ def test_diff_svg_arc_label_shows_under_forecast_percentage():
 def test_diff_svg_arc_label_shows_zero_percent_when_exact():
     """A matched arc whose forecast equals the actual shows a neutral ``0%`` —
     not signed, not in an over/under colour."""
-    svg = diff_svg(RELERR_FORECAST, RELERR_ACTUAL)
+    svg = diff_svg(RELERR_FORECAST, RELERR_ACTUAL, mode="relative")
     # Z->W: forecast 500 vs actual 500 -> 0%.
     assert re.search(r">0%<", svg)
     # 0% is neutral: it is not painted in either direction colour.
@@ -350,7 +357,7 @@ def test_diff_svg_arc_label_shows_zero_percent_when_exact():
 
 def test_diff_svg_added_arc_shows_minus_100_percent():
     """An added arc (it happened, forecast = 0) is a complete under-shot: -100%."""
-    svg = diff_svg(RELERR_FORECAST, RELERR_ACTUAL)
+    svg = diff_svg(RELERR_FORECAST, RELERR_ACTUAL, mode="relative")
     # W->V: forecast 0 vs actual 200 -> -100%, under-forecast (teal).
     assert re.search(rf'fill="{UNDER_COLOUR}"[^>]*>{MINUS}100%<', svg)
 
@@ -358,18 +365,38 @@ def test_diff_svg_added_arc_shows_minus_100_percent():
 def test_diff_svg_removed_arc_shows_dash_when_ratio_undefined():
     """A removed arc (predicted but actual = 0) has an undefined ratio: show an
     em-dash, never a raw inf/nan or a bare ``%``."""
-    svg = diff_svg(RELERR_FORECAST, RELERR_ACTUAL)
+    svg = diff_svg(RELERR_FORECAST, RELERR_ACTUAL, mode="relative")
     # V->X: forecast 400 vs actual 0 -> undefined -> em-dash, in neutral grey.
     assert re.search(r'fill="#555555"[^>]*>—<', svg)
     assert "inf" not in svg.lower() and "nan" not in svg.lower()
 
 
 def test_diff_svg_legend_names_the_percentage_key():
-    """The legend's edge-numbers key names the over/under signed-error percentage,
+    """The legend's edge-label key names the over/under signed-error percentage,
     showing the two direction colours so the reader can decode an arc."""
-    svg = diff_svg(RELERR_FORECAST, RELERR_ACTUAL)
+    svg = diff_svg(RELERR_FORECAST, RELERR_ACTUAL, mode="relative")
     assert "over" in svg and "under" in svg
     assert OVER_COLOUR in svg and UNDER_COLOUR in svg
+
+
+def test_diff_svg_relative_shows_only_the_change_percent():
+    """The relative view labels arcs with the bare change % alone — none of the raw
+    forecast/actual numbers nor their blue/green colours ride the arcs."""
+    svg = diff_svg(RELERR_FORECAST, RELERR_ACTUAL, mode="relative")
+    assert "%" in svg  # the change % is shown
+    # The blue/green forecast/actual number colours belong to the absolute view only.
+    assert FORECAST_COLOUR not in svg and ACTUAL_COLOUR not in svg
+
+
+def test_diff_svg_relative_colours_do_not_clash_with_arc_classes():
+    """The over/under % colours stay off the amber (added) / red (removed) arc
+    colours, so a % label can never be mistaken for an arc-class signal."""
+    amber, red = "#ffb300", "#e53935"
+    assert OVER_COLOUR not in {amber, red}
+    assert UNDER_COLOUR not in {amber, red}
+    # And the arc classes are still drawn in the relative view (lines kept in both).
+    svg = diff_svg(DRIFT_FORECAST, DRIFT_ACTUAL, mode="relative")
+    assert "#9e9e9e" in svg and amber in svg and red in svg
 
 
 # ---------------------------------------------------------------------------
@@ -397,7 +424,9 @@ METRICS = {"er": 1.5127795943816802, "truth_er": 0.8765432109876543, "mae": 3.21
 # Minimal valid pre-rendered SVGs, distinct per pane so the panes differ.
 FORECAST_SVG = '<svg id="forecast"><g class="node"></g></svg>'
 ACTUAL_SVG = '<svg id="actual"><g class="node"></g></svg>'
-DIFF_SVG = '<svg id="diff">#9e9e9e #ffb300 #e53935</svg>'
+# Two diff overlays — same line coding, distinct so the panes can be told apart.
+DIFF_ABS_SVG = '<svg id="diff-abs">#9e9e9e #ffb300 #e53935</svg>'
+DIFF_REL_SVG = '<svg id="diff-rel">#9e9e9e #ffb300 #e53935</svg>'
 
 
 @pytest.fixture
@@ -410,7 +439,8 @@ def asset_dir(tmp_path, monkeypatch):
     (base / "metrics.json").write_text(json.dumps(METRICS))
     (base / "forecast.svg").write_text(FORECAST_SVG)
     (base / "actual.svg").write_text(ACTUAL_SVG)
-    (base / "diff.svg").write_text(DIFF_SVG)
+    (base / "diff_absolute.svg").write_text(DIFF_ABS_SVG)
+    (base / "diff_relative.svg").write_text(DIFF_REL_SVG)
     monkeypatch.setattr(forecast, "ASSETS_ROOT", tmp_path)
     return tmp_path
 
@@ -424,7 +454,8 @@ def test_forecast_bundled_returns_triple(asset_dir):
         "metrics",
         "forecast_svg",
         "actual_svg",
-        "diff_svg",
+        "diff_absolute_svg",
+        "diff_relative_svg",
     }
 
 
@@ -433,7 +464,8 @@ def test_forecast_bundled_reads_pre_rendered_svgs(asset_dir):
     result = forecast_bundled("bpi2017", "chronos2", 7)
     assert result["forecast_svg"] == FORECAST_SVG
     assert result["actual_svg"] == ACTUAL_SVG
-    assert result["diff_svg"] == DIFF_SVG
+    assert result["diff_absolute_svg"] == DIFF_ABS_SVG
+    assert result["diff_relative_svg"] == DIFF_REL_SVG
 
 
 def test_forecast_bundled_reads_committed_assets(asset_dir):
@@ -589,7 +621,7 @@ def test_precompute_one_emits_valid_assets(tmp_path, monkeypatch):
     assert metrics["truth_er"] == 0.0  # truth-DFG baseline on the same final window
     assert metrics["mae"] == 0.0 and metrics["rmse"] == 0.0
     # The pre-rendered SVG figures sit alongside the regenerable JSON source.
-    for name in ("forecast.svg", "actual.svg", "diff.svg"):
+    for name in ("forecast.svg", "actual.svg", "diff_absolute.svg", "diff_relative.svg"):
         assert "<svg" in (out_dir / name).read_text()
 
 
@@ -638,7 +670,7 @@ def test_precompute_matrix_emits_all_twelve(tmp_path, monkeypatch):
             labels = {n["label"] for n in dfg["nodes"]}
             assert "▶" in labels and "■" in labels  # ▶/■ markers
         assert set(metrics) == {"er", "truth_er", "mae", "rmse"}
-        for name in ("forecast.svg", "actual.svg", "diff.svg"):
+        for name in ("forecast.svg", "actual.svg", "diff_absolute.svg", "diff_relative.svg"):
             assert "<svg" in (out_dir / name).read_text()
 
     assert written == set(precompute_demo.BUNDLED)
@@ -706,7 +738,7 @@ def test_app_head_inlines_vendored_pan_zoom(asset_dir):
 
 
 def test_app_panes_carry_dfg_pane_class(asset_dir):
-    """All three SVG panes carry the `dfg-pane` class so JS can target them."""
+    """All four SVG panes carry the `dfg-pane` class so JS can target them."""
     pytest.importorskip("gradio")
     import app
 
@@ -715,7 +747,7 @@ def test_app_panes_carry_dfg_pane_class(asset_dir):
         for c in app.build().blocks.values()
         if getattr(c, "elem_classes", None) and "dfg-pane" in c.elem_classes
     ]
-    assert len(panes) == 3  # forecast, actual-future, diff overlay
+    assert len(panes) == 4  # forecast, actual-future, diff absolute, diff relative
 
 
 @pytest.fixture
@@ -737,17 +769,22 @@ def drift_asset_dir(tmp_path, monkeypatch):
     (base / "metrics.json").write_text(json.dumps(METRICS))
     (base / "forecast.svg").write_text(FORECAST_SVG)
     (base / "actual.svg").write_text(ACTUAL_SVG)
-    (base / "diff.svg").write_text(DIFF_SVG)
+    (base / "diff_absolute.svg").write_text(DIFF_ABS_SVG)
+    (base / "diff_relative.svg").write_text(DIFF_REL_SVG)
     monkeypatch.setattr(forecast, "ASSETS_ROOT", tmp_path)
     return tmp_path
 
 
-def test_app_load_diff_produces_colour_coded_overlay(drift_asset_dir):
-    """app.load_diff renders the forecast/actual pair into one diff overlay pane."""
+def test_app_load_diff_produces_both_overlays(drift_asset_dir):
+    """app.load_diff renders the forecast/actual pair into the absolute and relative
+    overlay panes — both carrying the grey/amber/red diff colour coding."""
     pytest.importorskip("gradio")
     import app
 
-    diff_html = app.load_diff("bpi2017", "chronos2")
-    assert "<svg" in diff_html
-    # The overlay carries the diff colour coding (grey / amber / red).
-    assert "#9e9e9e" in diff_html and "#ffb300" in diff_html and "#e53935" in diff_html
+    absolute_html, relative_html = app.load_diff("bpi2017", "chronos2")
+    for diff_html in (absolute_html, relative_html):
+        assert "<svg" in diff_html
+        # The overlay carries the diff colour coding (grey / amber / red).
+        assert "#9e9e9e" in diff_html and "#ffb300" in diff_html and "#e53935" in diff_html
+    # The two panes are distinct documents (absolute vs relative).
+    assert absolute_html != relative_html

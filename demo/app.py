@@ -125,9 +125,16 @@ def _render_panes(result: dict[str, Any]) -> tuple[str, str, str, str, str, str]
     )
 
 
-def _render_diff(result: dict[str, Any]) -> str:
-    """Wrap the pre-rendered colour-coded diff overlay SVG in a scrollable pane."""
-    return _scrollable(result["diff_svg"])
+def _render_diff(result: dict[str, Any]) -> tuple[str, str]:
+    """Wrap the two pre-rendered diff overlays (absolute, relative) as scrollable panes.
+
+    Both keep the same grey/amber/red line styling; only the arc text differs — the
+    raw ``forecast | actual`` pair (absolute) vs the signed change % (relative).
+    """
+    return (
+        _scrollable(result["diff_absolute_svg"]),
+        _scrollable(result["diff_relative_svg"]),
+    )
 
 
 def load(dataset: str, model: str) -> tuple[str, str, str, str, str, str]:
@@ -139,13 +146,15 @@ def load(dataset: str, model: str) -> tuple[str, str, str, str, str, str]:
     return _render_panes(forecast_bundled(dataset, model))
 
 
-def load_diff(dataset: str, model: str) -> str:
-    """Resolve one bundled forecast into the colour-coded diff overlay pane.
+def load_diff(dataset: str, model: str) -> tuple[str, str]:
+    """Resolve one bundled forecast into the two colour-coded diff overlay panes.
 
     Returns:
-        The diff overlay SVG wrapped in a scrollable pane (grey = matched,
-        amber dashed = it happened but the forecast missed it, red dashed = the
-        forecast predicted it but it did not happen).
+        ``(absolute_html, relative_html)`` — both wrapped scrollable panes with the
+        same line coding (grey = matched, amber dashed = it happened but the forecast
+        missed it, red dashed = the forecast predicted it but it did not happen); the
+        absolute pane labels arcs ``forecast | actual``, the relative pane the signed
+        change %.
     """
     return _render_diff(forecast_bundled(dataset, model))
 
@@ -174,9 +183,20 @@ def build() -> gr.Blocks:
             with gr.Column():
                 gr.Markdown("### Actual future — what really happened that week")
                 actual_pane = gr.HTML(elem_classes=["dfg-pane"])
-        with gr.Row(visible=False) as diff_overlay, gr.Column():
+        with gr.Column(visible=False) as diff_overlay:
             gr.Markdown("### Diff — forecast vs actual future")
-            diff_pane = gr.HTML(elem_classes=["dfg-pane"])
+            # A sub-mode inside the Diff view: same grey/amber/red lines either way,
+            # the radio only swaps which text rides each arc.
+            diff_mode = gr.Radio(
+                ["Absolute", "Relative"],
+                value="Absolute",
+                label="Diff mode",
+                info="Absolute: forecast | actual. Relative: signed change %.",
+            )
+            with gr.Row(visible=True) as diff_abs_row:
+                diff_abs_pane = gr.HTML(elem_classes=["dfg-pane"])
+            with gr.Row(visible=False) as diff_rel_row:
+                diff_rel_pane = gr.HTML(elem_classes=["dfg-pane"])
         with gr.Row():
             er = gr.Textbox(label="ER — forecast", interactive=False)
             truth_er = gr.Textbox(label="ER — truth (baseline)", interactive=False)
@@ -187,15 +207,15 @@ def build() -> gr.Blocks:
         inputs = [dataset, model]
 
         def refresh(dataset: str, model: str) -> tuple[Any, ...]:
-            """Recompute every pane so both views stay in sync with the pickers.
+            """Recompute every pane so every view stays in sync with the pickers.
 
-            Resolves the forecast once and fans it into both views, so the diff
-            overlay and the side-by-side panes always show the same triple.
+            Resolves the forecast once and fans it into all panes, so the two diff
+            sub-views and the side-by-side panes always show the same window.
             """
             result = forecast_bundled(dataset, model)
-            return (*_render_panes(result), _render_diff(result))
+            return (*_render_panes(result), *_render_diff(result))
 
-        all_outputs = [*outputs, diff_pane]
+        all_outputs = [*outputs, diff_abs_pane, diff_rel_pane]
         for picker in inputs:
             picker.change(refresh, inputs, all_outputs)
         demo.load(refresh, inputs, all_outputs)
@@ -206,6 +226,13 @@ def build() -> gr.Blocks:
             return gr.update(visible=not is_diff), gr.update(visible=is_diff)
 
         view.change(set_view, view, [twin_panes, diff_overlay])
+
+        def set_diff_mode(mode: str) -> tuple[Any, Any]:
+            """Within the Diff view, swap the absolute pane for the relative one."""
+            is_rel = mode == "Relative"
+            return gr.update(visible=not is_rel), gr.update(visible=is_rel)
+
+        diff_mode.change(set_diff_mode, diff_mode, [diff_abs_row, diff_rel_row])
 
     # Gradio 6 takes `head` at launch() (not the Blocks constructor); stash it on
     # the Blocks so callers (main, tests, drivers) pass the same inlined payload.

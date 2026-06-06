@@ -32,15 +32,15 @@ _FORECAST_COLOUR = "#1e88e5"  # blue
 _ACTUAL_COLOUR = "#2e7d32"  # green
 _SEP_COLOUR = "#bdbdbd"  # faint separator between the two numbers
 
-# After the two numbers each arc also carries the forecast's signed relative error
-# vs the actual — (forecast - actual) / actual as an integer percent — so the reader
-# sees the *magnitude* of the over/under-shoot, not just the raw pair. It is colour
-# coded by direction: magenta = over-forecast (positive), teal = under-forecast
-# (negative); 0% and the undefined case (actual = 0) stay neutral. The pair avoids
-# the edge-class palette (amber added / red removed) so the signal cannot be
-# mistaken for an edge colour.
-_OVER_COLOUR = "#c2185b"  # magenta — forecast over-shot the actual
-_UNDER_COLOUR = "#6a1b9a"  # purple — forecast under-shot the actual (off the blue/green axis)
+# The *relative* diff view labels each arc with the forecast's signed relative
+# error vs the actual — (forecast - actual) / actual as an integer percent — so the
+# reader sees the *magnitude* of the over/under-shoot. It is colour coded by
+# direction along a warm/cool diverging axis: orange = over-forecast (too high),
+# teal = under-forecast (too low); 0% and the undefined case (actual = 0) stay
+# neutral. The pair is deliberately kept off the edge-class palette (amber added /
+# red removed) so a % colour can never be mistaken for an arc colour.
+_OVER_COLOUR = "#e8590c"  # orange — forecast over-shot the actual (warm = too much)
+_UNDER_COLOUR = "#0c8599"  # teal — forecast under-shot the actual (cool = too little)
 _NEUTRAL_COLOUR = "#555555"  # 0% (exact) or — (undefined: actual = 0)
 
 # Embedded legend rows: (line-sample HTML, meaning). The sample is a short glyph
@@ -64,7 +64,7 @@ def _relerr_label(forecast_freq: int, actual_freq: int) -> tuple[str, str]:
     """Signed relative error of the forecast vs the actual, as ``(text, colour)``.
 
     ``(forecast - actual) / actual`` rounded to an integer percent with an explicit
-    sign: positive = the forecast over-shot (magenta), negative = under-shot (teal),
+    sign: positive = the forecast over-shot (orange), negative = under-shot (teal),
     ``0%`` = exact (neutral). When ``actual == 0`` the ratio is undefined (the
     forecast predicted a relation that never happened), so we show an em-dash rather
     than a raw ``inf`` — mirroring the ``n/a`` convention in ``app._fmt``.
@@ -79,17 +79,24 @@ def _relerr_label(forecast_freq: int, actual_freq: int) -> tuple[str, str]:
     return "0%", _NEUTRAL_COLOUR
 
 
-def _arc_label(forecast_freq: int, actual_freq: int) -> str:
-    """HTML-like edge label: forecast (blue) | actual (green) (signed error %)."""
-    relerr_text, relerr_colour = _relerr_label(forecast_freq, actual_freq)
+def _absolute_label(forecast_freq: int, actual_freq: int) -> str:
+    """Absolute-view edge label: forecast (blue) | actual (green) — the raw pair."""
     return (
         f'<<FONT COLOR="{_FORECAST_COLOUR}">{forecast_freq}</FONT>'
         f'<FONT COLOR="{_SEP_COLOUR}">&#160;|&#160;</FONT>'
-        f'<FONT COLOR="{_ACTUAL_COLOUR}">{actual_freq}</FONT>'
-        f'<FONT COLOR="{_SEP_COLOUR}">&#160;(</FONT>'
-        f'<FONT COLOR="{relerr_colour}">{relerr_text}</FONT>'
-        f'<FONT COLOR="{_SEP_COLOUR}">)</FONT>>'
+        f'<FONT COLOR="{_ACTUAL_COLOUR}">{actual_freq}</FONT>>'
     )
+
+
+def _relative_label(forecast_freq: int, actual_freq: int) -> str:
+    """Relative-view edge label: the bare signed change % (orange over / teal under)."""
+    relerr_text, relerr_colour = _relerr_label(forecast_freq, actual_freq)
+    return f'<<FONT COLOR="{relerr_colour}">{relerr_text}</FONT>>'
+
+
+# Arc-label builder per diff mode — both keep the same grey/amber/red line styling;
+# only the text on each arc differs (the raw forecast|actual pair vs the change %).
+_LABEL_BUILDERS = {"absolute": _absolute_label, "relative": _relative_label}
 
 
 def dfg_json_to_svg(dfg: dict[str, Any]) -> str:
@@ -109,22 +116,32 @@ def dfg_json_to_svg(dfg: dict[str, Any]) -> str:
     return graph.pipe(format="svg").decode("utf-8")
 
 
-def diff_svg(forecast_dfg: dict[str, Any], actual_dfg: dict[str, Any]) -> str:
+def diff_svg(
+    forecast_dfg: dict[str, Any], actual_dfg: dict[str, Any], mode: str = "absolute"
+) -> str:
     """Render the forecast/actual diff as one colour-coded overlay SVG.
 
-    Arcs are partitioned by :func:`dfg_diff.dfg_diff` and drawn as:
+    Arcs are partitioned by :func:`dfg_diff.dfg_diff` and drawn with the same line
+    styling in either mode:
 
     * **matched** — solid grey,
     * **added** (it happened, the forecast missed it) — amber dashed,
     * **removed** (the forecast predicted it, it did not happen) — red dashed.
 
+    ``mode`` selects only what each arc's *text* shows:
+
+    * ``"absolute"`` — the raw ``forecast (blue) | actual (green)`` pair,
+    * ``"relative"`` — the bare signed change % (orange over / teal under).
+
     Args:
         forecast_dfg: The forecast DFG (``{"nodes": [...], "arcs": [...]}``).
         actual_dfg:   The actual-future DFG, same shape.
+        mode:         ``"absolute"`` (default) or ``"relative"``.
 
     Returns:
         An ``<svg>`` document as a string.
     """
+    label_for = _LABEL_BUILDERS[mode]
     diff = dfg_diff(forecast_dfg, actual_dfg)
     graph = graphviz.Digraph()
 
@@ -153,7 +170,7 @@ def diff_svg(forecast_dfg: dict[str, Any], actual_dfg: dict[str, Any]) -> str:
     }
     for diff_class, entries in diff.items():
         for entry in entries:
-            label = _arc_label(entry["forecast_freq"], entry["actual_freq"])
+            label = label_for(entry["forecast_freq"], entry["actual_freq"])
             graph.edge(
                 node_id[entry["from"]],
                 node_id[entry["to"]],
@@ -161,30 +178,36 @@ def diff_svg(forecast_dfg: dict[str, Any], actual_dfg: dict[str, Any]) -> str:
                 **styling[diff_class],
             )
 
-    _add_legend(graph)
+    _add_legend(graph, mode)
     return graph.pipe(format="svg").decode("utf-8")
 
 
-def _add_legend(graph: graphviz.Digraph) -> None:
+def _add_legend(graph: graphviz.Digraph, mode: str = "absolute") -> None:
     """Embed a compact key as a single HTML-table node in its own cluster.
 
-    The table has two parts: a forecast/actual number-colour key (explaining the
-    bicolour edge labels) and one row per diff class pairing a line sample with
-    its meaning. A single table keeps the legend tight instead of sprawling.
+    The table has two parts: an edge-label key explaining what the arc text means in
+    this ``mode`` (the forecast/actual number pair, or the over/under change %), and
+    one row per diff class pairing a line sample with its meaning. A single table
+    keeps the legend tight instead of sprawling.
     """
-    # The forecast/actual number-colour key spans the full width on its own row,
-    # so it does not widen the line-sample column and throw the grid off.
-    number_key = (
-        '<FONT COLOR="#555555">edge numbers: </FONT>'
-        f'<FONT COLOR="{_FORECAST_COLOUR}">forecast</FONT>'
-        f'<FONT COLOR="{_SEP_COLOUR}">&#160;|&#160;</FONT>'
-        f'<FONT COLOR="{_ACTUAL_COLOUR}">actual</FONT>'
-        f'<FONT COLOR="{_SEP_COLOUR}">&#160;(</FONT>'
-        f'<FONT COLOR="{_OVER_COLOUR}">over</FONT>'
-        '<FONT COLOR="#555555">/</FONT>'
-        f'<FONT COLOR="{_UNDER_COLOUR}">under</FONT>'
-        '<FONT COLOR="#555555"> %)</FONT>'
-    )
+    # The edge-label key spans the full width on its own row, so it does not widen
+    # the line-sample column and throw the grid off. It is mode-specific: the
+    # absolute view explains the bicolour number pair, the relative view the % axis.
+    if mode == "relative":
+        label_key = (
+            '<FONT COLOR="#555555">edge label: </FONT>'
+            f'<FONT COLOR="{_OVER_COLOUR}">over</FONT>'
+            '<FONT COLOR="#555555"> / </FONT>'
+            f'<FONT COLOR="{_UNDER_COLOUR}">under</FONT>'
+            '<FONT COLOR="#555555">-forecast %</FONT>'
+        )
+    else:
+        label_key = (
+            '<FONT COLOR="#555555">edge numbers: </FONT>'
+            f'<FONT COLOR="{_FORECAST_COLOUR}">forecast</FONT>'
+            f'<FONT COLOR="{_SEP_COLOUR}">&#160;|&#160;</FONT>'
+            f'<FONT COLOR="{_ACTUAL_COLOUR}">actual</FONT>'
+        )
     # The three diff classes form an aligned 2-column grid: line sample | meaning.
     class_rows = "".join(
         f'<TR><TD ALIGN="LEFT">{sample}</TD><TD ALIGN="LEFT">{meaning}</TD></TR>'
@@ -193,7 +216,7 @@ def _add_legend(graph: graphviz.Digraph) -> None:
     table = (
         '<<TABLE BORDER="0" CELLBORDER="0" CELLSPACING="3">'
         '<TR><TD COLSPAN="2" ALIGN="CENTER"><B>Legend</B></TD></TR>'
-        f'<TR><TD COLSPAN="2" ALIGN="LEFT">{number_key}</TD></TR>'
+        f'<TR><TD COLSPAN="2" ALIGN="LEFT">{label_key}</TD></TR>'
         f"{class_rows}</TABLE>>"
     )
     with graph.subgraph(name="cluster_legend") as legend:

@@ -34,9 +34,12 @@ def forecast_bundled(
     Returns:
         ``{"forecast_dfg": <dfg json>, "actual_dfg": <dfg json>,
            "metrics": {"er": float, "truth_er": float, "mae": float, "rmse": float},
-           "forecast_svg": str, "actual_svg": str, "diff_svg": str}`` — the JSON
-        DFGs (the regenerable source of truth) alongside the pre-rendered figures
-        so the served path needs no ``dot`` binary at runtime.
+           "forecast_svg": str, "actual_svg": str,
+           "diff_absolute_svg": str, "diff_relative_svg": str}`` — the JSON DFGs (the
+        regenerable source of truth) alongside the pre-rendered figures so the served
+        path needs no ``dot`` binary at runtime. The diff overlay comes in two
+        variants (same lines, different arc text): the raw forecast|actual pair
+        (absolute) and the signed change % (relative).
     """
     base = ASSETS_ROOT / dataset / model
     forecast_dfg = json.loads((base / "forecast_dfg.json").read_text())
@@ -48,5 +51,6 @@ def forecast_bundled(
         "metrics": metrics,
         "forecast_svg": (base / "forecast.svg").read_text(),
         "actual_svg": (base / "actual.svg").read_text(),
-        "diff_svg": (base / "diff.svg").read_text(),
+        "diff_absolute_svg": (base / "diff_absolute.svg").read_text(),
+        "diff_relative_svg": (base / "diff_relative.svg").read_text(),
     }

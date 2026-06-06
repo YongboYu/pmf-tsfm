@@ -7,7 +7,8 @@ demo model we reuse the **final forecast window** already in ``predictions.npy``
 
 For each pair this writes
 ``demo/assets/<dataset>/<model>/{forecast_dfg.json, actual_dfg.json, metrics.json,
-forecast.svg, actual.svg, diff.svg}``, reusing ``pmf_tsfm.er.dfg.dfg_to_json`` for
+forecast.svg, actual.svg, diff_absolute.svg, diff_relative.svg}``, reusing
+``pmf_tsfm.er.dfg.dfg_to_json`` for
 DFG serialisation, the precomputed ER sweep for ER,
 ``pmf_tsfm.utils.metrics.compute_metrics`` for MAE/RMSE, and ``render`` for the SVGs.
 
@@ -195,7 +196,10 @@ def precompute_one(
     # runtime). The JSON above stays the regenerable source of truth.
     (out_dir / "forecast.svg").write_text(dfg_json_to_svg(forecast_dfg))
     (out_dir / "actual.svg").write_text(dfg_json_to_svg(actual_dfg))
-    (out_dir / "diff.svg").write_text(diff_svg(forecast_dfg, actual_dfg))
+    # Two diff overlays — same grey/amber/red lines, different arc text: the raw
+    # forecast|actual pair (absolute) vs the signed change % (relative).
+    (out_dir / "diff_absolute.svg").write_text(diff_svg(forecast_dfg, actual_dfg, mode="absolute"))
+    (out_dir / "diff_relative.svg").write_text(diff_svg(forecast_dfg, actual_dfg, mode="relative"))
     return out_dir
 
 
