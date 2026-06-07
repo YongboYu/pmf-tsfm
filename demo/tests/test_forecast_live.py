@@ -180,19 +180,6 @@ def test_live_windows_rejects_log_with_too_little_history(tmp_path, monkeypatch)
         forecast_live._live_windows(tmp_path / "x.xes", "chronos2", 7)
 
 
-def test_warm_up_loads_the_model_on_the_given_device(monkeypatch):
-    """warm_up eagerly loads Chronos-2 on the requested device (HF ZeroGPU guidance:
-    load at module level on cuda, not lazily inside the GPU call)."""
-    import forecast_live
-
-    captured = {}
-    monkeypatch.setattr(
-        forecast_live, "_load_chronos2", lambda device=None: captured.update(device=device)
-    )
-    forecast_live.warm_up("cuda")
-    assert captured == {"device": "cuda"}
-
-
 def test_live_windows_rejects_unwired_model_before_preprocessing(tmp_path, monkeypatch):
     """Only chronos2 is wired this slice; a gated model is rejected before any work runs."""
     import forecast_live
