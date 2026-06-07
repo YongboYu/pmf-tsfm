@@ -24,16 +24,15 @@ from __future__ import annotations
 import json
 from functools import cache
 from pathlib import Path
-from typing import Any
 
 import numpy as np
 import pandas as pd
+from dfg_build import dfg_to_json, frequencies_to_dfg_json
 from render import dfg_json_to_svg, diff_svg
 
 from pmf_tsfm.er.automaton import compute_er
 from pmf_tsfm.er.dfg import (
     build_truth_dfg,
-    dfg_to_json,
     extract_sublog,
     extract_traces,
     load_event_log,
@@ -69,29 +68,6 @@ DATASET_DIRS: dict[str, str] = {
 BUNDLED: list[tuple[str, str]] = [
     (dataset, model) for dataset in DATASET_DIRS for model in MODEL_DIRS
 ]
-
-
-def frequencies_to_dfg_json(window: np.ndarray, feature_names: list[str]) -> dict[str, Any]:
-    """Build a clean DFG JSON from one window's DF-relation frequencies.
-
-    Sums the horizon, rounds, drops zero-frequency relations, and keeps the raw
-    ▶/■ markers so ``dfg_to_json`` maps them to the canonical start/end nodes —
-    no duplicate Start/End nodes and no artificial freq-1 arcs.
-
-    Args:
-        window:        shape (horizon, n_features) — one forecast/actual window.
-        feature_names: ``"A -> B"`` column names aligned with the last axis.
-
-    Returns:
-        DFG in ``{"nodes": [...], "arcs": [...]}`` format.
-    """
-    freqs = np.clip(np.round(window.sum(axis=0)), 0, None).astype(int)
-    dfg: dict[tuple[str, str], int] = {}
-    for name, freq in zip(feature_names, freqs, strict=True):
-        if freq > 0:
-            src, tgt = name.split("->", 1)
-            dfg[(src.strip(), tgt.strip())] = int(freq)
-    return dfg_to_json(dfg)
 
 
 def truth_er_from_sublog(sublog: pd.DataFrame) -> float:

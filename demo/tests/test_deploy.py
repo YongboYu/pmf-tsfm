@@ -1,13 +1,20 @@
-"""Deployment contract for the bundled forecast explorer's HF Space (slice 1, #113).
+"""Deployment contract for the explorer's HF Space (slice 1 #113, slice 3b #115).
 
-These tests pin the *serve-time* contract the Hugging Face Space relies on:
+These tests pin the *serve-time* contract the Hugging Face Space relies on. ADR-0005 is
+**amended** for slice 3b: the bundled path is still served from precomputed assets and
+stays import-pure, but the live tab forecasts uploads on ZeroGPU and renders their DFGs
+at request time, so the Space now legitimately carries graphviz + the model libs. The
+one hard line that remains: the Space never installs **pmf_tsfm** (its heavy model/uni2ts
+tree) — the live path reuses only the lean, vendored demo modules.
 
-  - ``requirements.txt`` lists **gradio only** — no graphviz / pmf_tsfm / numpy / pandas
-    (ADR-0005: serve-time deps stay gradio-only so the Space needs no ``dot`` binary and no GPU).
-  - ``README.md`` carries valid HF Space YAML frontmatter (so HF builds the Space at all).
-  - importing the serve path (``forecast`` / ``app``) never pulls the precompute-time modules.
-  - every offered dataset x model combo has its committed assets (the Space serves files, ADR-0002).
-  - the deploy workflow syncs only the serve-time subset of ``demo/`` to the Space.
+  - ``requirements.txt`` pins gradio (matching the README) and carries the live-path deps,
+    but never ``pmf_tsfm``.
+  - ``README.md`` carries valid HF Space YAML frontmatter incl. ``suggested_hardware`` for ZeroGPU.
+  - ``import forecast`` (the bundled core) stays pure; ``import app`` may pull the live deps
+    (render/graphviz) but never ``pmf_tsfm`` or the precompute module.
+  - every offered bundled dataset x model combo has its committed assets (ADR-0002).
+  - the deploy workflow syncs the serve-time subset of ``demo/`` (incl. the live modules), but
+    not ``precompute_demo.py`` (it imports pmf_tsfm).
 """
 
 from __future__ import annotations
@@ -23,8 +30,11 @@ DEMO = Path(__file__).resolve().parent.parent
 REPO = DEMO.parent
 WORKFLOW = REPO / ".github" / "workflows" / "deploy-demo.yml"
 
-# Heavy / precompute-time deps that must never reach the gradio-only serve runtime (ADR-0005).
-_FORBIDDEN_SERVE_DEPS = ("graphviz", "pmf-tsfm", "pmf_tsfm", "numpy", "pandas", "torch")
+# The one dep that must never reach the Space: pmf_tsfm (its heavy model/uni2ts/wandb tree).
+# The live path reuses only the lean, vendored demo modules instead (ADR-0005 amended, #115).
+_FORBIDDEN_SERVE_DEPS = ("pmf-tsfm", "pmf_tsfm")
+# The live tab needs these at serve time (ZeroGPU forecast + request-time DFG rendering).
+_REQUIRED_LIVE_DEPS = ("spaces", "graphviz", "torch", "chronos-forecasting", "pm4py")
 
 
 def _requirement_names(text: str) -> set[str]:
@@ -53,11 +63,15 @@ def _frontmatter(text: str) -> dict[str, str]:
     return out
 
 
-def test_requirements_pins_gradio_and_nothing_heavy():
+def test_requirements_serve_both_paths_but_never_pmf_tsfm():
     names = _requirement_names((DEMO / "requirements.txt").read_text())
     assert "gradio" in names
+    # The live tab's serve deps are present...
+    missing = set(_REQUIRED_LIVE_DEPS) - names
+    assert not missing, f"requirements.txt is missing live-path serve deps: {missing}"
+    # ...but pmf_tsfm (the heavy tree) is never installed on the Space (ADR-0005 amended).
     assert not (names & set(_FORBIDDEN_SERVE_DEPS)), (
-        f"requirements.txt must stay gradio-only (ADR-0005); found {names & set(_FORBIDDEN_SERVE_DEPS)}"
+        f"requirements.txt must never carry pmf_tsfm; found {names & set(_FORBIDDEN_SERVE_DEPS)}"
     )
 
 
@@ -66,6 +80,10 @@ def test_readme_has_valid_hf_space_frontmatter():
     assert fm.get("sdk") == "gradio", "HF Space must be a Gradio-SDK Space (ADR-0003 amended)"
     assert fm.get("app_file") == "app.py", "app_file must point at the Space-root app.py"
     assert "sdk_version" in fm, "HF needs a pinned sdk_version to build the Space"
+    # The live tab runs on ZeroGPU — the Space must request that hardware (#115).
+    assert fm.get("suggested_hardware") == "zero-a10g", (
+        "README must request ZeroGPU hardware (suggested_hardware: zero-a10g) for the live tab"
+    )
     # The pinned Space SDK version must agree with the serve-time requirements pin.
     req = (DEMO / "requirements.txt").read_text()
     pin = next(
@@ -81,15 +99,14 @@ def test_readme_has_valid_hf_space_frontmatter():
     )
 
 
-def _assert_clean_serve_import(import_stmt: str) -> None:
+def _assert_serve_import_excludes(import_stmt: str, forbidden: tuple[str, ...]) -> None:
     # In a fresh interpreter with only demo/ on the path (no src/), importing the serve path must
-    # succeed and must NOT have pulled in the precompute-time modules. Run in a subprocess so the
+    # succeed and must NOT have pulled in any ``forbidden`` module. Run in a subprocess so the
     # in-process suite (which imports render/precompute_demo) can't pollute the module table.
     code = (
         f"import sys; sys.path.insert(0, {str(DEMO)!r}); "
         f"{import_stmt}; "
-        "bad = [m for m in ('render', 'precompute_demo', 'graphviz', 'pmf_tsfm') "
-        "if m in sys.modules]; "
+        f"bad = [m for m in {forbidden!r} if m in sys.modules]; "
         "assert not bad, bad"
     )
     result = subprocess.run(  # noqa: S603 - fixed argv, no shell, trusted constant code
@@ -98,14 +115,17 @@ def _assert_clean_serve_import(import_stmt: str) -> None:
     assert result.returncode == 0, result.stderr
 
 
-def test_serve_path_imports_without_precompute_deps():
-    # forecast.py is the gradio-free serve core — always checkable, incl. in CI (no gradio there).
-    # This guards ADR-0005 against a stray `import render` (which would drag in graphviz).
-    _assert_clean_serve_import("import forecast")
-    # app.py is the other half of the serve path but imports gradio; only check it where gradio
-    # is installed (locally / on the Space), matching the demo suite's gradio-optional convention.
+def test_serve_path_imports_stay_pmf_tsfm_free():
+    # The bundled core stays import-pure: `import forecast` must drag in none of the precompute /
+    # render / graphviz / pmf_tsfm machinery (it reads precomputed assets only). Checkable in CI.
+    _assert_serve_import_excludes(
+        "import forecast", ("render", "precompute_demo", "graphviz", "pmf_tsfm")
+    )
+    # app.py imports gradio (and, for the live tab, render/graphviz) — only checkable where gradio
+    # is installed. The amended invariant: the whole serve path still never pulls pmf_tsfm or the
+    # precompute module (the live path reuses the vendored demo modules instead).
     if importlib.util.find_spec("gradio") is not None:
-        _assert_clean_serve_import("import app, forecast")
+        _assert_serve_import_excludes("import app, forecast", ("precompute_demo", "pmf_tsfm"))
 
 
 # The serve artifacts every bundled dataset x model combo must ship (ADR-0002/0005).
@@ -158,14 +178,24 @@ def test_every_offered_combo_has_committed_assets():
     assert not missing, f"offered combos missing committed assets: {missing}"
 
 
-def test_deploy_workflow_syncs_only_the_serve_time_subset():
+def test_deploy_workflow_syncs_the_serve_time_subset():
     text = WORKFLOW.read_text()
     # Triggered by demo/ changes on main, authenticated with the HF token secret.
     assert "branches:" in text and "main" in text
     assert "demo/" in text, "workflow should be path-filtered to demo/ changes"
     assert "HF_TOKEN" in text, "workflow must auth to the Space with the HF_TOKEN secret"
-    # The gradio-only Space must never receive precompute-time modules (ADR-0005).
-    for forbidden in ("precompute_demo.py", "render.py"):
-        assert forbidden not in text, (
-            f"deploy workflow must not sync {forbidden} to the Space (keep it gradio-only)"
-        )
+    # The live tab's modules + apt packages must be staged for the Space (#115).
+    for required in (
+        "forecast_live.py",
+        "upload_guard.py",
+        "log_to_series.py",
+        "dfg_build.py",
+        "dfg_diff.py",
+        "render.py",
+        "packages.txt",
+    ):
+        assert required in text, f"deploy workflow must sync {required} for the live tab"
+    # precompute_demo.py imports pmf_tsfm, which the Space never installs — keep it out.
+    assert "precompute_demo.py" not in text, (
+        "deploy workflow must not sync precompute_demo.py (it imports pmf_tsfm)"
+    )

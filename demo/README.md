@@ -9,19 +9,20 @@ app_file: app.py
 pinned: false
 license: mit
 short_description: Explore TSFM forecasts of directly-follows process behaviour
+suggested_hardware: zero-a10g
 ---
 
-# Process Model Forecasting — bundled explorer
+# Process Model Forecasting Explorer
 
-A GPU-free explorer for the CAiSE 2026 paper *Process Model Forecasting with Time Series Foundation
-Models* (arXiv:2512.07624). It makes the paper's result tangible: off-the-shelf Time-Series
-Foundation Models (Chronos-2, Moirai-2.0, TimesFM-2.5) can forecast how the **directly-follows (DF)
-relations** of a process evolve over time.
+An explorer for the CAiSE 2026 paper *Process Model Forecasting with Time Series Foundation Models*
+(arXiv:2512.07624). It makes the paper's result tangible: off-the-shelf Time-Series Foundation Models
+(Chronos-2, Moirai-2.0, TimesFM-2.5) can forecast how the **directly-follows (DF) relations** of a
+process evolve over time.
 
 ## What you can do
 
-Pick one of the four bundled event logs (`bpi2017`, `bpi2019_1`, `sepsis`, `hospital_billing`) and a
-model. You see:
+**Bundled explorer.** Pick one of the four bundled event logs (`bpi2017`, `bpi2019_1`, `sepsis`,
+`hospital_billing`) and a model. You see:
 
 - the **forecast DFG** (predicted next week of process behaviour) beside the **actual-future DFG**
   (what really happened) — the bundled path is a *holdout backtest*: the real last week is held out
@@ -30,12 +31,19 @@ model. You see:
   counts) and **Relative** (signed change %) labelling;
 - an **ER / MAE / RMSE** accuracy strip, with the truth-DFG ER baseline for context.
 
+**Live upload (your log).** Upload a custom **XES** log and forecast its genuine next week (forecast
+origin = the log end) on **ZeroGPU**. Because an upload has no future ground truth, this tab reports
+**drift** — the DF relations the forecast adds or drops vs the **last-known window** — and **never**
+an accuracy metric (ADR-0004). Default **Chronos-2**; oversize logs and heavy models are capped so a
+call stays under the GPU time limit.
+
 ## How it runs
 
-Everything is served from **precomputed, committed assets** — including the pre-rendered SVG figures
-— so the app is instant, infinitely concurrent, needs **no GPU and no graphviz binary**, and cannot
-be DoS'd into a bill. The live custom-upload path (on ZeroGPU) and the REST/MCP surfaces are later
-slices of the same app.
+The **bundled** path is served from **precomputed, committed assets** (incl. pre-rendered SVGs) — so
+it is instant, infinitely concurrent, needs **no GPU**, and cannot be DoS'd into a bill. The **live**
+path runs preprocessing + a Chronos-2 forecast under `@spaces.GPU` on **ZeroGPU** and renders its
+DFGs at request time (so the Space carries graphviz + the model libs; see `packages.txt` /
+`requirements.txt`). The REST/MCP surface is a later slice of the same app.
 
 Run it locally:
 

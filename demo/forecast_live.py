@@ -20,26 +20,126 @@ from typing import Any
 
 import numpy as np
 import upload_guard
+from dfg_build import frequencies_to_dfg_json
 from dfg_diff import dfg_diff
-from precompute_demo import frequencies_to_dfg_json
+from log_to_series import log_to_df_series
 from render import dfg_json_to_svg, diff_svg
+
+# Chronos-2 is the only model wired on the hosted live path this slice (#115);
+# moirai2 / timesfm2.5 stay a documented follow-up. The id matches
+# configs/model/chronos/chronos2.yaml. Loading an ``s3://`` checkpoint needs boto3.
+_CHRONOS2_MODEL_ID = "s3://autogluon/chronos-2/"
+_chronos2_pipeline: object | None = None  # module-level cache, loaded once per process
+
+
+def _load_chronos2(device: str | None = None) -> object:
+    """Load (and cache) the Chronos-2 pipeline. Imports torch/chronos lazily so the
+    live-core module stays importable — and testable — without the model libs.
+
+    Args:
+        device: the device to place the model on. ``None`` (the default, used by the
+            per-call path) auto-detects: real ``cuda`` inside a ``@spaces.GPU`` call,
+            else ``cpu``. :func:`warm_up` passes ``"cuda"`` explicitly so the startup
+            load targets the GPU even under ZeroGPU's module-level CUDA emulation, where
+            ``torch.cuda.is_available()`` is ``False``.
+    """
+    global _chronos2_pipeline
+    if _chronos2_pipeline is None:
+        import torch
+        from chronos import BaseChronosPipeline
+
+        if device is None:
+            device = "cuda" if torch.cuda.is_available() else "cpu"
+        _chronos2_pipeline = BaseChronosPipeline.from_pretrained(
+            _CHRONOS2_MODEL_ID, device_map=device
+        )
+    return _chronos2_pipeline
+
+
+def warm_up(device: str = "cuda") -> None:
+    """Eagerly load Chronos-2 at startup so per-call GPU time is spent on inference only.
+
+    HF ZeroGPU guidance is to load models on ``cuda`` at **module level** (it emulates
+    CUDA outside ``@spaces.GPU`` so the placement is cheap), not lazily inside the GPU
+    function — otherwise the *first* request pays the cold model download/load out of its
+    ~120s ``duration`` budget and may time out. The Space calls this once at import (see
+    ``app.py``); off-Space it is simply never called, and the per-call path lazy-loads on
+    CPU instead.
+    """
+    _load_chronos2(device=device)
+
+
+def _chronos2_forecast(context: np.ndarray, horizon: int) -> np.ndarray:
+    """Forecast the next ``horizon`` days of every DF relation with Chronos-2.
+
+    A minimal port of ``pmf_tsfm.models.chronos.ChronosAdapter._predict_chronos2_batched``
+    (batch every feature into one ``predict_df`` call via a per-feature ``item_id``, take
+    the median) — kept here so the live path needs only chronos-forecasting + torch, not
+    the full ``pmf_tsfm`` dep tree. **This is the GPU work** (wrapped by ``@spaces.GPU`` in
+    the GUI) and is what tests monkeypatch.
+
+    Args:
+        context: ``(n_days, n_features)`` history — the whole log's daily DF series.
+        horizon: number of future days to forecast.
+
+    Returns:
+        ``(horizon, n_features)`` forecast frequencies (median).
+    """
+    import pandas as pd
+
+    pipeline = _load_chronos2()
+    n_features = context.shape[1]
+    rows = [
+        {"item_id": feat_idx, "timestamp": t, "target": float(value)}
+        for feat_idx in range(n_features)
+        for t, value in enumerate(context[:, feat_idx])
+    ]
+    pred_df = pipeline.predict_df(  # type: ignore[attr-defined]
+        pd.DataFrame(rows), prediction_length=horizon, quantile_levels=[0.1, 0.5, 0.9]
+    )
+    forecast = np.zeros((horizon, n_features))
+    for feat_idx in range(n_features):
+        feat = pred_df[pred_df["item_id"] == feat_idx]
+        forecast[:, feat_idx] = feat["predictions"].to_numpy()[:horizon]
+    return forecast
 
 
 def _live_windows(
     log: str | Path, model: str, horizon: int
 ) -> tuple[np.ndarray, np.ndarray, list[str]]:
-    """Preprocess + forecast one upload, the GPU seam wired to ZeroGPU in #115.
+    """Preprocess + forecast one upload — the GPU seam (ADR-0004, ZeroGPU in #115).
 
     Returns ``(forecast_window, last_known_window, feature_names)`` where both windows
     are ``(horizon, n_features)`` DF-relation frequency arrays in the **same** feature
-    space (so the two DFGs key consistently): the forecast for the next ``horizon`` days
-    from the log end, and the actual last ``horizon`` days of the log. #115 implements
-    this (preprocess log → DF-relation series; model.predict → forecast window; series
-    tail → last-known window); the tests monkeypatch it.
+    space (so the two DFGs key consistently): the model forecast for the next ``horizon``
+    days *from the log end* (the genuine unseen future), and the actual last ``horizon``
+    days of the log (the recent past the drift is measured against).
+
+    The whole daily series is the forecast context; its tail is the last-known window.
+    Tests monkeypatch ``log_to_df_series`` / ``_chronos2_forecast`` to keep real model
+    inference out of CI (as slice 3a kept this whole seam mocked).
+
+    Raises:
+        UploadRejected: the model is not wired on the hosted live path, or the log spans
+            too few days to forecast a ``horizon``-day window from history.
     """
-    raise NotImplementedError(
-        "live preprocessing + inference is wired on ZeroGPU in #115; tests monkeypatch this seam"
-    )
+    if model != "chronos2":
+        raise upload_guard.UploadRejected(
+            f"{model} is not yet available on the hosted live demo; use chronos2."
+        )
+
+    series = log_to_df_series(log)
+    feature_names = list(series.columns)
+    values = series.to_numpy(dtype=float)
+    if len(values) < horizon + 1:
+        raise upload_guard.UploadRejected(
+            f"the log spans only {len(values)} day(s); at least {horizon + 1} are needed to "
+            f"forecast a {horizon}-day window from prior history."
+        )
+
+    last_known_window = values[-horizon:]
+    forecast_window = _chronos2_forecast(values, horizon)
+    return forecast_window, last_known_window, feature_names
 
 
 def drift_report(
@@ -113,10 +213,10 @@ def forecast_live(
         UploadRejected: the log is too large or the model is gated for its size.
 
     Note:
-        The reused ``diff_svg`` legend still reads "forecast | actual" / "over/under-forecast
-        %"; relabelling the live diff view ("last-known window" / "% change from recent
-        past") is a GUI concern handled when the live path is wired (#115). The bundle
-        *data* already uses the correct drift vocabulary and carries no accuracy metric.
+        The diff SVGs are rendered with ``framing="drift"`` so their legend reads
+        "forecast | last-known window" / "% change from recent past" (never "actual" or
+        accuracy) — the relabel the bundle carries, so the same SVGs are honest whether
+        shown in the GUI or returned by the future MCP tool.
     """
     model = upload_guard.check_upload(log, model)
     forecast_window, last_known_window, feature_names = _live_windows(log, model, horizon)
@@ -129,6 +229,10 @@ def forecast_live(
         "drift": drift_report(forecast_dfg, comparison_dfg),
         "forecast_svg": dfg_json_to_svg(forecast_dfg),
         "comparison_svg": dfg_json_to_svg(comparison_dfg),
-        "diff_absolute_svg": diff_svg(forecast_dfg, comparison_dfg, mode="absolute"),
-        "diff_relative_svg": diff_svg(forecast_dfg, comparison_dfg, mode="relative"),
+        "diff_absolute_svg": diff_svg(
+            forecast_dfg, comparison_dfg, mode="absolute", framing="drift"
+        ),
+        "diff_relative_svg": diff_svg(
+            forecast_dfg, comparison_dfg, mode="relative", framing="drift"
+        ),
     }
