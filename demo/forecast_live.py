@@ -29,44 +29,30 @@ from render import dfg_json_to_svg, diff_svg
 # moirai2 / timesfm2.5 stay a documented follow-up. The id matches
 # configs/model/chronos/chronos2.yaml. Loading an ``s3://`` checkpoint needs boto3.
 _CHRONOS2_MODEL_ID = "s3://autogluon/chronos-2/"
-_chronos2_pipeline: object | None = None  # module-level cache, loaded once per process
+_chronos2_pipeline: object | None = None  # cache, loaded once per (forked) worker process
 
 
-def _load_chronos2(device: str | None = None) -> object:
+def _load_chronos2() -> object:
     """Load (and cache) the Chronos-2 pipeline. Imports torch/chronos lazily so the
     live-core module stays importable — and testable — without the model libs.
 
-    Args:
-        device: the device to place the model on. ``None`` (the default, used by the
-            per-call path) auto-detects: real ``cuda`` inside a ``@spaces.GPU`` call,
-            else ``cpu``. :func:`warm_up` passes ``"cuda"`` explicitly so the startup
-            load targets the GPU even under ZeroGPU's module-level CUDA emulation, where
-            ``torch.cuda.is_available()`` is ``False``.
+    **Called only from inside the ``@spaces.GPU`` worker** (via :func:`_chronos2_forecast`),
+    never at module import: ZeroGPU forks a worker per GPU call, and initialising CUDA in
+    the parent process (e.g. an eager ``device_map="cuda"`` load at import) breaks that fork
+    with "process PID not found (pid=0)". So the model is loaded on the real GPU that exists
+    inside the worker; ``torch.cuda.is_available()`` is ``True`` there. The weights cache to
+    disk on first download, so subsequent workers load fast.
     """
     global _chronos2_pipeline
     if _chronos2_pipeline is None:
         import torch
         from chronos import BaseChronosPipeline
 
-        if device is None:
-            device = "cuda" if torch.cuda.is_available() else "cpu"
+        device = "cuda" if torch.cuda.is_available() else "cpu"
         _chronos2_pipeline = BaseChronosPipeline.from_pretrained(
             _CHRONOS2_MODEL_ID, device_map=device
         )
     return _chronos2_pipeline
-
-
-def warm_up(device: str = "cuda") -> None:
-    """Eagerly load Chronos-2 at startup so per-call GPU time is spent on inference only.
-
-    HF ZeroGPU guidance is to load models on ``cuda`` at **module level** (it emulates
-    CUDA outside ``@spaces.GPU`` so the placement is cheap), not lazily inside the GPU
-    function — otherwise the *first* request pays the cold model download/load out of its
-    ~120s ``duration`` budget and may time out. The Space calls this once at import (see
-    ``app.py``); off-Space it is simply never called, and the per-call path lazy-loads on
-    CPU instead.
-    """
-    _load_chronos2(device=device)
 
 
 def _chronos2_forecast(context: np.ndarray, horizon: int) -> np.ndarray:

@@ -26,7 +26,7 @@ from typing import Any
 
 import gradio as gr
 from forecast import forecast_bundled
-from forecast_live import forecast_live, warm_up
+from forecast_live import forecast_live
 from upload_guard import UploadRejected
 
 # Only the precomputed bundled pairs are offered as choices: the full 4-by-3 matrix.
@@ -40,6 +40,16 @@ LIVE_MODELS: list[str] = ["chronos2"]
 # ZeroGPU boundary: ``@spaces.GPU`` requests a GPU slice for the ~120s of the live call
 # (ADR-0001). ``spaces`` only exists on the HF Space, so off-Space (local / CI) we fall
 # back to a no-op decorator and the same code runs on CPU for the visual check.
+#
+# IMPORTANT — do NOT load the model on cuda at module import. ZeroGPU forks a worker per
+# @spaces.GPU call; if CUDA is initialised in *this* (parent) process first, the fork's
+# process tracking fails with "process PID not found (pid=0)". HF's "load on cuda at
+# module level" guidance relies on the emulation intercepting `.to('cuda')`, which it does
+# for standard transformers/diffusers — but NOT for the autogluon Chronos-2 loader
+# (`BaseChronosPipeline.from_pretrained(device_map="cuda")`), which inits real CUDA in the
+# parent and breaks the fork. So Chronos-2 is loaded lazily INSIDE the @spaces.GPU call
+# (see forecast_live._chronos2_forecast), where a real GPU exists. The weights cache to disk
+# on first download, so later calls are fast.
 try:
     import spaces
 
@@ -48,14 +58,6 @@ except ImportError:  # pragma: no cover - exercised only off-Space
 
     def _gpu(fn):  # type: ignore[no-redef]
         return fn
-else:  # pragma: no cover - exercised only on the Space
-    # On ZeroGPU, warm-load Chronos-2 on cuda at import (HF guidance), so each call's
-    # ~120s budget is spent on inference, not a cold download/load. Non-fatal: if the
-    # startup load fails the first request falls back to a lazy load.
-    try:
-        warm_up("cuda")
-    except Exception as err:  # never block app startup on a warm-up miss
-        print(f"Chronos-2 warm-up skipped ({err}); will lazy-load on first request.")
 
 
 @_gpu
