@@ -528,7 +528,7 @@ assertion: Foundation models are the new direction in forecasting
 .s8-evidence { position: relative }
 .s8-card { position: relative; border: 1.5px solid #cdd6e0; border-radius: 12px; padding: 22px 24px 26px; min-height: 218px; display: flex; flex-direction: column; gap: 16px }
 .s8-card--tsfm { border: 2px solid var(--brand); background: #f4f8fc }
-.s8-badge { position: absolute; top: -13px; right: 18px; background: var(--accent); color: var(--ink); font-size: 14px; font-weight: 700; border-radius: 6px; padding: 3px 10px; box-shadow: 0 2px 8px rgba(221, 138, 46, 0.3) }
+.s8-badge { position: absolute; top: -13px; right: 18px; background: var(--accent); color: var(--ink); font-size: 14px; font-weight: 700; border-radius: 6px; padding: 3px 10px }
 .s8-name { font-size: 22px; font-weight: 700; color: var(--neutral); white-space: nowrap }
 .s8-name--brand { color: var(--brand) }
 .s8-ex { display: flex; align-items: center; align-self: center; gap: 10px; font-size: 19px; color: var(--ink); font-variant-numeric: tabular-nums }
@@ -545,7 +545,7 @@ assertion: Foundation models are the new direction in forecasting
 .s8-link { position: absolute; left: 50%; transform: translate(-50%, 50%); display: flex; align-items: center; gap: 6px; white-space: nowrap; z-index: 5 }
 .s8-link--data { bottom: 88px }
 .s8-link--task { bottom: 38px }
-.s8-link .ae-callout { font-size: 22px !important; font-weight: 700 !important; padding: 8px 18px !important; box-shadow: 0 4px 14px rgba(221, 138, 46, 0.35) }
+.s8-link .ae-callout { font-size: 22px !important; font-weight: 700 !important; padding: 8px 18px !important }
 .s8-larr, .s8-rarr { color: var(--accent); font-size: 22px; font-weight: 800; line-height: 1 }
 .s8-defs { margin: 46px auto 0; width: fit-content; text-align: left; display: flex; flex-direction: column; gap: 10px; font-size: 23px; color: var(--neutral) }
 .s8-def strong { color: var(--ink) }
