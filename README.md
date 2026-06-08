@@ -226,6 +226,26 @@ bash scripts/run_full_pipeline.sh
 
 These are local orchestration scripts: shell helpers for running sequential experiment batches on your workstation or server, without [Slurm](https://slurm.schedmd.com/) job submission. The shell scripts source `scripts/env.sh`, which loads `.env` and activates `.venv` automatically when present.
 
+## Run on Your Own Data (Self-Host & Agents)
+
+Beyond the research CLI above, the core pipeline ships as two self-host artifacts so you can run zero-shot DF-relation forecasting plus accuracy (MAE / RMSE + Entropic Relevance) on **your own** process log — a raw `.xes`/`.xes.gz` (auto-converted to the daily DF-relation series) or a prepared DF-relation `.parquet` — with no caps. Both wrap the same Gradio-free seam [`src/pmf_tsfm/api.py`](src/pmf_tsfm/api.py) (`forecast_backtest` / `forecast_only` / `list_models`), a zero-shot holdout backtest (ADR-0004) that reuses the real cores, so the numbers match the CLI and paper. See [ADR-0008](docs/adr/0008-core-forecasting-artifacts-mcp-docker.md) for the design.
+
+- **Docker — self-host CLI** ([`docker/README.md`](docker/README.md)). Build the core image and forecast your own log:
+  ```bash
+  docker build -f docker/Dockerfile -t pmf-tsfm .
+  docker run --rm -v "$PWD/data:/data" -v pmf-cache:/cache \
+    pmf-tsfm backtest --input /data/processed_logs/sepsis.xes --model chronos/chronos2
+  ```
+  The image also runs the full Hydra CLIs (`inference`, `evaluate`, `evaluate_er`, ...). Default models are Chronos + Moirai; TimesFM is an opt-in build (`--build-arg INSTALL_TIMESFM=1`).
+
+- **MCP — agent server** ([`mcp/README.md`](mcp/README.md)). A headless [FastMCP](https://modelcontextprotocol.io) server exposing the same capability as typed MCP tools:
+  ```bash
+  uv sync --extra mcp
+  python mcp/server.py        # stdio; connect any MCP client or the MCP Inspector
+  ```
+
+The capped Gradio demo in `demo/` remains the hosted visualization Space; these two artifacts are the uncapped, bring-your-own-data path.
+
 ## Tested Environments
 
 - macOS on Apple Silicon: tested with `device=mps` for local development and lighter runs.
