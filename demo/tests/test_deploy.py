@@ -195,6 +195,8 @@ def test_deploy_workflow_syncs_the_serve_time_subset():
         "packages.txt",
     ):
         assert required in text, f"deploy workflow must sync {required} for the live tab"
+    # The live tab's one-click example log must reach the Space (gr.Examples points at it).
+    assert "demo/examples" in text, "deploy workflow must sync demo/examples for the live example"
     # precompute_demo.py imports pmf_tsfm, which the Space never installs — keep it out.
     assert "precompute_demo.py" not in text, (
         "deploy workflow must not sync precompute_demo.py (it imports pmf_tsfm)"

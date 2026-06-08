@@ -27,6 +27,7 @@ from dfg_diff import dfg_diff
 from forecast import forecast_bundled
 from precompute_demo import frequencies_to_dfg_json, precompute_one
 from render import dfg_json_to_svg, diff_svg
+from upload_guard import MAX_UPLOAD_BYTES, SMALL_LOG_BYTES
 
 # ---------------------------------------------------------------------------
 # Shared DFG fixture — a tiny ▶ → A → B → ■ graph
@@ -837,6 +838,21 @@ _LIVE_STUB_BUNDLE = {
 }
 
 
+def _drain(gen):
+    """Consume a ``run_live`` generator, returning its final yielded output tuple."""
+    final = None
+    for item in gen:
+        final = item
+    return final
+
+
+def _markdown_values(blocks) -> list[str]:
+    """Every non-empty gr.Markdown string rendered in a built Blocks app."""
+    import gradio as gr
+
+    return [c.value for c in blocks.blocks.values() if isinstance(c, gr.Markdown) and c.value]
+
+
 def test_app_builds_both_tabs():
     """The app exposes the bundled explorer and the live upload tab side by side."""
     gr = pytest.importorskip("gradio")
@@ -853,7 +869,9 @@ def test_run_live_renders_panes_and_drift_on_success(monkeypatch):
     import app
 
     monkeypatch.setattr(app, "_run_live", lambda log_path, model: _LIVE_STUB_BUNDLE)
-    status, forecast, comparison, diff_abs, diff_rel, summary = app.run_live("up.xes", "chronos2")
+    status, forecast, comparison, diff_abs, diff_rel, summary = _drain(
+        app.run_live("up.xes", "chronos2")
+    )
 
     assert "✅" in status
     for html in (forecast, comparison, diff_abs, diff_rel):
@@ -862,6 +880,22 @@ def test_run_live_renders_panes_and_drift_on_success(monkeypatch):
     assert "adds" in summary and "drops" in summary
     assert "not accuracy" in summary.lower()
     assert "mae" not in summary.lower() and "rmse" not in summary.lower()
+
+
+def test_run_live_yields_interim_progress_before_result(monkeypatch):
+    """Forecast streams an immediate 'working' state (blank panes) before the slow GPU
+    result, so the live tab shows progress instead of freezing for ~120s."""
+    pytest.importorskip("gradio")
+    import app
+
+    monkeypatch.setattr(app, "_run_live", lambda log_path, model: _LIVE_STUB_BUNDLE)
+    states = list(app.run_live("up.xes", "chronos2"))
+
+    assert len(states) >= 2, "expected an interim progress state, then the result"
+    interim_status, *interim_panes = states[0]
+    assert "Forecasting" in interim_status
+    assert interim_panes == ["", "", "", "", ""]  # no stale/partial graph while working
+    assert "✅" in states[-1][0]  # the final state is the completed forecast
 
 
 def test_run_live_surfaces_upload_rejection_with_blank_panes(monkeypatch):
@@ -874,7 +908,7 @@ def test_run_live_surfaces_upload_rejection_with_blank_panes(monkeypatch):
         raise UploadRejected("log is 40.0 MB; the upload cap is 25.0 MB.")
 
     monkeypatch.setattr(app, "_run_live", _reject)
-    status, *panes = app.run_live("big.xes", "chronos2")
+    status, *panes = _drain(app.run_live("big.xes", "chronos2"))
 
     assert "rejected" in status.lower() and "cap" in status
     assert panes == ["", "", "", "", ""]
@@ -885,7 +919,7 @@ def test_run_live_prompts_when_no_file_uploaded():
     pytest.importorskip("gradio")
     import app
 
-    status, *panes = app.run_live(None, "chronos2")
+    status, *panes = _drain(app.run_live(None, "chronos2"))
     assert "Upload" in status
     assert panes == ["", "", "", "", ""]
 
@@ -899,6 +933,61 @@ def test_run_live_reports_unexpected_failure_without_crashing(monkeypatch):
         raise RuntimeError("graphviz exploded")
 
     monkeypatch.setattr(app, "_run_live", _boom)
-    status, *panes = app.run_live("up.xes", "chronos2")
+    status, *panes = _drain(app.run_live("up.xes", "chronos2"))
     assert "Could not forecast" in status
     assert panes == ["", "", "", "", ""]
+
+
+def test_live_tab_offers_example_log(tmp_path):
+    """The live tab ships a one-click example: a small committed log wired to the upload."""
+    gr = pytest.importorskip("gradio")
+    import app
+
+    # The committed sample exists and sits under the small-log gate (a snappy example).
+    assert app.EXAMPLE_LOG.exists(), "the live-tab example log must be committed"
+    assert app.EXAMPLE_LOG.stat().st_size < SMALL_LOG_BYTES
+
+    # It is wired into the UI as a gr.Examples (a gr.Dataset) referencing that file.
+    datasets = [c for c in app.build().blocks.values() if isinstance(c, gr.Dataset)]
+    samples = [str(s) for d in datasets for row in d.samples for s in row]
+    assert any(app.EXAMPLE_LOG.name in s for s in samples), "example not wired to the upload"
+
+
+def test_live_example_is_framed_as_a_stand_in_for_upload():
+    """The example is labelled as a stand-in for the user's own log (not a duplicate of the
+    bundled sepsis entry), keeping the live tab's 'upload your own' framing clear."""
+    pytest.importorskip("gradio")
+    import app
+
+    note = app._example_note()
+    assert "sepsis" in note.lower() and "your own" in note.lower()
+    assert any(note in m for m in _markdown_values(app.build())), (
+        "the example stand-in note must be shown on the live tab"
+    )
+
+
+def test_live_caps_note_is_derived_from_guard_constants():
+    """The caps shown to the user are formatted from the guard constants (single source of
+    truth), and the caption is rendered on the live tab — not a hand-typed number."""
+    pytest.importorskip("gradio")
+    import app
+
+    note = app._live_caps_note()
+    # Same formatting the guard uses in its rejection messages, so the up-front cap is the
+    # exact number a user sees if their upload is refused (upload_guard.py).
+    assert f"{MAX_UPLOAD_BYTES / 1e6:.1f}" in note
+    assert f"{SMALL_LOG_BYTES / 1e6:.1f}" in note
+
+    markdowns = _markdown_values(app.build())
+    assert any(note in m for m in markdowns), "caps note must be shown on the live tab"
+
+
+def test_tabs_carry_onboarding_accordions():
+    """Each tab carries a collapsed 'What am I looking at?' explainer for first-time visitors."""
+    gr = pytest.importorskip("gradio")
+    import app
+
+    accordions = [c for c in app.build().blocks.values() if isinstance(c, gr.Accordion)]
+    explainers = [a for a in accordions if a.label == "What am I looking at?"]
+    assert len(explainers) >= 2, "expected an onboarding accordion on each tab"
+    assert all(not a.open for a in explainers), "the explainer should start collapsed"

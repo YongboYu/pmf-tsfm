@@ -27,7 +27,7 @@ from typing import Any
 import gradio as gr
 from forecast import forecast_bundled
 from forecast_live import forecast_live
-from upload_guard import UploadRejected
+from upload_guard import MAX_UPLOAD_BYTES, SMALL_LOG_BYTES, UploadRejected
 
 # Only the precomputed bundled pairs are offered as choices: the full 4-by-3 matrix.
 DATASETS: list[str] = ["bpi2017", "bpi2019_1", "sepsis", "hospital_billing"]
@@ -36,6 +36,10 @@ MODELS: list[str] = ["chronos2", "moirai2", "timesfm2.5"]
 # The live path runs on ZeroGPU. Only Chronos-2 is wired this slice (#115); moirai2 /
 # timesfm2.5 stay gated (a follow-up), so the live picker offers Chronos-2 alone.
 LIVE_MODELS: list[str] = ["chronos2"]
+
+# A tiny committed sample (a dense six-week slice of the bundled sepsis log) so the live
+# tab has a one-click "Try an example" — no one needs their own XES to see the path work.
+EXAMPLE_LOG = Path(__file__).resolve().parent / "examples" / "sepsis_sample.xes"
 
 # ZeroGPU boundary: ``@spaces.GPU`` requests a GPU slice for the ~120s of the live call
 # (ADR-0001). ``spaces`` only exists on the HF Space, so off-Space (local / CI) we fall
@@ -218,30 +222,70 @@ def _drift_summary(drift: dict[str, list[dict[str, Any]]]) -> str:
 # Blank panes + cleared summary, reused when an upload is rejected or absent.
 _LIVE_BLANK: tuple[str, str, str, str, str] = ("", "", "", "", "")
 
+# Shown the instant Forecast is pressed, before the (slow, cold-loading) GPU call returns,
+# so the live tab never just sits frozen for ~120s. Yielded ahead of the result below.
+_LIVE_WORKING = (
+    "⏳ Forecasting on ZeroGPU — the first call cold-loads Chronos-2 (this can take ~60s); "
+    "later calls are fast. Hold on…"
+)
 
-def run_live(log_path: str | None, model: str) -> tuple[str, str, str, str, str, str]:
-    """Forecast an uploaded log and assemble the live-tab outputs.
 
-    Returns ``(status_md, forecast_html, comparison_html, diff_abs_html, diff_rel_html,
+def run_live(log_path: str | None, model: str):
+    """Forecast an uploaded log and stream the live-tab outputs.
+
+    A generator: it **yields an interim "working" state immediately** (so the UI shows
+    progress, not a frozen pane, while the ~120s ZeroGPU call runs), then yields the final
+    ``(status_md, forecast_html, comparison_html, diff_abs_html, diff_rel_html,
     drift_summary_md)``. A guard rejection (oversize / gated model / too-short log) or any
     other failure short-circuits to a clear status message with blank panes — the GPU is
     only reached for an accepted upload.
     """
     if not log_path:
-        return ("⬆️ Upload an XES event log, then press **Forecast**.", *_LIVE_BLANK)
+        yield (
+            "⬆️ Upload an XES event log (or pick the example), then press **Forecast**.",
+            *_LIVE_BLANK,
+        )
+        return
+    yield (_LIVE_WORKING, *_LIVE_BLANK)
     try:
         result = _run_live(log_path, model)
     except UploadRejected as rejected:
-        return (f"⚠️ Upload rejected: {rejected}", *_LIVE_BLANK)
+        yield (f"⚠️ Upload rejected: {rejected}", *_LIVE_BLANK)
+        return
     except Exception as err:
-        return (f"⚠️ Could not forecast this log: {err}", *_LIVE_BLANK)
-    return (
+        yield (f"⚠️ Could not forecast this log: {err}", *_LIVE_BLANK)
+        return
+    yield (
         "✅ Forecast complete — showing the genuine next week vs the last-known window.",
         _scrollable(result["forecast_svg"]),
         _scrollable(result["comparison_svg"]),
         _scrollable(result["diff_absolute_svg"]),
         _scrollable(result["diff_relative_svg"]),
         _drift_summary(result["drift"]),
+    )
+
+
+def _example_note() -> str:
+    """Frame the one-click example so it doesn't read as a duplicate of the bundled sepsis
+    entry: it is a ready-made **stand-in for your own upload**, and the live path forecasts
+    *this slice's* genuine next week — distinct from the Bundled tab's backtest of the full log.
+    """
+    return (
+        "The example is a six-week slice of the **sepsis** log (one of the bundled datasets), a "
+        "ready-made stand-in for your own upload — the live path forecasts *this slice's* genuine "
+        "next week and its drift. The **Bundled explorer** tab instead backtests the *full* sepsis "
+        "log against known truth."
+    )
+
+
+def _live_caps_note() -> str:
+    """The upload limits shown on the live tab, **derived** from the guard constants so the
+    displayed caps can never drift from what ``upload_guard.check_upload`` actually enforces.
+    """
+    return (
+        f"**Limits** — max upload **{MAX_UPLOAD_BYTES / 1e6:.1f} MB**. Chronos-2 forecasts any "
+        f"log up to that cap; Moirai-2 / TimesFM-2.5 (when enabled) are limited to logs under "
+        f"**{SMALL_LOG_BYTES / 1e6:.1f} MB** so a single call stays within the GPU time limit."
     )
 
 
@@ -256,9 +300,33 @@ def _build_bundled_tab() -> tuple[Any, list[Any], list[Any]]:
         "from the rest, then compared against what actually happened — so ER / MAE / RMSE "
         "are genuine accuracy."
     )
+    with gr.Accordion("What am I looking at?", open=False):
+        gr.Markdown(
+            "A **directly-follows graph (DFG)** summarises a process: each arc *a → b* is a "
+            "**directly-follows (DF) relation** (b directly follows a), the number on it the "
+            "count over the week.\n\n"
+            "- **Forecast** — the held-out last week, as the model predicted it from prior weeks.\n"
+            "- **Actual future** — what really happened that week.\n"
+            "- **ER / MAE / RMSE** — how accurate the forecast was against that actual future. "
+            "**Entropic Relevance (ER)** scores how well a DFG explains the real behaviour "
+            "(lower is better; the *truth (baseline)* box is the ER of the actual DFG itself — the "
+            "floor to beat). **MAE / RMSE** measure the DF-frequency error.\n\n"
+            "Accuracy is meaningful here because the actual future is known. The **Live upload** "
+            "tab forecasts a genuinely unseen future instead, so it reports **drift, never accuracy**."
+        )
     with gr.Row():
-        dataset = gr.Dropdown(DATASETS, value=DATASETS[0], label="Dataset")
-        model = gr.Dropdown(MODELS, value=MODELS[0], label="Model")
+        dataset = gr.Dropdown(
+            DATASETS,
+            value=DATASETS[0],
+            label="Dataset",
+            info="One of the paper's four event logs",
+        )
+        model = gr.Dropdown(
+            MODELS,
+            value=MODELS[0],
+            label="Model",
+            info="The time-series foundation model that produced the forecast",
+        )
     view = gr.Radio(["Side-by-side", "Diff"], value="Side-by-side", label="View")
     with gr.Row(visible=True) as twin_panes:
         with gr.Column():
@@ -317,16 +385,46 @@ def _build_live_tab() -> None:
         "Upload a custom **XES** log to forecast its genuine next week (forecast origin = "
         "the log end) on ZeroGPU, then read the **drift** of that forecast vs the "
         "**last-known window** — DF relations the forecast adds or drops. There is no "
-        "future truth for an upload, so this path shows **drift, never accuracy** "
-        "(ADR-0004).  Default **Chronos-2**; large logs and heavy models are capped so a "
-        "call stays under the GPU time limit."
+        "future truth for an upload, so this path shows **drift, never accuracy** (ADR-0004)."
     )
+    with gr.Accordion("What am I looking at?", open=False):
+        gr.Markdown(
+            "Each arc *a → b* in a **directly-follows graph (DFG)** is a **directly-follows "
+            "(DF) relation** (b directly follows a). The live path forecasts the **genuine next "
+            "week** from your log's end and compares it to the **last-known window** (its recent "
+            "past):\n\n"
+            "- **Forecast** — the predicted next week's DFG.\n"
+            "- **Last-known window** — the most recent week already in your log.\n"
+            "- **Drift** — the DF relations the forecast **adds** or **drops** vs that recent past.\n\n"
+            "No accuracy metric (ER / MAE / RMSE) is shown: an upload has no future ground truth to "
+            "score against (ADR-0004). For scored accuracy, see the **Bundled explorer** tab."
+        )
     with gr.Row():
         upload = gr.File(label="XES event log", file_types=[".xes"], type="filepath")
-        live_model = gr.Dropdown(LIVE_MODELS, value=LIVE_MODELS[0], label="Model")
+        live_model = gr.Dropdown(
+            LIVE_MODELS,
+            value=LIVE_MODELS[0],
+            label="Model",
+            info="Chronos-2 is wired on the hosted GPU; more models are a follow-up",
+        )
         run = gr.Button("Forecast", variant="primary")
-    status = gr.Markdown("⬆️ Upload an XES event log, then press **Forecast**.")
-    view = gr.Radio(["Side-by-side", "Drift"], value="Side-by-side", label="View")
+    gr.Examples(
+        examples=[[str(EXAMPLE_LOG)]],
+        inputs=[upload],
+        label="Try an example — a six-week slice of the sepsis log",
+        cache_examples=False,
+    )
+    gr.Markdown(_example_note())
+    gr.Markdown(_live_caps_note())
+    status = gr.Markdown(
+        "⬆️ Upload an XES event log (or pick the example), then press **Forecast**."
+    )
+    view = gr.Radio(
+        ["Side-by-side", "Drift"],
+        value="Side-by-side",
+        label="View",
+        info="Side-by-side: forecast vs last-known window. Drift: their overlay.",
+    )
     with gr.Row(visible=True) as twin_panes:
         with gr.Column():
             gr.Markdown("### Forecast — the genuine next week, predicted")

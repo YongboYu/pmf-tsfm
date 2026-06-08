@@ -128,6 +128,31 @@ def test_drift_report_uses_recent_not_actual_vocabulary():
     )
 
 
+# --- the committed example log ----------------------------------------------
+
+
+def test_example_log_is_a_usable_live_input():
+    """The live tab's one-click example must be a valid live input: under the small-log
+    gate and spanning enough days that log_to_df_series yields >= horizon+1 rows (so a
+    7-day window can be forecast from prior history, per _live_windows)."""
+    from pathlib import Path
+
+    from log_to_series import log_to_df_series
+
+    example = Path(__file__).resolve().parent.parent / "examples" / "sepsis_sample.xes"
+    assert example.exists(), "the committed example log is missing"
+
+    from upload_guard import SMALL_LOG_BYTES
+
+    assert example.stat().st_size < SMALL_LOG_BYTES
+
+    series = log_to_df_series(example)
+    horizon = 7
+    assert len(series) >= horizon + 1, "example log spans too few days to forecast from"
+    # An active tail (not a sparse trail-off) so the drift view is meaningful.
+    assert series.to_numpy()[-horizon:].sum() > 0
+
+
 # --- _live_windows (the seam: preprocess + forecast) ------------------------
 
 
