@@ -4,9 +4,10 @@
 #   * Bundled explorer — serves precomputed assets incl. pre-rendered SVGs; needs only
 #     gradio. GPU-free, no `dot` binary required for that path.
 #   * Live upload — preprocesses + forecasts an uploaded log on ZeroGPU and renders its
-#     DFGs at request time, so it pulls in graphviz, the model libs (Chronos-2), and the
-#     `spaces` GPU shim. `pmf_tsfm` is deliberately NOT installed — the live path reuses
-#     only the lean, vendored demo modules (dfg_build / log_to_series / forecast_live).
+#     DFGs at request time, so it pulls in graphviz, the three model libs (Chronos-2 +
+#     Moirai-2 + TimesFM-2.5), and the `spaces` GPU shim. `pmf_tsfm` is deliberately NOT
+#     installed — the live path imports the model libs directly and reuses the vendored
+#     demo modules (dfg_build / log_to_series / forecast_live), not the heavy paper package.
 #
 # The gradio pin must match the README frontmatter `sdk_version`. graphviz also needs the
 # system `dot` binary — see packages.txt.
@@ -19,3 +20,9 @@ pm4py>=2.7.12.4
 torch>=2.2
 chronos-forecasting>=1.4.0
 boto3>=1.28  # Chronos-2 loads from an s3:// checkpoint (configs/model/chronos/chronos2.yaml)
+# Moirai-2 (uni2ts) + TimesFM-2.5 for live model parity with the bundled tab. These are the
+# heavy libs (uni2ts drags in jax/jaxlib/gluonts/lightning, ~+490 MB) — gated to small logs
+# by upload_guard so a single GPU call stays under the ZeroGPU wall-time cap.
+uni2ts>=2.0.0
+# Pinned to the same commit as the pyproject `timesfm_v25` extra (no 2.x release tags exist).
+timesfm @ https://github.com/google-research/timesfm/archive/ed29ec5ef7e2d86c48b632859de3b63856ef9cad.zip

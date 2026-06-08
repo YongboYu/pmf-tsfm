@@ -30,11 +30,21 @@ DEMO = Path(__file__).resolve().parent.parent
 REPO = DEMO.parent
 WORKFLOW = REPO / ".github" / "workflows" / "deploy-demo.yml"
 
-# The one dep that must never reach the Space: pmf_tsfm (its heavy model/uni2ts/wandb tree).
-# The live path reuses only the lean, vendored demo modules instead (ADR-0005 amended, #115).
+# The one dep that must never reach the Space: pmf_tsfm (the heavy paper package with its
+# wandb/training tree). The live path installs the model libs directly and reuses the
+# vendored demo modules instead (ADR-0005 amended, #115).
 _FORBIDDEN_SERVE_DEPS = ("pmf-tsfm", "pmf_tsfm")
-# The live tab needs these at serve time (ZeroGPU forecast + request-time DFG rendering).
-_REQUIRED_LIVE_DEPS = ("spaces", "graphviz", "torch", "chronos-forecasting", "pm4py")
+# The live tab needs these at serve time (ZeroGPU forecast + request-time DFG rendering):
+# the three model libs (chronos-forecasting / uni2ts / timesfm) + render/GPU shims.
+_REQUIRED_LIVE_DEPS = (
+    "spaces",
+    "graphviz",
+    "torch",
+    "chronos-forecasting",
+    "uni2ts",
+    "timesfm",
+    "pm4py",
+)
 
 
 def _requirement_names(text: str) -> set[str]:
