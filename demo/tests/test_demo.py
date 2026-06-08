@@ -974,9 +974,10 @@ def test_live_caps_note_is_derived_from_guard_constants():
 
     note = app._live_caps_note()
     # Same formatting the guard uses in its rejection messages, so the up-front cap is the
-    # exact number a user sees if their upload is refused (upload_guard.py).
+    # exact number a user sees if their upload is refused (upload_guard.py). The live tab is
+    # Chronos-2 only, so the note shows just that one cap (the gated small-log threshold
+    # applies only to the bundled families, which the live picker never offers).
     assert f"{MAX_UPLOAD_BYTES / 1e6:.1f}" in note
-    assert f"{SMALL_LOG_BYTES / 1e6:.1f}" in note
 
     markdowns = _markdown_values(app.build())
     assert any(note in m for m in markdowns), "caps note must be shown on the live tab"

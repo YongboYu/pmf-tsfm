@@ -27,7 +27,7 @@ from typing import Any
 import gradio as gr
 from forecast import forecast_bundled
 from forecast_live import forecast_live
-from upload_guard import MAX_UPLOAD_BYTES, SMALL_LOG_BYTES, UploadRejected
+from upload_guard import MAX_UPLOAD_BYTES, UploadRejected
 
 # Only the precomputed bundled pairs are offered as choices: the full 4-by-3 matrix.
 DATASETS: list[str] = ["bpi2017", "bpi2019_1", "sepsis", "hospital_billing"]
@@ -285,9 +285,8 @@ def _live_caps_note() -> str:
     displayed caps can never drift from what ``upload_guard.check_upload`` actually enforces.
     """
     return (
-        f"**Limits** — max upload **{MAX_UPLOAD_BYTES / 1e6:.1f} MB**. Chronos-2 forecasts any "
-        f"log up to that cap; Moirai-2 / TimesFM-2.5 (when enabled) are limited to logs under "
-        f"**{SMALL_LOG_BYTES / 1e6:.1f} MB** so a single call stays within the GPU time limit."
+        f"**Limits** — max upload **{MAX_UPLOAD_BYTES / 1e6:.1f} MB**; "
+        f"Chronos-2 forecasts any log up to that cap."
     )
 
 
