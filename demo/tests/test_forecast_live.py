@@ -8,11 +8,15 @@ are gradio-free and tested through their public interfaces:
 upload_guard.py
   - check_upload — size caps + model gating + default Chronos-2, clear rejections
 forecast_live.py
-  - drift_report  — DF relations partitioned as drift vs the recent past
-  - forecast_live — assembles the live bundle (drift, never accuracy) from a log
+  - drift_report   — DF relations partitioned as drift vs the recent past
+  - forecast_live  — assembles the live bundle (drift, never accuracy) from a log
+  - resolve_source — maps an agent-supplied URL / "example" keyword to a local XES path
 """
 
 from __future__ import annotations
+
+import io
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -335,3 +339,78 @@ def test_forecast_live_imports_no_gradio():
         [sys.executable, "-c", code], capture_output=True, text=True
     )
     assert result.returncode == 0, result.stderr
+
+
+# --- resolve_source (the agent-tool input resolver, #116) -------------------
+#
+# The MCP/REST tool can't drive a browser file picker, so it takes a *source string*:
+# an http(s) URL to an XES log, or the keyword "example". resolve_source maps that to a
+# local XES path forecast_live can read. It stays gradio/spaces-free (stdlib only).
+
+
+class _FakeResp:
+    """A stand-in for a urlopen() response: a readable, context-manager byte stream."""
+
+    def __init__(self, data: bytes):
+        self._buf = io.BytesIO(data)
+
+    def read(self, n: int = -1) -> bytes:
+        return self._buf.read(n)
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        return False
+
+
+def test_resolve_source_example_keyword_returns_committed_log():
+    """The "example" (and "sepsis_sample") keyword resolves to the committed sample log,
+    so an agent has a zero-setup input — no URL needed to see the tool work."""
+    from forecast_live import EXAMPLE_LOG, resolve_source
+
+    assert resolve_source("example") == str(EXAMPLE_LOG)
+    assert resolve_source("sepsis_sample") == str(EXAMPLE_LOG)
+    assert Path(resolve_source("example")).exists()
+
+
+def test_resolve_source_rejects_bundled_name_pointing_to_gui():
+    """A bundled dataset name is *not* a live input: its full log isn't on the live surface
+    (accuracy lives in the GUI), so it's rejected with a message pointing there."""
+    from forecast_live import resolve_source
+
+    with pytest.raises(UploadRejected, match="http"):
+        resolve_source("sepsis")
+
+
+@pytest.mark.parametrize("bad", ["file:///etc/passwd", "ftp://host/log.xes", "/local/path.xes"])
+def test_resolve_source_rejects_non_http_scheme(bad):
+    """Only http(s) is fetched — no local-file or other-scheme reads (path/SSRF safety)."""
+    from forecast_live import resolve_source
+
+    with pytest.raises(UploadRejected):
+        resolve_source(bad)
+
+
+def test_resolve_source_downloads_http_url(monkeypatch):
+    """An http(s) URL is streamed to a local .xes temp file resolve_source returns."""
+    import forecast_live
+
+    payload = b"<log><trace/></log>"
+    monkeypatch.setattr(forecast_live, "urlopen", lambda url, *a, **k: _FakeResp(payload))
+
+    path = forecast_live.resolve_source("https://example.com/log.xes")
+
+    assert path.endswith(".xes")
+    assert Path(path).read_bytes() == payload
+
+
+def test_resolve_source_rejects_oversize_download(monkeypatch):
+    """A download past the upload byte cap is rejected (and not left on disk)."""
+    import forecast_live
+
+    monkeypatch.setattr(forecast_live.upload_guard, "MAX_UPLOAD_BYTES", 4)
+    monkeypatch.setattr(forecast_live, "urlopen", lambda url, *a, **k: _FakeResp(b"toolong"))
+
+    with pytest.raises(UploadRejected, match="cap"):
+        forecast_live.resolve_source("https://example.com/big.xes")

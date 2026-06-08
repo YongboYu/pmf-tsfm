@@ -44,12 +44,12 @@ The **bundled** path is served from **precomputed, committed assets** (incl. pre
 it is instant, infinitely concurrent, needs **no GPU**, and cannot be DoS'd into a bill. The **live**
 path runs preprocessing + a Chronos-2 forecast under `@spaces.GPU` on **ZeroGPU** and renders its
 DFGs at request time (so the Space carries graphviz + the model libs; see `packages.txt` /
-`requirements.txt`). The REST/MCP surface is a later slice of the same app.
+`requirements.txt`).
 
 Run it locally:
 
 ```bash
-uv run --with gradio python app.py
+uv run --with 'gradio[mcp]' python app.py
 ```
 
 ## Self-host with Docker
@@ -72,3 +72,27 @@ that cache across runs with a volume:
 ```bash
 docker run -p 7860:7860 -v pmf-hf-cache:/app/.cache/huggingface pmf-tsfm-demo
 ```
+
+## Agent API (REST + MCP)
+
+The same app launches with `mcp_server=True`, so beyond the GUI it serves an auto-generated **REST
+API** and an **MCP server** (endpoint `…/gradio_api/mcp/sse`). Exactly **one** tool is exposed — the
+live forecast — and its schema is derived from the function's type hints + docstring (no hand-written
+schema). The bundled accuracy path is **GUI-only** and never reachable as a tool.
+
+**`forecast_from_source(source, model="chronos2")`** — `source` is an `http(s)` URL to an XES log, or
+the keyword `"example"` (the bundled sepsis sample). It returns a **drift** bundle
+(`forecast_dfg`, `comparison_dfg`, `drift`) — DF relations the forecast adds/drops vs the log's
+last-known window — and **never** an accuracy metric (an upload has no future truth).
+
+Call it over REST with `gradio_client`:
+
+```python
+from gradio_client import Client
+
+client = Client("http://127.0.0.1:7860")  # or the Space URL
+bundle = client.predict("example", "chronos2", api_name="/forecast_from_source")
+print(bundle["drift"])  # {"added": [...], "removed": [...], "stable": [...]}
+```
+
+or point any MCP client at `…/gradio_api/mcp/sse` and call the `forecast_from_source` tool.

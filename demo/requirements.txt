@@ -9,8 +9,9 @@
 #     only the lean, vendored demo modules (dfg_build / log_to_series / forecast_live).
 #
 # The gradio pin must match the README frontmatter `sdk_version`. graphviz also needs the
-# system `dot` binary — see packages.txt.
-gradio==6.16.0
+# system `dot` binary — see packages.txt. The `[mcp]` extra pulls in the `mcp` package that
+# `launch(mcp_server=True)` requires (#116) — plain `gradio` does not install it.
+gradio[mcp]==6.16.0
 spaces>=0.30
 graphviz>=0.20
 numpy>=1.24

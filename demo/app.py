@@ -13,9 +13,12 @@ Two tabs over the two agent-clean deep modules:
   at request time, so this path needs the ``dot`` binary + the model libs (unlike the
   GPU-free bundled path) — see ``requirements.txt`` / ``packages.txt``.
 
-``mcp_server`` stays off in this slice (flipped on in #116, ADR-0003).
+Launched with ``mcp_server=True`` (#116, ADR-0003), the one app serves three surfaces: the
+GUI, an auto-generated REST API, and an MCP server. Only ``forecast_from_source`` (the live
+forecast, by URL/keyword) is a public endpoint → the single agent tool; every GUI listener is
+``api_visibility="private"`` so the bundled accuracy path never leaks to an agent.
 
-    uv run --with gradio python demo/app.py
+    uv run --with 'gradio[mcp]' python demo/app.py
 """
 
 from __future__ import annotations
@@ -26,7 +29,7 @@ from typing import Any
 
 import gradio as gr
 from forecast import forecast_bundled
-from forecast_live import forecast_live
+from forecast_live import EXAMPLE_LOG, forecast_live, resolve_source
 from upload_guard import MAX_UPLOAD_BYTES, UploadRejected
 
 # Only the precomputed bundled pairs are offered as choices: the full 4-by-3 matrix.
@@ -39,9 +42,9 @@ MODELS: list[str] = ["chronos2", "moirai2", "timesfm2.5"]
 # attempted in #122, reverted in #123). The upload guard still recognises them as gated.
 LIVE_MODELS: list[str] = ["chronos2"]
 
-# A tiny committed sample (a dense six-week slice of the bundled sepsis log) so the live
-# tab has a one-click "Try an example" — no one needs their own XES to see the path work.
-EXAMPLE_LOG = Path(__file__).resolve().parent / "examples" / "sepsis_sample.xes"
+# The committed sample (a dense six-week slice of the bundled sepsis log) is the live tab's
+# one-click "Try an example" *and* the agent tool's "example" keyword — defined once in
+# forecast_live (gradio-free) and re-exported here.
 
 # ZeroGPU boundary: ``@spaces.GPU`` requests a GPU slice for the ~120s of the live call
 # (ADR-0001). ``spaces`` only exists on the HF Space, so off-Space (local / CI) we fall
@@ -71,9 +74,48 @@ def _run_live(log_path: str, model: str) -> dict[str, Any]:
     """Run the live forecast under the ZeroGPU slice — the GPU entry point.
 
     A thin wrapper so the GPU boundary sits at the GUI layer; ``forecast_live`` stays
-    agent-clean (no ``spaces`` dependency) for the future MCP/REST tool (#116).
+    agent-clean (no ``spaces`` dependency) for the MCP/REST tool (#116), which reaches the
+    same GPU seam through :func:`forecast_from_source`.
     """
     return forecast_live(log_path, model)
+
+
+# The slim agent payload: the regenerable DFG sources of truth + the drift partition. The
+# pre-rendered SVGs the GUI needs are dropped (agents rarely want rendered figures), and no
+# accuracy metric is ever present — an upload has no future truth (ADR-0004).
+_AGENT_BUNDLE_KEYS = ("forecast_dfg", "comparison_dfg", "drift")
+
+
+def forecast_from_source(source: str, model: str = "chronos2") -> dict[str, Any]:
+    """Forecast an event log's genuine next week and report its drift (never accuracy).
+
+    The agent-facing entry point exposed as the REST/MCP tool (#116). Unlike the GUI it
+    takes a *source string*, not a browser upload: an event log named by URL or keyword is
+    resolved to a local XES file, forecast on the hosted GPU, and summarised as **drift**
+    of the forecast vs the log's last-known window. An upload has no future truth, so this
+    returns drift — DF relations the forecast adds or drops — and **never** an accuracy
+    score. (Scored bundled accuracy is a GUI-only concern; this tool never serves it.)
+
+    Args:
+        source: An ``http(s)`` URL to an XES event log, or the keyword ``"example"`` for the
+                bundled sepsis sample (a zero-setup input). Bundled dataset names are not
+                accepted here — explore those, with accuracy, in the GUI's Bundled tab.
+        model:  Time-series foundation model id. Only ``"chronos2"`` is wired on the hosted
+                live path; other ids are rejected.
+
+    Returns:
+        A drift bundle ``{"forecast_dfg": <dfg json>, "comparison_dfg": <dfg json>,
+        "drift": {"added": [...], "removed": [...], "stable": [...]}}`` — the forecast DFG,
+        the last-known-window DFG it is compared against, and their drift partition (each
+        entry ``{"from", "to", "forecast_freq", "recent_freq"}``). No accuracy metric.
+
+    Raises:
+        UploadRejected: the source can't be resolved (not a URL or known keyword), the
+            downloaded log is too large, or the model is not available on the live path.
+    """
+    path = resolve_source(source)  # GPU-free: download a URL or map the keyword to a path
+    bundle = _run_live(path, model)  # the existing @spaces.GPU seam (same as the GUI)
+    return {key: bundle[key] for key in _AGENT_BUNDLE_KEYS}
 
 
 # Vendored (not CDN) so the Hugging Face Space works fully offline / behind
@@ -365,20 +407,24 @@ def _build_bundled_tab() -> tuple[Any, list[Any], list[Any]]:
         return (*_render_panes(result), *_render_diff(result))
 
     all_outputs = [*outputs, diff_abs_pane, diff_rel_pane]
+    # All GUI listeners are api_visibility="private" so they never become MCP/REST tools:
+    # only forecast_from_source is public (the bundled accuracy path stays GUI-only, #116).
     for picker in inputs:
-        picker.change(refresh, inputs, all_outputs)
+        picker.change(refresh, inputs, all_outputs, api_visibility="private")
 
     def set_view(view: str) -> tuple[Any, Any]:
         is_diff = view == "Diff"
         return gr.update(visible=not is_diff), gr.update(visible=is_diff)
 
-    view.change(set_view, view, [twin_panes, diff_overlay])
+    view.change(set_view, view, [twin_panes, diff_overlay], api_visibility="private")
 
     def set_diff_mode(mode: str) -> tuple[Any, Any]:
         is_rel = mode == "Relative"
         return gr.update(visible=not is_rel), gr.update(visible=is_rel)
 
-    diff_mode.change(set_diff_mode, diff_mode, [diff_abs_row, diff_rel_row])
+    diff_mode.change(
+        set_diff_mode, diff_mode, [diff_abs_row, diff_rel_row], api_visibility="private"
+    )
     return refresh, inputs, all_outputs
 
 
@@ -452,23 +498,28 @@ def _build_live_tab() -> None:
             diff_rel_pane = gr.HTML(elem_classes=["dfg-pane"])
     drift_summary = gr.Markdown()
 
+    # Private like every GUI listener (the agent surface is forecast_from_source alone, #116):
+    # the browser-upload run_live has no agent equivalent anyway — MCP can't drive a file picker.
     run.click(
         run_live,
         [upload, live_model],
         [status, forecast_pane, comparison_pane, diff_abs_pane, diff_rel_pane, drift_summary],
+        api_visibility="private",
     )
 
     def set_view(view: str) -> tuple[Any, Any]:
         is_drift = view == "Drift"
         return gr.update(visible=not is_drift), gr.update(visible=is_drift)
 
-    view.change(set_view, view, [twin_panes, drift_overlay])
+    view.change(set_view, view, [twin_panes, drift_overlay], api_visibility="private")
 
     def set_drift_mode(mode: str) -> tuple[Any, Any]:
         is_rel = mode == "Relative"
         return gr.update(visible=not is_rel), gr.update(visible=is_rel)
 
-    drift_mode.change(set_drift_mode, drift_mode, [diff_abs_row, diff_rel_row])
+    drift_mode.change(
+        set_drift_mode, drift_mode, [diff_abs_row, diff_rel_row], api_visibility="private"
+    )
 
 
 def build() -> gr.Blocks:
@@ -486,9 +537,14 @@ def build() -> gr.Blocks:
             with gr.Tab("Live upload (your log)"):
                 _build_live_tab()
 
-        # Render the bundled tab once on load (the live tab waits for an upload).
+        # The one public API endpoint → the one MCP tool (its type hints + docstring are the
+        # auto-derived schema, ADR-0003). Everything else above is api_visibility="private".
+        gr.api(forecast_from_source, api_name="forecast_from_source")
+
+        # Render the bundled tab once on load (the live tab waits for an upload). Private so
+        # the load hook doesn't surface as a tool.
         refresh, inputs, all_outputs = load_target
-        demo.load(refresh, inputs, all_outputs)
+        demo.load(refresh, inputs, all_outputs, api_visibility="private")
 
     # Gradio 6 takes `head` at launch() (not the Blocks constructor); stash it on
     # the Blocks so callers (main, tests, drivers) pass the same inlined payload.
@@ -498,7 +554,11 @@ def build() -> gr.Blocks:
 
 def main() -> None:
     demo = build()
-    demo.launch(head=demo.demo_head)
+    # mcp_server=True serves the GUI, the REST API (gradio_client), and the MCP endpoint
+    # (/gradio_api/mcp/sse) from this one app — three surfaces, one codebase (ADR-0003).
+    # show_error surfaces the agent tool's clear UploadRejected reason ("use a URL or
+    # 'example'") to REST/MCP callers; without it Gradio hides it behind a generic message.
+    demo.launch(head=demo.demo_head, mcp_server=True, show_error=True)
 
 
 if __name__ == "__main__":
