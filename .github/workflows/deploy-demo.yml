@@ -39,14 +39,15 @@ jobs:
         # Explicit allow-list: only what the running app reads. Anything not copied here never
         # reaches the Space. The bundled path needs app + forecast + assets; the live path adds the
         # vendored modules forecast_live imports (render, dfg_build, dfg_diff, log_to_series,
-        # upload_guard) + packages.txt. The precompute module is excluded (it imports pmf_tsfm).
+        # upload_guard) + packages.txt + the one-click example log (examples/). The precompute
+        # module is excluded (it imports pmf_tsfm).
         run: |
           set -euo pipefail
           rm -rf _space && mkdir -p _space
           cp demo/app.py demo/forecast.py demo/forecast_live.py demo/upload_guard.py \
              demo/log_to_series.py demo/dfg_build.py demo/dfg_diff.py demo/render.py \
              demo/requirements.txt demo/packages.txt demo/README.md _space/
-          cp -r demo/static demo/assets _space/
+          cp -r demo/static demo/assets demo/examples _space/
           echo "Staged for the Space:"
           find _space -maxdepth 2 -type f | sort
 
