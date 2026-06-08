@@ -236,7 +236,7 @@ application and predict its future — the next event, the remaining time, or th
 PMF is system-level: take a WINDOW of the whole log, and forecast the next process model —
 how often each transition fires next, e.g. how often "offer sent → cancelled" occurs across
 ALL cases. Horizon = the near-term system future (conceptually weeks-to-months; the 7-day
-experimental horizon is setup detail for S11 — don't say it here).
+experimental horizon is setup detail for S12 — don't say it here).
 
 Same event log, different question. (Absorbed into the assertion — deliver in speech.)
 
@@ -277,228 +277,657 @@ use the abbreviation. Let the THREE CLICKS carry it; don't talk over them:
   • click 2 — sum each arc's 7 daily forecasts → the reassembled, FORECASTED DFG (≈316 vs held-out 315).
 
 Keep it to "aggregate daily, forecast 7 days ahead." Do NOT mention stride / expanding window /
-60-20-20 here — that's S11. "past/future" are a conceptual history→horizon motif, not the
+60-20-20 here — that's S12. "past/future" are a conceptual history→horizon motif, not the
 experimental window.
 
 Transition OUT (to S5): "So it's a forecasting problem. Why isn't it already solved?"
 -->
 
 ---
-layout: two-cols-header
+layout: assertion-evidence
+locator: The challenge
+assertion: DF series are hard — drift, intermittency, and heterogeneity
 ---
 
-# Where current PMF stands
+<div class="grid grid-cols-2 gap-8 mt-3" style="height: 350px">
 
-<div class="text-sm opacity-70">From our prior benchmark (Yu et al. 2025)</div>
+  <!-- LEFT — drift (truth only) -->
+  <div class="flex flex-col">
+    <div class="s5-panel-label">① Drift — a real level shift</div>
+    <img src="/figures/s5-drift-truth.png"
+         class="block w-full object-contain rounded-lg" style="max-height: 280px"
+         alt="BPI2017 Sent→Cancelled daily values — drops from ~46 to ~3 over the test period" />
+    <div class="s5-panel-cap">BPI2017 · Sent → Cancelled</div>
+  </div>
 
-::left::
+  <!-- RIGHT — intermittency (truth only) -->
+  <div class="flex flex-col">
+    <div class="s5-panel-label">② Intermittent — long zeros, sudden spikes</div>
+    <img src="/figures/s5-intermittent-truth.png"
+         class="block w-full object-contain rounded-lg" style="max-height: 280px"
+         alt="BPI2019-1 Cancel→Record Invoice Receipt daily values — mostly zero with spikes to 29" />
+    <div class="s5-panel-cap">BPI2019-1 · Cancel → Record Invoice Receipt</div>
+  </div>
 
-**Three findings:**
-
-1. **ML/DL doesn't reliably beat naive** — sparsity + small data defeat training
-2. **Univariate beats multivariate** — heterogeneity within each log
-3. **No model wins across logs** — heterogeneity also across logs
-
-<div class="mt-3 text-xs opacity-70">
-Benchmark recommends XGBoost as the strongest ML default — our baseline going forward.
 </div>
 
-<div class="mt-2 text-xs opacity-60">
-Quantified in this paper: DF series score 2–3× higher on transition, shifting, non-Gaussianity than 21 standard benchmarks.
+<div class="mt-4 text-center" style="font-size: 20px; color: #334155">
+  ③ <strong style="color: var(--brand)">Heterogeneous</strong> — the pattern differs
+  <strong>within</strong> a log and <strong>across</strong> logs (two logs here, two very different shapes).
 </div>
 
-::right::
-
-<img src="/figures/bpi2017-drift-xgb-only.png" class="block mx-auto rounded-lg w-full max-h-[300px] object-contain" alt="BPI2017 O_Sent→O_Cancelled — ground truth vs XGBoost (XGBoost misses the drift)" />
-
-<div class="text-xs opacity-60 mt-2 text-center">
-XGBoost stays flat. The actual line drops.
-</div>
+<style>
+.s5-panel-label { font-size: 18px; font-weight: 700; color: var(--brand); text-align: center; margin-bottom: 6px }
+.s5-panel-cap { font-size: 14px; color: var(--neutral); text-align: center; margin-top: 6px }
+</style>
 
 <!--
-Q: Why don't existing methods already solve this?
+[S-05]
+Q: What makes these series difficult?
 
-Transition in: "So we have a forecasting problem. Why isn't it already solved?"
+Transition IN (from S4): "So it's a forecasting problem. Why isn't it already solved?"
 
-75s. Three DF properties — sparsity, heterogeneity (within and across logs), small scale — explain three benchmark findings. Land the WHY, not just the WHAT.
+Three data challenges, shown with REAL ground-truth series (no model lines yet):
+  ① Drift — BPI2017 Sent → Cancelled: a genuine level shift, fires ~46/day early, decays to ~3.
+  ② Intermittent — BPI2019-1 Cancel → Record Invoice Receipt: ~80% zeros, sudden spikes to ~29.
+  ③ Heterogeneous — the two panels are different logs with completely different shapes; DF
+    relations also differ within a single log. Neither is white noise, neither is a smooth trend.
 
-Also pre-loads the XGBoost baseline for beat 7. When the results chart appears, recall: "XGBoost was the strongest ML in the benchmark — that's why it's our ML baseline."
+Axes: x = day (stride = 1, so consecutive windows are consecutive days), y = value (the 7-day-ahead
+forecast's last day). These two plots reappear on S14 with the model lines revealed — DO NOT show
+any model line here.
 
-Transition out (BRIDGE INTO BEAT 4 — memorize):
-"These three properties — sparsity, heterogeneity, small scale — defeat from-scratch ML/DL. That's exactly what foundation models are designed for."
+45s. Transition OUT (to S6): "These are hard. So — do the methods we already have handle them?"
 -->
 
 ---
+layout: assertion-evidence
+locator: Prior work
+assertion: Trained-from-scratch ML/DL don't win on these series
+---
 
-# Why a time series foundation model?
+<div class="grid grid-cols-2 gap-8 mt-3" style="height: 330px">
 
-<div class="grid grid-cols-2 gap-8 mt-2">
+  <!-- LEFT — drift: XGBoost misses the drop -->
+  <div class="flex flex-col">
+    <div class="s6-panel-label">Drift — XGBoost stays high, misses the drop</div>
+    <img src="/figures/s6-drift-xgb.png"
+         class="block w-full object-contain rounded-lg" style="max-height: 270px"
+         alt="BPI2017 drift — XGBoost stays elevated while the truth collapses late" />
+    <div class="s6-cap">BPI2017 · Sent → Cancelled</div>
+  </div>
 
-<div class="border rounded-lg p-4">
-<div class="font-bold text-center mb-3 opacity-80">LLM</div>
-
-- Text in → text out
-- Web-scale text corpus
-- Generalizes across language tasks
-
-</div>
-
-<div class="border-2 rounded-lg p-4" style="border-color: #1d4ed8">
-<div class="font-bold text-center mb-3" style="color: #1d4ed8">TSFM</div>
-
-- **Numbers in → numbers out**
-- Millions of diverse time series
-- Generalizes across forecasting tasks
-
-</div>
-
-</div>
-
-<div class="mt-6 space-y-2">
-
-- Same paradigm as LLMs: pretrain at scale, generalize **zero-shot**
-- **No event logs in pretraining, to our knowledge**
-- Built for: heterogeneity · small data · no per-task retraining
+  <!-- RIGHT — intermittent: XGBoost overshoots the zeros -->
+  <div class="flex flex-col">
+    <div class="s6-panel-label">Intermittent — XGBoost overshoots the zeros</div>
+    <img src="/figures/s6-intermittent-xgb.png"
+         class="block w-full object-contain rounded-lg" style="max-height: 270px"
+         alt="BPI2019-1 intermittent — XGBoost hallucinates 40–71 where the truth is mostly zero" />
+    <div class="s6-cap">BPI2019-1 · Cancel → Record Invoice Receipt</div>
+  </div>
 
 </div>
 
-<div class="mt-2 text-sm opacity-60">
-zero-shot = run a pretrained model on a new series with no extra training
+<div class="mt-4 text-center" style="font-size: 20px; color: #334155; line-height: 1.5">
+  <div>Small, complex, heterogeneous data → from-scratch ML/DL <strong style="color: var(--brand)">overfit</strong>.</div>
+  <div>Even <strong>XGBoost</strong> — the prior benchmark's top ML (Yu et al. 2025) — loses.</div>
 </div>
 
-<div class="mt-6 text-center font-semibold opacity-90 italic">
-"Specialized models overfit on small heterogeneous PMF data.<br/>
-Foundation models, pretrained on millions of diverse series, are designed to not."
-</div>
+<style>
+.s6-panel-label { font-size: 18px; font-weight: 700; color: var(--brand); text-align: center; margin-bottom: 6px }
+.s6-cap { font-size: 14px; color: var(--neutral); text-align: center; margin-top: 6px }
+</style>
 
 <!--
-Q: Why should a generic forecaster do better than a specialized one?
+[S-06]
+Q: Do the methods we already have handle these patterns?
 
-Transition in (bridge from beat 3): "These three properties — sparsity, heterogeneity, small scale — defeat from-scratch ML/DL. That's exactly what foundation models are designed for."
+Transition IN (from S5): "These are hard. So — do existing methods handle them?"
 
-60s. CRITIQUE CONSTRAINT: must say "no event logs in pretraining, TO OUR KNOWLEDGE." Not "no process data." The wording is non-negotiable.
+ML/DL don't win in general. Here is the prior benchmark's TOP ML — tuned XGBoost (Yu et al. 2025) —
+on the SAME two series from S5:
+  • Drift: XGBoost stays high and misses the level-shift drop.
+  • Intermittent: XGBoost overfits badly — it hallucinates large values (40–71) where the truth is
+    mostly zero. A textbook overfit to a small, complex, heterogeneous signal.
+Reason (callback to S5's challenges): small + complex + heterogeneous data makes from-scratch
+ML/DL overfit. XGBoost is the benchmark's recommended top model and still loses — it becomes our ML
+baseline going forward.
 
-Load-bearing line — deliver the footer aloud: "Specialized models overfit on small heterogeneous PMF data. Foundation models, pretrained on millions of diverse series, are designed to not."
+Honest nuance (speech only): the TSFM revealed on S14 wins by staying controlled (not overshooting),
+not by capturing the rare spikes. Do NOT show any TSFM line here — that's S14.
 
-Transition out (into beat 5): "We have a candidate. Here's what we ask of it."
+45s. Transition OUT (to S7 complexity): "It's not bad luck — these series are statistically off the
+charts, and the logs are tiny."
+-->
+
+---
+layout: assertion-evidence
+locator: Diagnosis
+assertion: DF series are shorter and statistically harder
+---
+
+<div class="grid items-center mt-2" style="grid-template-columns: 46% 54%; gap: 26px; height: 400px">
+  <!-- LEFT — complexity radar (3 harder-than-benchmark axes in amber) -->
+  <div class="flex flex-col" style="min-height: 0">
+    <img src="/figures/s7-complexity-radar.png" class="block w-full object-contain" style="max-height: 360px" alt="DF complexity radar — 7 metrics across 4 logs; Transition, Shifting, Non-Gaussianity highlighted" />
+    <div class="s7-cap">band = min–max across the 4 logs · line = median</div>
+  </div>
+  <!-- RIGHT — the three elevated metrics (def + range) + small-data stats -->
+  <div class="flex flex-col justify-center" style="min-height: 0; gap: 20px">
+    <div>
+      <div class="s7-section">Complexity Measurement</div>
+      <div class="s7-metrics">
+        <div class="s7-metric"><span class="s7-m-name">Transition</span><span class="s7-m-def">abrupt regime changes</span><span class="s7-m-val">.06–.23</span></div>
+        <div class="s7-metric"><span class="s7-m-name">Shifting</span><span class="s7-m-def">level / timing moves</span><span class="s7-m-val">.27–.48</span></div>
+        <div class="s7-metric"><span class="s7-m-name">Non-Gaussianity</span><span class="s7-m-def">spiky, not bell-curved</span><span class="s7-m-val">.33–.59</span></div>
+        <div class="s7-badge">▸ higher than 21 public time series datasets (Li et al. 2025)</div>
+      </div>
+    </div>
+    <table class="s7-stats">
+      <colgroup><col style="width: 29%" /><col style="width: 14%" /><col style="width: 13%" /><col style="width: 22%" /><col style="width: 22%" /></colgroup>
+      <thead>
+        <tr><th>Event log</th><th class="hot">Days</th><th>DFs</th><th>Cases</th><th>Events</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>BPI2017</td><td class="hot">319</td><td>21</td><td>40,229</td><td>248,236</td></tr>
+        <tr><td>BPI2019_1</td><td class="hot">307</td><td class="b">149</td><td>197,521</td><td>1,298,887</td></tr>
+        <tr><td>Sepsis</td><td class="hot">459</td><td class="b">135</td><td>999</td><td>16,009</td></tr>
+        <tr><td>Hospital Billing</td><td class="hot">726</td><td>73</td><td>78,828</td><td>570,803</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="mt-8 text-center" style="font-size: 22px; color: #334155">
+  Complex signal + little data → from-scratch ML/DL <strong style="color: var(--brand)">overfit</strong>.
+</div>
+
+<style>
+.s7-cap { font-size: 14px; color: var(--neutral); text-align: center; margin-top: 6px }
+.s7-section { font-size: 14px; font-weight: 700; color: var(--neutral); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 7px }
+.s7-metrics { background: #fbedd8; border-radius: 10px; padding: 13px 16px }
+.s7-metric { display: grid; grid-template-columns: 160px 1fr auto; align-items: baseline; gap: 10px; padding: 4px 0 }
+.s7-m-name { font-size: 19px; font-weight: 700; color: var(--brand) }
+.s7-m-def { font-size: 17px; color: var(--ink); width: 200px; justify-self: center; text-align: left }
+.s7-m-val { font-size: 18px; font-weight: 700; color: var(--ink); font-variant-numeric: tabular-nums }
+.s7-badge { margin-top: 11px; background: var(--accent); color: var(--ink); font-size: 16px; font-weight: 600; border-radius: 7px; padding: 7px 10px; text-align: center }
+.s7-stats { width: 100%; border-collapse: collapse; font-size: 16px; color: var(--ink); table-layout: fixed }
+.s7-stats th { text-align: right; font-weight: 700; color: var(--neutral); border-bottom: 1.5px solid #cbd5e1; padding: 6px 8px; font-size: 14px; text-transform: uppercase; letter-spacing: .02em }
+.s7-stats th:first-child, .s7-stats td:first-child { text-align: left }
+.s7-stats td { padding: 6px 8px; border-bottom: 1px solid #eef2f6; text-align: right; font-variant-numeric: tabular-nums }
+.s7-stats .hot { background: #fbedd8 }
+.s7-stats .b { font-weight: 700 }
+</style>
+
+<!--
+[S-07]
+Q: Why do trained-from-scratch models struggle here?
+
+Transition IN (from S6): "It's not bad luck — these series are statistically off the charts,
+and the logs are tiny."
+
+This is the quantitative WHY behind S6's overfitting. Two facts, one message:
+  • COMPLEX — across 7 paper complexity metrics, three stand out: Transition, Shifting,
+    Non-Gaussianity. The paper reports these as HIGHER than the 21 public forecasting
+    benchmarks (Li et al. 2025). Say it qualitatively — we don't plot the benchmark
+    numbers (not in our repo); the amber axes + badge carry it.
+  • SMALL — every log is one short multivariate series: only 307–726 daily steps, split
+    expanding-window, with up to 149 DF variables. Sepsis is the extreme (999 cases /
+    16,009 events over 459 days) — the sparsity that drives its later ER failure (backup).
+
+Together: complex signal + little data → from-scratch ML/DL overfit (exactly S6). Numbers are
+paper-faithful (stats_log.tex / stats_df.tex). Don't re-explain S6's overfit — prove it.
+
+45-60s. Transition OUT (to S8 TSFM): "Small, complex, heterogeneous data is exactly where a
+model you *don't* train might win."
+-->
+
+---
+layout: assertion-evidence
+locator: Forecasting today
+assertion: Foundation models are the new direction in forecasting
+---
+
+<div class="s8-evidence mt-4">
+  <div class="grid grid-cols-2 items-stretch" style="gap: 186px">
+    <!-- LEFT — LLM: foundation model for language (neutral gray) -->
+    <div class="s8-card">
+      <div class="s8-name">Large Language Model (LLM)</div>
+      <div class="s8-ex">
+        <span class="s8-ex-q">I am a math <span class="s8-blank">?</span></span>
+        <span class="s8-ex-arrow">→</span>
+        <span class="s8-ex-a">teacher</span>
+      </div>
+      <div class="s8-rows">
+        <div class="s8-row"><span class="s8-rk">training data</span><span class="s8-rv">web-scale text</span></div>
+        <div class="s8-row"><span class="s8-rk">tasks</span><span class="s8-rv">language</span></div>
+      </div>
+    </div>
+    <!-- RIGHT — TSFM: foundation model for time series, what we use (brand-navy emphasis) -->
+    <div class="s8-card s8-card--tsfm">
+      <div class="s8-badge">what we use</div>
+      <div class="s8-name s8-name--brand">Time Series Foundation Model (TSFM)</div>
+      <div class="s8-ex">
+        <span class="s8-ex-q">…12, 9, 14, 11, <span class="s8-blank">?</span></span>
+        <span class="s8-ex-arrow">→</span>
+        <span class="s8-ex-a s8-ex-a--brand">13</span>
+      </div>
+      <div class="s8-rows">
+        <div class="s8-row"><span class="s8-rk">training data</span><span class="s8-rv s8-rv--brand">millions of diverse series</span></div>
+        <div class="s8-row"><span class="s8-rk">tasks</span><span class="s8-rv s8-rv--brand">forecasting</span></div>
+      </div>
+    </div>
+  </div>
+  <!-- centered linking callouts (double arrows) bridging the two shared rows; reveal on click -->
+  <div class="s8-link s8-link--data" v-click="1"><span class="s8-larr">←</span><Callout>pretrained at scale</Callout><span class="s8-rarr">→</span></div>
+  <div class="s8-link s8-link--task" v-click="1"><span class="s8-larr">←</span><Callout>generalizable</Callout><span class="s8-rarr">→</span></div>
+</div>
+
+<div class="s8-defs">
+  <div class="s8-def"><strong>zero-shot</strong> — frozen parameters, run as-is</div>
+  <div class="s8-def"><strong>fine-tuning</strong> — tweak the parameters on your own data</div>
+</div>
+
+<style>
+.s8-evidence { position: relative }
+.s8-card { position: relative; border: 1.5px solid #cdd6e0; border-radius: 12px; padding: 20px 24px; display: flex; flex-direction: column; gap: 16px }
+.s8-card--tsfm { border: 2px solid var(--brand); background: #f4f8fc }
+.s8-badge { position: absolute; top: -13px; right: 18px; background: var(--accent); color: var(--ink); font-size: 14px; font-weight: 700; border-radius: 6px; padding: 3px 10px; box-shadow: 0 2px 8px rgba(221, 138, 46, 0.3) }
+.s8-name { font-size: 22px; font-weight: 700; color: var(--neutral); white-space: nowrap }
+.s8-name--brand { color: var(--brand) }
+.s8-ex { display: flex; align-items: center; gap: 12px; font-size: 23px; color: var(--ink); font-variant-numeric: tabular-nums }
+.s8-ex-q { font-weight: 500 }
+.s8-blank { display: inline-block; min-width: 24px; text-align: center; color: var(--neutral-soft); font-weight: 700; border-bottom: 2px dashed var(--neutral-soft); line-height: 1.1 }
+.s8-ex-arrow { color: var(--neutral-soft); font-weight: 800 }
+.s8-ex-a { font-weight: 700; color: var(--ink); background: #eef2f6; border-radius: 6px; padding: 2px 11px }
+.s8-ex-a--brand { color: #fff; background: var(--brand) }
+.s8-rows { margin-top: auto; display: flex; flex-direction: column; gap: 16px }
+.s8-row { display: flex; align-items: baseline; gap: 14px }
+.s8-rk { font-size: 18px; color: var(--neutral); font-weight: 600; width: 112px; flex: none }
+.s8-rv { font-size: 22px; color: var(--ink) }
+.s8-rv--brand { font-weight: 600 }
+.s8-link { position: absolute; left: 50%; transform: translate(-50%, 50%); display: flex; align-items: center; gap: 6px; white-space: nowrap; z-index: 5 }
+.s8-link--data { bottom: 88px }
+.s8-link--task { bottom: 38px }
+.s8-link .ae-callout { font-size: 19px !important; font-weight: 700 !important; padding: 6px 14px !important; box-shadow: 0 4px 14px rgba(221, 138, 46, 0.35) }
+.s8-larr, .s8-rarr { color: var(--accent); font-size: 22px; font-weight: 800; line-height: 1 }
+.s8-defs { margin: 30px auto 0; width: fit-content; text-align: left; display: flex; flex-direction: column; gap: 10px; font-size: 23px; color: var(--neutral) }
+.s8-def strong { color: var(--ink) }
+</style>
+
+<!--
+[S-08]
+Q: What is the current direction in forecasting? (And are we forecasting with an LLM?)
+
+Transition IN (from S7): "Small, complex, heterogeneous data is exactly where a model you
+*don't* train might win."
+
+THE load-bearing slide (outline: the single slide that, if cut, most weakens the talk — without
+it half the room thinks we fine-tuned GPT). One message: the current direction in forecasting is
+foundation models. Just as an LLM is a foundation model for language (text → text), a Time Series
+Foundation Model (TSFM) is one for time series (time series → time series) — same recipe (pretrain
+at scale, then generalize across tasks), different data. So we are NOT using an LLM.
+
+Two terms defined here so later slides can lean on them:
+  • zero-shot — run the pretrained model on a new log, no training.
+  • fine-tuning — keep training it on task data. (LoRA / full variants defined later, S11/S15.)
+
+45s. Transition OUT (to S9 — Why TSFMs for PMF): "Same recipe as LLMs. So why would that help
+*our* problem?"
+-->
+
+---
+layout: assertion-evidence
+locator: The bet
+assertion: Foundation models are built not to overfit
+---
+
+<div class="s9-flow">
+  <!-- ROW 1 — our data: the diagnosis carried from S7 -->
+  <div class="s9-row">
+    <div class="s9-tag">our data</div>
+    <div class="s9-line">
+      <div class="s9-sub">
+        <span class="s9-lead">complex + small</span>
+        <span class="s9-chip s9-chip--small">307–726 points / log</span>
+      </div>
+      <div class="s9-sub">
+        <span class="s9-arr">→</span>
+        <span class="s9-out s9-out--bad">from-scratch models <strong>overfit</strong></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- pivot connector -->
+  <div class="s9-so">so</div>
+
+  <!-- ROW 2 — the bet: a foundation model brings a prior -->
+  <div class="s9-row s9-row--bet">
+    <div class="s9-tag s9-tag--brand">the bet</div>
+    <div class="s9-line">
+      <div class="s9-sub">
+        <span class="s9-lead s9-lead--brand">pretrained on</span>
+        <span class="s9-chip s9-chip--big">millions of diverse series</span>
+      </div>
+      <div class="s9-sub">
+        <span class="s9-arr s9-arr--brand">→</span>
+        <span class="s9-out s9-out--good">a <strong>broad prior</strong>, not a fresh fit</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="s9-caveat">No event logs in pretraining, <em>to our knowledge</em>.</div>
+
+<style>
+.s9-flow { margin-top: 34px; display: flex; flex-direction: column; align-items: center; gap: 10px }
+.s9-row { display: grid; grid-template-columns: 110px 1fr; align-items: center; gap: 20px; width: 100%; max-width: 880px; border: 1.5px solid #cdd6e0; border-radius: 12px; padding: 18px 24px }
+.s9-row--bet { border: 2px solid var(--brand); background: #f4f8fc }
+.s9-tag { font-size: 16px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--neutral) }
+.s9-tag--brand { color: var(--brand) }
+.s9-line { display: flex; flex-direction: column; align-items: flex-start; gap: 9px; font-size: 23px; color: var(--ink) }
+.s9-sub { display: flex; align-items: center; gap: 14px; flex-wrap: wrap }
+.s9-lead { font-weight: 600; color: var(--neutral) }
+.s9-lead--brand { color: var(--brand) }
+.s9-chip { font-size: 20px; font-weight: 700; border-radius: 7px; padding: 3px 12px; font-variant-numeric: tabular-nums }
+.s9-chip--small { background: #eef2f6; color: var(--neutral) }
+.s9-chip--big { background: var(--brand); color: #fff; letter-spacing: .01em }
+.s9-arr { color: var(--neutral); font-weight: 800 }
+.s9-arr--brand { color: var(--brand) }
+.s9-out--bad { color: var(--neutral) }
+.s9-out--bad strong { color: var(--ink) }
+.s9-out--good { color: var(--ink) }
+.s9-out--good strong { color: var(--brand) }
+.s9-so { font-size: 18px; font-style: italic; font-weight: 600; color: var(--neutral); letter-spacing: .04em }
+.s9-caveat { margin-top: 26px; text-align: center; font-size: 21px; color: var(--neutral) }
+.s9-caveat em { color: var(--ink); font-style: italic; font-weight: 600 }
+</style>
+
+<!--
+[S-09]
+Q: Why should a generic forecaster beat a specialized one?
+
+Transition IN (from S8): "Same recipe as LLMs. So why would that help *our* problem?"
+
+Callback to S7: our DF series are both COMPLEX and SMALL — only 307–726 daily points per log —
+exactly where a model trained from scratch overfits.
+
+LOAD-BEARING line (say aloud): "Specialized models overfit on small heterogeneous PMF data.
+Foundation models, pretrained on millions of diverse series, are designed to not."
+
+Caveat (critique constraint): "No event logs in pretraining, to our knowledge" — so this is
+genuinely zero-shot transfer; we test whether generic forecasting knowledge carries to DF series.
+(Say "no event logs in pretraining, to our knowledge" — NOT "no process data".)
+
+~35s. Transition OUT (to S10 — Three questions): "We have a candidate. Here's what we ask of it."
 -->
 
 ---
 layout: center
 ---
 
-# Three questions this talk answers
+<div class="s10">
 
-<div class="text-left max-w-3xl mt-8 space-y-6">
+<div class="s10-heading">Three questions this talk answers</div>
+<div class="s10-rule"></div>
 
-<div>
-<span class="font-bold opacity-50 mr-2">1.</span>
-Can an <strong>off-the-shelf forecaster</strong> — trained on no process data — beat the strongest PMF baselines?
+<div class="s10-list">
+
+  <div class="s10-q">
+    <span class="s10-num">1</span>
+    <div class="s10-text">Can <strong>zero-shot</strong> TSFMs give better <strong>DF time-series forecasts</strong>?</div>
+  </div>
+
+  <div class="s10-q">
+    <span class="s10-num">2</span>
+    <div class="s10-text">Does <strong>fine-tuning</strong> improve the results further?</div>
+  </div>
+
+  <div class="s10-q s10-q--open">
+    <span class="s10-num s10-num--amber">3</span>
+    <div class="s10-text">Does a better forecast give us a <strong>better forecasted process model</strong>?</div>
+  </div>
+
 </div>
 
-<div>
-<span class="font-bold opacity-50 mr-2">2.</span>
-If yes, does <strong>adapting it to process data</strong> help?
 </div>
 
-<div>
-<span class="font-bold opacity-50 mr-2">3.</span>
-Does a better forecast give us a <strong>better process model</strong>?
-</div>
-
-</div>
+<style>
+.s10 { max-width: 1040px; margin: 0 auto; }
+.s10-heading { font-size: 40px; font-weight: 700; color: var(--brand); line-height: 1.12; letter-spacing: -0.01em; }
+.s10-rule { width: 72px; height: 5px; background: var(--accent); border-radius: 3px; margin: 20px 0 44px; }
+.s10-list { display: flex; flex-direction: column; gap: 32px; }
+.s10-q { display: flex; align-items: flex-start; gap: 24px; }
+.s10-num {
+  flex: none; width: 48px; height: 48px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--brand); color: #fff;
+  font-weight: 700; font-size: 25px; line-height: 1; font-variant-numeric: tabular-nums;
+}
+.s10-num--amber { background: var(--accent); color: var(--ink); }
+.s10-text { font-size: 30px; line-height: 1.4; color: var(--ink); padding-top: 7px; }
+.s10-text strong { color: var(--brand); font-weight: 700; }
+.s10-q--open .s10-text strong { color: #b06317; }
+</style>
 
 <!--
-Q: What does this talk actually deliver?
+[S-10]
+Q: What three things does this talk actually test?
 
-30s. Plain-English scaffold — names ("TSFM", "LoRA", "Entropic Relevance") land on later slides, not here.
+Transition IN (from S9): "We have a candidate. Here's what we ask of it."
 
-The three questions map to the three findings:
-- Q1 (zero-shot beats baselines)  → beat 7 (results bars + drift callback)
-- Q2 (adapting it helps?)          → beat 8 (fine-tuning + timing): marginal, dataset-dependent
-- Q3 (better forecast → better process model?) → beat 9 via Entropic Relevance: parity, not better; Sepsis the exception
+30s scaffold for the results. Names (Chronos / MOIRAI / TimesFM, LoRA, Entropic Relevance)
+land on later slides, not here. Standard terminology only: zero-shot (NOT off-the-shelf),
+fine-tuning (NOT adapting).
 
-Transition out (into beat 6): "Three questions. Here's what we point at them."
+Q1 is forecasting accuracy vs the strongest PMF baselines ONLY (seasonal-naive + tuned
+XGBoost) — the on-slide line is trimmed to "give better DF time-series forecasts?"; say the
+"vs the strongest PMF baselines" comparator ALOUD. Do NOT claim process-model quality here —
+that is Q3 / ER.
+Q2 ("further") = does fine-tuning add on top of the zero-shot win.
+Q3 (amber) = the open one: does a better forecast translate to a better forecasted process model?
+
+Maps to the results (speaker-notes only): Q1 -> S13 (zero-shot beats both baselines),
+Q2 -> S15 (fine-tuning marginal), Q3 -> S16 (ER parity).
+
+Transition OUT (into S11 — The candidates): "Three questions. Here's what we point at them."
 -->
 
 ---
+layout: assertion-evidence
+locator: Model coverage
+assertion: 3 model families, 12 variants, 3 settings
+---
 
-# The candidates
+<div class="s11-evidence">
 
-<div class="border-2 border-dashed border-gray-400 rounded-lg p-4 mb-4 flex items-center justify-center min-h-[180px]">
-<div class="text-center opacity-60 text-sm">
-[PLACEHOLDER]<br/>
-Release timeline — three lanes (Chronos / MOIRAI / TimesFM)<br/>
-x-axis: release date (2024 → 2025)  ·  y-axis: model size (parameters, log scale)<br/>
-one point per variant, labeled; latest of each highlighted in accent<br/>
-Chronos-T5 · Bolt · 2  |  MOIRAI 1.0 · 1.1 · MoE · 2.0  |  TimesFM 1.0 · 2.0 · 2.5<br/>
-(several variants span a size range — plot the representative/used size)
+<svg viewBox="-70 0 1010 430" width="100%" style="display:block">
+<line x1="95" y1="40" x2="95" y2="345" stroke="var(--neutral)" stroke-width="1.5"/>
+<line x1="95" y1="345" x2="760" y2="345" stroke="var(--neutral)" stroke-width="1.5"/>
+<text transform="translate(28,192) rotate(-90)" text-anchor="middle" style="font-size:16px" fill="var(--neutral)" font-weight="600">model size (params, log)</text>
+<text x="428" y="393" text-anchor="middle" style="font-size:16px" fill="var(--neutral)" font-weight="600">release date</text>
+<line x1="95" y1="320.6" x2="760" y2="320.6" stroke="var(--neutral-soft)" stroke-width="1" stroke-dasharray="2 4" opacity="0.5"/>
+<text x="85" y="324.6" text-anchor="end" style="font-size:16px" fill="var(--neutral)">10M</text>
+<line x1="95" y1="162.8" x2="760" y2="162.8" stroke="var(--neutral-soft)" stroke-width="1" stroke-dasharray="2 4" opacity="0.5"/>
+<text x="85" y="166.8" text-anchor="end" style="font-size:16px" fill="var(--neutral)">100M</text>
+<line x1="95" y1="52.5" x2="760" y2="52.5" stroke="var(--neutral-soft)" stroke-width="1" stroke-dasharray="2 4" opacity="0.5"/>
+<text x="85" y="56.5" text-anchor="end" style="font-size:16px" fill="var(--neutral)">500M</text>
+<text x="95.0" y="371" text-anchor="middle" style="font-size:16px" fill="var(--neutral)" font-weight="600">2024</text>
+<text x="427.5" y="371" text-anchor="middle" style="font-size:16px" fill="var(--neutral)" font-weight="600">2025</text>
+<text x="760.0" y="371" text-anchor="middle" style="font-size:16px" fill="var(--neutral)" font-weight="600">2026</text>
+<rect x="387.3" y="106.6" width="14" height="236.3" rx="7" fill="var(--family-chronos)" opacity="0.14"/>
+<rect x="387.3" y="106.6" width="14" height="236.3" rx="7" fill="none" stroke="var(--family-chronos)" stroke-width="1" opacity="0.40"/>
+<rect x="254.2" y="78.0" width="14" height="226.5" rx="7" fill="var(--family-moirai)" opacity="0.14"/>
+<rect x="254.2" y="78.0" width="14" height="226.5" rx="7" fill="none" stroke="var(--family-moirai)" stroke-width="1" opacity="0.40"/>
+<circle cx="394.3" cy="335.8" r="5" fill="var(--family-chronos)"/>
+<circle cx="394.3" cy="269.7" r="5" fill="var(--family-chronos)"/>
+<circle cx="394.3" cy="213.1" r="5" fill="var(--family-chronos)"/>
+<circle cx="394.3" cy="113.6" r="5" fill="var(--family-chronos)"/>
+<circle cx="693.5" cy="150.3" r="11" fill="none" stroke="var(--accent)" stroke-width="3.5"/>
+<circle cx="693.5" cy="150.3" r="6.5" fill="var(--family-chronos)"/>
+<circle cx="261.2" cy="297.5" r="5" fill="var(--family-moirai)"/>
+<circle cx="261.2" cy="85.0" r="5" fill="var(--family-moirai)"/>
+<circle cx="354.3" cy="173.1" r="5" fill="var(--family-moirai)"/>
+<circle cx="627.0" cy="311.6" r="11" fill="none" stroke="var(--accent)" stroke-width="3.5"/>
+<circle cx="627.0" cy="311.6" r="6.5" fill="var(--family-moirai)"/>
+<circle cx="221.4" cy="115.3" r="5" fill="var(--family-timesfm)"/>
+<circle cx="434.1" cy="52.5" r="5" fill="var(--family-timesfm)"/>
+<circle cx="663.6" cy="115.3" r="11" fill="none" stroke="var(--accent)" stroke-width="3.5"/>
+<circle cx="663.6" cy="115.3" r="6.5" fill="var(--family-timesfm)"/>
+<text x="394.3" y="98.6" text-anchor="middle" style="font-size:18px" font-weight="700" fill="var(--family-chronos)">Chronos Bolt</text>
+<text x="710.5" y="155.3" text-anchor="start" style="font-size:18px" font-weight="700" fill="var(--family-chronos)">Chronos-2</text>
+<text x="261.2" y="70.0" text-anchor="middle" style="font-size:18px" font-weight="700" fill="var(--ink)">MOIRAI-1.1</text>
+<text x="340.3" y="177.1" text-anchor="end" style="font-size:18px" font-weight="700" fill="var(--ink)">MOIRAI-MoE</text>
+<text x="340.3" y="195.1" text-anchor="end" style="font-size:14px" fill="var(--neutral)">86M active · 935M total</text>
+<text x="644.0" y="316.6" text-anchor="start" style="font-size:18px" font-weight="700" fill="var(--ink)">MOIRAI-2.0</text>
+<text x="209.4" y="120.3" text-anchor="end" style="font-size:18px" font-weight="700" fill="var(--family-timesfm)">TimesFM-1.0</text>
+<text x="448.1" y="56.5" text-anchor="start" style="font-size:18px" font-weight="700" fill="var(--family-timesfm)">TimesFM-2.0</text>
+<text x="680.6" y="120.3" text-anchor="start" style="font-size:18px" font-weight="700" fill="var(--family-timesfm)">TimesFM-2.5</text>
+</svg>
+
+<div class="s11-strip">
+  <span class="s11-pill s11-pill--zs">zero-shot <span class="ct">12</span></span>
+  <span class="s11-pill">Low-Rank Adaptation (LoRA) <span class="ct">4</span></span>
+  <span class="s11-pill">full fine-tuning <span class="ct">5</span></span>
 </div>
-</div>
-
-<div class="grid grid-cols-3 gap-4 text-sm">
-
-<div>
-<strong>Chronos</strong> <span class="opacity-60">— Amazon</span><br/>
-<span class="opacity-80">encoder-decoder → encoder-only (Chronos-2)</span>
-</div>
-
-<div>
-<strong>MOIRAI</strong> <span class="opacity-60">— Salesforce</span><br/>
-<span class="opacity-80">masked encoder → decoder-only (MOIRAI-2.0)</span>
-</div>
-
-<div>
-<strong>TimesFM</strong> <span class="opacity-60">— Google</span><br/>
-<span class="opacity-80">decoder-only throughout (scales 1.0 → 2.5)</span>
-</div>
 
 </div>
 
-<div class="mt-6 flex justify-center gap-3 text-sm">
-<span class="px-3 py-1 rounded border" style="border-color: #1d4ed8; color: #1d4ed8">zero-shot</span>
-<span class="px-3 py-1 rounded border opacity-80">LoRA <span class="text-xs opacity-70">(small trainable adapters on attention)</span></span>
-<span class="px-3 py-1 rounded border opacity-80">full fine-tuning</span>
-</div>
-
-<div class="mt-4 text-center text-xs opacity-70">
-Univariate throughout (per Yu 2025 finding)
-</div>
+<style>
+.s11-evidence svg { display:block; max-width:940px; margin:6px auto 0 }
+.s11-strip { display:flex; justify-content:center; gap:14px; margin-top:26px }
+.s11-pill { font-size:19px; border:1.5px solid var(--neutral-soft); border-radius:999px; padding:6px 18px; color:var(--neutral); font-weight:600 }
+.s11-pill .ct { color:var(--ink); font-weight:800 }
+.s11-pill--zs { border-color:var(--brand); color:var(--brand); background:#f4f8fc }
+.s11-pill--zs .ct { color:var(--brand) }
+</style>
 
 <!--
-Q: Which models? Which settings?
+[S-11]
+Q: Which models, and what settings?
 
-45s. Names appear on screen, not in voice. Let the timeline do the work.
-Three evolving families; results use the latest of each (Chronos-2, MOIRAI-2.0, TimesFM-2.5).
-Size axis tells a "newer = smaller, yet better" story — MOIRAI-2.0 is just 11.4M params.
+Key message: we tried a lot — 3 model families across 3 settings (12 zero-shot variants).
 
-Transition into results: "Three families. Eight model variants. No event logs in pretraining.
-Here's what happens when you point them at DF time series."
+Names stay ON SCREEN, not in the voice (attention-risk #1 — let the timeline carry the load).
+Say the shape, not the roster: each family has shipped several generations; the latest of each
+(amber) is what the results use, and the trend is "newer = smaller, yet better" — MOIRAI-2.0 is just
+~11.4M params. univariate throughout (Yu 2025). LoRA = Low-Rank Adaptation, small trainable adapters
+on attention (full form is on the slide). 45s.
+
+Transition IN (from S10 three questions): "Three questions. Here's what we point at them."
+Transition OUT (to S12 experimental setup): "That's the coverage — now exactly how we evaluated it."
+(The "...no event logs in pretraining ... point them at DF time series" line belongs at the results
+entry, S13, not here.)
+-->
+
+---
+layout: assertion-evidence
+locator: Experimental setup
+assertion: Each step adds one day, then re-forecasts the next seven
+---
+
+<div class="s12-wrap mt-0">
+  <div class="s12-schem">
+    <div class="s12-schem-title">Expanding window · stride = 1 day · 7-day horizon</div>
+    <svg viewBox="0 0 600 224" class="s12-svg" role="img" aria-label="Expanding-window evaluation: history grows one day per step, each step forecasts 7 days">
+      <rect x="72" y="26" width="188" height="26" rx="4" fill="#00407a"/>
+      <rect x="260" y="26" width="84" height="26" rx="4" fill="#dd8a2e"/>
+      <rect x="72" y="66" width="214" height="26" rx="4" fill="#00407a"/>
+      <rect x="286" y="66" width="84" height="26" rx="4" fill="#dd8a2e"/>
+      <rect x="72" y="106" width="240" height="26" rx="4" fill="#00407a"/>
+      <rect x="312" y="106" width="84" height="26" rx="4" fill="#dd8a2e"/>
+      <rect x="72" y="146" width="266" height="26" rx="4" fill="#00407a" opacity="0.4"/>
+      <rect x="338" y="146" width="84" height="26" rx="4" fill="#dd8a2e" opacity="0.4"/>
+      <text x="26" y="99" class="s12-side" text-anchor="middle" transform="rotate(-90 26 99)">+1 day per step</text>
+      <line x1="72" y1="188" x2="560" y2="188" class="s12-axis"/>
+      <text x="558" y="206" class="s12-axis-lbl" text-anchor="end">Day →</text>
+    </svg>
+    <div class="s12-legend">
+      <span><i class="s12-sw s12-sw--navy"></i>history</span>
+      <span><i class="s12-sw s12-sw--amber"></i>7-day forecast</span>
+    </div>
+  </div>
+  <div class="s12-strip">
+    <span class="s12-pill">daily DF aggregation</span>
+    <span class="s12-pill">baselines · seasonal-naive + XGBoost</span>
+    <span class="s12-pill">univariate inference</span>
+  </div>
+</div>
+
+<style>
+.s12-wrap { position: relative }
+.s12-schem { display: flex; flex-direction: column; align-items: center }
+.s12-schem-title { font-size: 18px; font-weight: 700; color: var(--brand); margin-bottom: 20px }
+.s12-svg { width: 690px; max-width: 100%; height: auto }
+.s12-side { font-size: 16px; fill: var(--neutral); font-weight: 700 }
+.s12-axis { stroke: var(--neutral-soft); stroke-width: 1.5 }
+.s12-axis-lbl { font-size: 16px; fill: var(--neutral) }
+.s12-legend { display: flex; gap: 28px; font-size: 16px; color: var(--neutral); margin-top: 6px }
+.s12-sw { display: inline-block; width: 14px; height: 14px; border-radius: 3px; margin-right: 7px; vertical-align: -2px }
+.s12-sw--navy { background: #00407a }
+.s12-sw--amber { background: #dd8a2e }
+.s12-strip { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; margin-top: 32px }
+.s12-pill { font-size: 16px; color: var(--ink); background: #eef2f6; border: 1px solid #cdd6e0; border-radius: 8px; padding: 6px 14px; font-weight: 500 }
+</style>
+
+<!--
+[S-12]
+Q: How exactly did you evaluate? (And was it fair?)
+
+Transition IN (from S11 candidates): "Before the results, one slide on exactly how we tested."
+
+This slide OWNS the window/stride detail kept off S4. Reconciliation: S4 says only "aggregate
+daily, forecast 7 days ahead"; S12 adds the protocol — expanding window, stride = 1 day. Nothing
+on S4 contradicts this.
+
+Deliver the assumption -> design-choice mapping ALOUD (it is intentionally NOT on the slide):
+  - you re-plan as new data arrives each day  -> stride = 1 day
+  - you care about the coming week            -> 7-day horizon
+  - you never throw history away              -> expanding (not sliding) window
+Fairness (the Callout / key message): the SAME expanding window and 7-day horizon apply to every
+model — baselines and TSFMs alike — and the two baselines are the STRONGEST from our prior
+benchmark (seasonal-naive + XGBoost), not weak strawmen. Univariate inference throughout.
+
+45s. Transition OUT (to S13 — zero-shot results): "With that setup, here are the zero-shot results."
 -->
 
 ---
 layout: assertion-evidence
 locator: Results
-assertion: Zero-shot TSFMs beat both baselines on every log
+assertion: The latest zero-shot TSFMs beat both baselines on every log
 ---
 
-<img src="/figures/results-mae-bars.png" class="block mx-auto w-full max-h-[380px] object-contain rounded-lg" alt="Zero-shot MAE across 4 event logs — TSFMs vs Seasonal-Naive and XGBoost baselines" />
-
-<div class="text-center mt-3" v-click>
-  <Callout>−21% mean MAE vs best baseline · 3 models × 4 logs</Callout>
+<div class="text-center mb-2" style="font-size:15px;color:var(--neutral)">
+  Mean Absolute Error (MAE), lower is better ·
+  <span style="color:var(--baseline);font-weight:600">gray = baselines</span> ·
+  colour = latest TSFM per family
 </div>
 
-<div class="caption mt-2 text-center">Two strongest baselines from our prior benchmark (Yu 2025) — full ranking on backup.</div>
+<div class="relative">
+  <img src="/figures/results-mae-bars.png" class="block mx-auto w-full max-h-[400px] object-contain rounded-lg" alt="Zero-shot MAE across 4 event logs — gray baselines (Seasonal-Naive, XGBoost) vs the latest TSFM of each family (Chronos-2, MOIRAI-2.0, TimesFM-2.5); coloured bars lower on every log" />
+  <div class="absolute" style="left:0;top:50%;transform:translateY(-50%)" v-click="1">
+    <Callout style="text-align:center">−21% mean MAE<br/>vs best baseline</Callout>
+  </div>
+  <div class="absolute" style="right:0;top:50%;transform:translateY(-50%)" v-click="2">
+    <Callout style="text-align:center">All 12 variants:<br/>92% beat baseline<br/>−15% mean MAE</Callout>
+  </div>
+</div>
 
 <!--
+[S-13]
 Q: Does Q1 hold — do zero-shot TSFMs beat the baselines?
 
-Transition in: "Three families. Eight model variants. No event logs in pretraining.
+Transition in: "Three families. Twelve variants. No event logs in pretraining.
 Here's what happens when you point them at DF time series."
 
-~2 min. CRITIQUE CONSTRAINT — open with the baseline framing verbatim:
+~2 min. Say "Mean Absolute Error" on first use (kicker carries MAE). CRITIQUE CONSTRAINT —
+open with the baseline framing verbatim (the on-slide caption was dropped; deliver it aloud):
 "We compare against the two strongest baselines from our prior benchmark; full ranking
 on backup." Pre-empts cherry-picking.
+
+Callouts (click 1 then 2): (1) the 3 latest TSFMs average −21% MAE vs the best baseline.
+(2) across ALL twelve zero-shot variants × 4 logs, 92% of results beat the best baseline
+(−15% mean); only four older/smaller models miss, all on BPI2017.
 
 The three latest models (Chronos-2, MOIRAI-2.0, TimesFM-2.5) win MAE on all four logs —
 including Sepsis (MOIRAI-2.0 ↓28%). Sepsis is NOT a MAE exception; it only becomes the
@@ -511,120 +940,162 @@ Transition out (into 7b): "Same data, same window — here's what that win looks
 -->
 
 ---
+layout: assertion-evidence
+locator: Results
+assertion: Zero-shot tracks the drift, stays controlled on sparsity
+---
 
-# Drift, revealed
+<div class="grid grid-cols-2 gap-8 mt-3" style="height: 330px">
 
-<div class="grid grid-cols-2 gap-6 items-center">
+  <!-- LEFT — drift: reveal MOIRAI-2.0 + amber adaptation box -->
+  <div class="flex flex-col">
+    <div class="s14-panel-label">Drift — tracked</div>
+    <div class="s14-stack">
+      <img src="/figures/s6-drift-xgb.png" v-click.hide="1" class="s14-img"
+           alt="BPI2017 drift — XGBoost stays high while truth collapses late" />
+      <img src="/figures/s14-drift-tsfm.png" v-click="1" class="s14-img s14-img--over"
+           alt="BPI2017 drift revealed — MOIRAI-2.0 dips toward the truth in the boxed back-half where XGBoost stays elevated" />
+    </div>
+    <div class="s14-cap">BPI2017 · Sent → Cancelled</div>
+  </div>
 
-<div>
-
-Same plot as before. Same prediction window.
-
-This time with the TSFM line.
-
-<div class="mt-6 text-sm space-y-2 opacity-90">
-
-- XGBoost stays flat
-- TSFM misses the initial drop, then **adapts**
-- This is online adaptation from historical context — no retraining
+  <!-- RIGHT — sparsity: reveal MOIRAI-2.0 + amber arrow to the zero line -->
+  <div class="flex flex-col">
+    <div class="s14-panel-label">Sparsity — controlled</div>
+    <div class="s14-stack">
+      <img src="/figures/s6-intermittent-xgb.png" v-click.hide="1" class="s14-img"
+           alt="BPI2019-1 intermittent — XGBoost hallucinates 40–71 where truth is mostly zero" />
+      <img src="/figures/s14-intermittent-tsfm.png" v-click="1" class="s14-img s14-img--over"
+           alt="BPI2019-1 intermittent revealed — MOIRAI-2.0 holds near zero (amber arrow), no false bursts, no spikes" />
+    </div>
+    <div class="s14-cap">BPI2019-1 · Cancel → Record Invoice Receipt</div>
+  </div>
 
 </div>
 
+<div class="mt-4 text-center" style="font-size: 20px; color: #334155; line-height: 1.5">
+  <div>Drift: misses the drop, then <strong style="color: var(--brand)">adapts</strong> — online context, no retraining.</div>
+  <div>Sparsity: holds near zero — no false bursts, but <strong>no spikes either</strong>.</div>
 </div>
 
-<img src="/figures/bpi2017-drift-with-tsfm.png" class="block mx-auto rounded-lg w-full max-h-[340px] object-contain" alt="BPI2017 drift revealed — Chronos-2 and MOIRAI-2.0 track the drop XGBoost missed" />
+<style>
+.s14-panel-label { font-size: 18px; font-weight: 700; color: var(--brand); text-align: center; margin-bottom: 6px }
+.s14-cap { font-size: 14px; color: var(--neutral); text-align: center; margin-top: 6px }
+.s14-stack { position: relative; width: 100%; max-height: 270px }
+.s14-img { display: block; width: 100%; object-fit: contain; max-height: 270px; border-radius: 8px }
+.s14-img--over { position: absolute; inset: 0 }
+</style>
+
+<!--
+[S-14]
+Q: What does the zero-shot win look like on real DF patterns?
+
+Transition IN (from S13 bars): "Same data, same window — here's what that win looks like."
+
+THE CALLBACK MOMENT — the audience remembers these two plots from S5/S6 (truth only, then XGBoost
+failing). One click reveals the MOIRAI-2.0 line on BOTH, with the amber marks. Don't rush the click.
+  • Drift (left, amber box): "Same plot, same window. The TSFM tracks the drop XGBoost missed."
+    MOIRAI-2.0 misses the initial drop, then catches up at the troughs — online adaptation, NO
+    retraining. The box frames where it comes down while XGBoost stays stuck high.
+  • Sparsity (right, amber arrow) — the HONEST beat: MOIRAI-2.0 holds near zero. It avoids
+    XGBoost's false bursts (XGBoost hallucinated 40–71 where truth is mostly 0; MOIRAI-2.0 MAE 2.0,
+    −89%), but it does NOT catch the rare spikes. The arrow marks it: down to ~0, still present.
+    "Not a miracle spike detector — on a near-empty signal, the honest answer is to stay near zero."
+
+Mechanism (if asked): the TSFM adapts via an EXPANDING historical-context window at inference —
+no retraining (paper §4.1).
+
+~1 min. Transition OUT (to S15 fine-tuning): "TSFMs win zero-shot. Natural next question: can we
+make them better?"
+-->
+
+---
+layout: assertion-evidence
+locator: Fine-tuning
+assertion: Fine-tuning barely helps
+---
+
+<div class="flex items-center gap-5 mt-2">
+
+<div style="flex: 1">
+<img src="/figures/ft-slope.png" class="block w-full object-contain rounded-lg" style="max-height: 500px" alt="MAE relative to zero-shot across LoRA and full fine-tuning — most lines barely move; full fine-tuning sometimes overfits (amber), worst +87%" />
+</div>
+
+<div style="flex: 0 0 23%" v-click class="space-y-8">
+<Callout dir="left">53% of fine-tuning runs got worse</Callout>
+<div class="font-semibold text-xl" style="color: var(--brand)">Skip fine-tuning at PMF data scale.</div>
+</div>
 
 </div>
 
 <!--
-Q: What does the zero-shot win look like on real drift?
+[S-15] Q: Does fine-tuning (Q2) help? Is it worth it?
 
-~1 min. THE CALLBACK MOMENT — the audience remembers this plot from slide 3 (XGBoost
-flat, actual line drops). Now reveal the TSFM line. Don't rush — let them see it appear.
-Single spoken line: "Same data. Same prediction window. The TSFM tracks what XGBoost missed."
+~1 min 30s. The clean-negative beat before S16's low-energy ER concession.
+Transition in: "TSFMs win zero-shot. Natural next question — can we make them better?"
 
-Mechanism (if asked): the TSFM adapts via an expanding historical-context window at
-inference — no retraining (paper §4.1). Misses the initial drift, then catches up.
+Panel order (logs are small on screen — name them aloud): top-left BPI2017, top-right BPI2019-1,
+bottom-left Sepsis, bottom-right Hospital Billing.
 
-Transition out (into beat 8): "TSFMs win zero-shot. Natural next question: can we make
-them better?"
+Read the slope: most lines hug the 1.0 zero-shot baseline (grey bundle — fine-tuning barely moves
+accuracy), while a few full-FT lines shoot up in amber (overfitting on small logs):
+MOIRAI-1.1-R-large +87% on BPI2019-1, +31% on Sepsis; Chronos-2 +16% on Sepsis. Click reveals the
+tally: across all 36 LoRA + full fine-tuning runs, 19 (53%) landed worse than zero-shot. The few real
+gains (Sepsis full-FT −10 to −13%) are small and dataset-dependent.
+
+COST — speak it, do NOT put on slide (no wall-clock logged, no fabricated ratio):
+"And it never comes for free. Zero-shot is one forward pass per window. LoRA and full fine-tuning each
+add a whole training stage — repeated for every model and every log — and in the worst case full
+fine-tuning nearly doubled the error. The accuracy payoff is a coin-flip and sometimes catastrophic.
+So at PMF data scale, skip it."
+
+Transition out: "Fine-tuning isn't the win. So does the forecasting win even translate into a better
+process model?"
 -->
 
 ---
-
-# Does fine-tuning help?
-
-<div class="grid grid-cols-2 gap-4">
-
-<div>
-<div class="text-xs opacity-70 mb-1 text-center">Accuracy — MAE across settings</div>
-<img src="/figures/ft-slope.png" class="block mx-auto rounded-lg w-full max-h-[330px] object-contain" alt="Fine-tuning vs zero-shot, normalized — most lines hug 1.0; a few overfit" />
-</div>
-
-<div>
-<div class="text-xs opacity-70 mb-1 text-center">Compute — wall-clock (log scale)</div>
-<div class="border-2 border-dashed border-gray-400 rounded-lg p-4 flex items-center justify-center min-h-[320px]">
-<div class="text-center opacity-60 text-sm">
-[PLACEHOLDER]<br/>
-Log-scale bar chart<br/>
-7 bars:<br/>
-3 ZS · 3 LoRA · 3 Full-FT · 1 XGBoost reference
-</div>
-</div>
-</div>
-
-</div>
-
-<div class="mt-4 text-center font-semibold opacity-90">
-Marginal accuracy. ~100× compute. Skip it at PMF data scale.
-</div>
-
-<!--
-~3 min 15s. Two findings: (a) fine-tuning rarely helps, (b) it costs a lot.
-Drive the eye to the flat lines on the left, then the log-scale jump on the right.
-Don't moralize — let the visual do it.
--->
-
----
-layout: two-col-evidence
+layout: assertion-evidence
 locator: Evaluation
-assertion: TSFMs reach ER parity — not better
+assertion: Forecasting beats reuse — but better forecasts don't make better models
 ---
 
-::left::
+<div class="text-center mb-3" style="font-size:19px;max-width:1040px;margin-left:auto;margin-right:auto">
+  <b style="color:var(--ink)">Entropic Relevance (ER)</b> <span style="color:var(--neutral)">— average bits to encode one log trace with the forecasted process model ·</span> <b style="color:var(--brand)">lower = better</b>
+</div>
 
 <div class="relative">
-  <img src="/figures/er-hospital-billing.png" class="block w-full max-h-[340px] object-contain rounded-lg" alt="Hospital Billing ER — reusing the historical (Training) model is far worse than any forecast" />
-  <div class="absolute" style="left: 34%; top: 26%" v-click="1">
+  <img src="/figures/er-hospital-billing.png" class="block mx-auto w-full max-h-[380px] object-contain rounded-lg" alt="Hospital Billing ER — reusing the historical (Training) model is far worse than any forecast; the five forecasts cluster close together" />
+  <div class="absolute" style="left:40%;top:14%" v-click="1">
     <Callout dir="left">Forecast ≫ reuse</Callout>
   </div>
-  <div class="absolute" style="left: 52%; top: 40%" v-click="2">
+  <div class="absolute" style="left:58%;top:40%" v-click="2">
     <Callout dir="down">TSFMs ≈ baselines</Callout>
   </div>
 </div>
 
-<div class="caption mt-3">ER = bits-per-trace · Hospital Billing · in-bar % = traces the forecasted model fits.</div>
-
-::right::
-
-$$\mathrm{ER}(L,M) \approx \text{bits to encode one trace}$$
-
-<div class="dense">Hospital Billing — lower is better:</div>
-
-- **Truth** — 1.86 *(ideal floor)*
-- **Forecasts** — 2.1–2.5 *(baselines & TSFMs alike)*
-- **Training** — 5.83 *(reuse the old model — worst)*
-
-<div class="mt-5 font-semibold" style="color: var(--brand)">The bottleneck has moved from forecasting accuracy to process-aware representation.</div>
+<div class="caption text-center mt-2" style="color:var(--neutral)">Hospital Billing · Truth = ideal floor · Training = reuse the historical model</div>
 
 <!--
-Q: Does the forecasting win translate to a better process model?
+[S-16]
+Q: Does the forecasting win translate into a better process model?
 
 Transition in: "But forecasting accuracy isn't the only thing we care about in PM."
-Open with the QUESTION, not the result — beat 8→9 is the talk's lowest-energy moment.
+OPEN WITH THE QUESTION, not the result — S14→S16 is the talk's lowest-energy moment.
+
+Introduce the term: say "Entropic Relevance" in full on first use (the on-slide line carries it
+full-form-first); use "ER" thereafter. One line: ER = expected bits to encode a log trace under the
+forecasted model; lower = better; Truth is the floor.
+
+Two findings (revealed in sequence with the two callouts):
+  1. v-click 1 — Forecast ≫ reuse: the Training bar (reuse the historical/discovered model) towers at
+     5.83 while EVERY forecast lands ~2.1–2.5 → forecasting has value (callback to discovery's static
+     model in S2).
+  2. v-click 2 — TSFMs ≈ baselines: the three FMs (2.43 / 2.52 / 2.39) are no better than the two
+     baseline forecasts (2.17 / 2.12); the differences are small → a better forecast did NOT yield a
+     better process model (answers Q3).
 
 ~1 min 30s. THE LOAD-BEARING SLIDE.
-Memorized rebuttal — deliver in speech, not on slide (verbatim from SLIDES.md):
+Memorized rebuttal — deliver in SPEECH, not on slide (verbatim from SLIDES.md):
 
 "ER parity means we're not producing better DFG structures — we're producing
 DFGs with better edge weights. For tasks where the forecast itself is the
@@ -634,6 +1105,9 @@ process model, ER says the bottleneck is now the DFG representation,
 not the forecaster."
 
 Do not skip this line. Rehearse it cold.
+
+Transition out (hands the "bottleneck has moved" framing to S17): "So the forecasting is solved —
+which means the open problem has moved somewhere else."
 -->
 
 ---

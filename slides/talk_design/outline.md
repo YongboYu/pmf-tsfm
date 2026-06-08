@@ -1,9 +1,14 @@
-# Talk outline — pmf-tsfm @ CAiSE 2026 (v3, 19-slide)
+# Talk outline — pmf-tsfm @ CAiSE 2026 (v3, 20-slide)
 
 **v3 (2026-06-06)** — reopened from v2 via a `grill-with-docs` session against
-`revision_comments.md`. Expanded from 11 beats to **19 content slides + backups** for the official
+`revision_comments.md`. Expanded from 11 beats to **20 content slides + backups** for the official
 **20-min talk + 10-min Q&A** slot. Canonical beat-by-beat content. For brief / hard constraints /
 spoken lines, see `../SLIDES.md`. Supersedes the v1 11-beat outline.
+
+**v3.1 (2026-06-07)** — during the JIT pass, split the old motivation off the truth-only S5: added
+**S6 "Strongest prior method falls short"** (XGBoost-vs-truth + the ML≈naive benchmark finding) so
+the "existing methods fail" beat lands *before* the TSFM bet; subsequent content beats shifted +1
+(old S6–S19 → S7–S20).
 
 > **Golden standard (from the revision brief):** decide the **one key message** for a slide first,
 > *then* pick the single best visualization/material to convey it. Don't compress multiple messages
@@ -37,21 +42,22 @@ Use established terms verbatim; introduce them briefly once, then rely on them.
 | 2 | Process discovery → a static model, but processes drift | NEW | Discovery gives one static model; the real process changes over time |
 | 3 | PMF vs PPM | revised | System-level forecast vs case-level prediction |
 | 4 | PMF = forecasting DF time series | reorder | The pipeline: log → DF daily series → forecast → DFG |
-| 5 | DF series are hard | revised | Not white noise: drift **and** sparsity/intermittency |
-| 6 | Complexity + small data | NEW | Why from-scratch ML/DL overfits here |
-| 7 | What is a TSFM (vs LLM) | split | A foundation model for numbers — **not** an LLM |
-| 8 | Why TSFMs for PMF | split | Pretrained on millions of series → resists overfitting on small/complex data |
-| 9 | Three questions | reword | The scaffold for the results |
-| 10 | The candidates | revised | We tried a lot: 3 families × 3 settings |
-| 11 | Experimental setup | NEW | The evaluation is rigorous and fair |
-| 12 | Zero-shot TSFMs beat both baselines on every log | **KEY** | The central win |
-| 13 | Drift + sparsity, revealed | revised | TSFMs track what XGBoost missed; honest on sparsity |
-| 14 | Fine-tuning isn't necessary | revised | Marginal/negative gain for big extra training cost |
-| 15 | ER: two findings | revised | Forecast ≫ no-forecast; TSFMs ≈ baselines on process quality |
-| 16 | Discussion / limitations + future work | NEW | The bottleneck has moved to process-aware representation |
-| 17 | Takeaways | revised | Practitioner pitch + scientific signals |
-| 18 | Artifacts | revised | Reproducible: code · demo · HPC matrix · recording |
-| 19 | Thank you | | — |
+| 5 | DF series are hard | revised | Three challenges: drift, intermittency, heterogeneity |
+| 6 | Trained-from-scratch ML/DL don't win | NEW | XGBoost (top prior ML) misses drift + overfits intermittency |
+| 7 | Complexity + small data | NEW | Why from-scratch ML/DL overfits here |
+| 8 | What is a TSFM (vs LLM) | split | A foundation model for numbers — **not** an LLM |
+| 9 | Why TSFMs for PMF | split | Pretrained on millions of series → resists overfitting on small/complex data |
+| 10 | Three questions | reword | The scaffold for the results |
+| 11 | The candidates | revised | We tried a lot: 3 families × 3 settings |
+| 12 | Experimental setup | NEW | The evaluation is rigorous and fair |
+| 13 | Zero-shot TSFMs beat both baselines on every log | **KEY** | The central win |
+| 14 | Drift + sparsity, revealed | revised | TSFMs track what XGBoost missed; honest on sparsity |
+| 15 | Fine-tuning isn't necessary | revised | Marginal/negative gain for big extra training cost |
+| 16 | ER: two findings | revised | Forecast ≫ no-forecast; TSFMs ≈ baselines on process quality |
+| 17 | Discussion / limitations + future work | NEW | The bottleneck has moved to process-aware representation |
+| 18 | Takeaways | revised | Practitioner pitch + scientific signals |
+| 19 | Artifacts | revised | Reproducible: code · demo · HPC matrix · recording |
+| 20 | Thank you | | — |
 | B1–B7 | Backups | revised | Q&A defense |
 
 ---
@@ -94,22 +100,40 @@ pipeline."
 **(middle) a stack of daily DF time series** (we forecast *all* arcs, not one) → forecast →
 **(right) the reassembled/forecasted DFG**. One line: *"each DF edge is a univariate series — like
 website traffic per day, for one activity transition."* Keep the stride/window detail OFF this
-slide (it lives on S11); just say "aggregate daily, forecast ahead".
+slide (it lives on S12); just say "aggregate daily, forecast ahead".
 **Visual:** the woven `DfgEvolution.vue` figure, reordered (TS-stack middle, DFGs right). Reconcile
-wording with S11 so the two slides don't confuse.
+wording with S12 so the two slides don't confuse.
 **Transition out:** "So it's a forecasting problem. Why isn't it already solved?"
 
-### Slide 5 — DF series are hard  (revised, truth-only)
-**Key message:** DF time series are **genuinely hard** — drift *and* sparsity/intermittency — not
-white noise, not trivially forecastable.
+### Slide 5 — DF series are hard  (revised, truth-only, THREE challenges)
+**Key message:** DF time series are **genuinely hard** on three fronts — **① drift, ② intermittency,
+③ heterogeneity** (within and across logs) — not white noise, not trivially forecastable.
 **Audience Q:** "What makes these series difficult?"
-**Content:** **two example series (ground truth only)** — (a) a drift example (BPI2017
-O_Sent→O_Cancelled, the callback seed) and (b) a sparse/intermittent example (candidate: Sepsis
-ER_Registration→ER_Triage). No model lines yet (preserve the S13 callback).
-**Visual:** two small truth-only line plots. Title not limited to "drift".
-**Transition out:** "And it's not just shape — the statistics are off the charts."
+**Content:** **two ground-truth-only line panels** — ① drift = BPI2017 `Sent → Cancelled` (the S14
+callback seed, drops ~46→~3); ② intermittent = **BPI2019-1 `Cancel Invoice Receipt → Record Invoice
+Receipt`** (~80% zeros, spikes to 29). Bottom line states ③ heterogeneity: the two panels are
+different logs with different shapes, and DF relations differ within one log. No model lines yet.
+**Visual:** two truth-only **line** plots, consistent layout; **x = "Day"** (stride 1 ⇒ consecutive
+windows = consecutive days), **y = "Value"** (7-day-ahead forecast's last day — not a 7-day sum).
+**Transition out:** "These are hard. So — do the methods we already have handle them?"
 
-### Slide 6 — Complexity + small data  [NEW]
+### Slide 6 — Trained-from-scratch ML/DL don't win  [NEW]
+**Key message:** **from-scratch ML/DL don't win on DF series in general** — even the prior benchmark's
+top ML (tuned XGBoost) misses the drift AND overfits the intermittent series.
+**Audience Q:** "Do the methods we already have handle these patterns?"
+**Content:** the **same two series as S5**, now with the **XGBoost** line revealed (two panels, same
+layout): drift = XGBoost stays high, misses the drop; intermittent = XGBoost **overfits**, hallucinating
+40–71 where the truth is mostly zero. Bottom = the reason: small + complex + heterogeneous data →
+**overfitting** (callback to S5's challenges); **XGBoost is the benchmark's recommended top ML
+(Yu 2025) and still loses** → it becomes our ML baseline. Do **not** reveal the TSFM yet (S14).
+One exhibit, three acts: hard (S5) → ML/DL overfit (S6) → FM wins (S14). Honest nuance (speech): the
+TSFM wins by staying controlled, not by capturing the rare spikes.
+**Visual:** two truth + XGBoost **line** panels (`s6-drift-xgb.png`, `s6-intermittent-xgb.png`); the
+intermittent panel's y-axis grows past the truth range to fit XGBoost's overshoot (the overfit visual).
+**Transition out:** "It's not bad luck — these series are statistically off the charts, and the logs
+are tiny."
+
+### Slide 7 — Complexity + small data  [NEW]
 **Key message:** DF series are **statistically harder** than typical benchmarks **and** the logs are
 **small** — so from-scratch ML/DL overfits.
 **Audience Q:** "Why do trained-from-scratch models struggle here?"
@@ -119,13 +143,13 @@ higher than the 21 public benchmarks). State the comparison **qualitatively** as
 annotation: *"higher transition / shifting / non-Gaussianity than the 21 public benchmarks
 (Li et al. 2025)"* — **no fabricated benchmark bars** (those values aren't in our repo). (b)
 small-data stats (`stats_log.tex`: variants/cases/events/DFs/days) — emphasize small + heterogeneous.
-**Framing:** this is *proof* of the S3-era benchmark findings AND the motivation for S7–S8:
+**Framing:** this is *proof* of the S3-era benchmark findings AND the motivation for S8–S9:
 no-training + pretrained-at-scale could fix overfitting on small/complex data.
 **Visual:** complexity chart (highlighted metrics) + a compact stats table. Calm, scientific.
 **Transition out:** "Small, complex, heterogeneous data is exactly where a model you *don't* train
 might win."
 
-### Slide 7 — What is a TSFM (vs LLM)  (split from old S5)
+### Slide 8 — What is a TSFM (vs LLM)  (split from old S5)
 **Key message:** a TSFM is a **foundation model for numbers** — same idea as an LLM, but we are
 **not** using an LLM to forecast.
 **Audience Q:** "What even is a TSFM?"
@@ -135,27 +159,27 @@ briefly (one line each) here so later slides can rely on them.
 **Constraint:** one-line definitions for zero-shot (and later LoRA/ER).
 **Transition out:** "Same recipe as LLMs. So why would that help *our* problem?"
 
-### Slide 8 — Why TSFMs for PMF  (split from old S5)
+### Slide 9 — Why TSFMs for PMF  (split from old S5)
 **Key message:** pretrained on millions of diverse series, TSFMs are **designed not to overfit** —
-the exact failure mode of from-scratch models on small/complex DF data (callback to S6).
+the exact failure mode of from-scratch models on small/complex DF data (callback to S7).
 **Audience Q:** "Why should a generic forecaster beat a specialized one?"
-**Content:** the bet, tied explicitly back to S6's overfitting. Load-bearing line (deliver aloud):
+**Content:** the bet, tied explicitly back to S7's overfitting. Load-bearing line (deliver aloud):
 *"Specialized models overfit on small heterogeneous PMF data. Foundation models, pretrained on
 millions of diverse series, are designed to not."* Critique constraint: **"no event logs in
 pretraining, to our knowledge."**
 **Transition out:** "We have a candidate. Here's what we ask of it."
 
-### Slide 9 — Three questions  (reworded, standard terminology)
+### Slide 10 — Three questions  (reworded, standard terminology)
 **Key message:** the talk answers three precise questions.
 1. Can **zero-shot** TSFMs give **better DF time-series forecasts** than the strongest **PMF
    baselines**? *(forecasting only — not process-model quality)*
 2. Does **fine-tuning** improve the results?
 3. Does a **better forecast** give us a **better forecasted process model**?
 **Note:** Q1 is about forecasting accuracy vs PMF baselines (don't claim process-model quality
-here — that's Q3 / ER). Maps to S12 (Q1), S14 (Q2), S15 (Q3).
+here — that's Q3 / ER). Maps to S13 (Q1), S15 (Q2), S16 (Q3).
 **Transition out:** "Three questions. Here's what we point at them."
 
-### Slide 10 — The candidates  (revised)
+### Slide 11 — The candidates  (revised)
 **Key message:** we evaluated a lot — **3 families × 3 settings**.
 **Audience Q:** "Which models? Which settings?"
 **Content:** release-timeline visual (Chronos / MOIRAI / TimesFM lanes, 2023→2026; latest
@@ -163,7 +187,7 @@ highlighted). One line per family (vendor + architecture). Settings strip: **zer
 full fine-tuning**. Footer: "univariate throughout (per Yu 2025)." Names on screen, not in voice.
 **Visual:** replace the `[PLACEHOLDER]` timeline with a real diagram (Vue/SVG or Python).
 
-### Slide 11 — Experimental setup  [NEW]
+### Slide 12 — Experimental setup  [NEW]
 **Key message:** the evaluation is **rigorous and fair** — here's the protocol.
 **Audience Q:** "How exactly did you evaluate?"
 **Content (brief, no clutter):** **expanding window, stride = 1 day**, **7-day horizon**, daily
@@ -172,7 +196,7 @@ single H100, univariate inference. Frame as *assumption → design choice*. This
 "owns" the window/stride detail kept off S4.
 **Visual:** a small expanding-window schematic + a compact setup strip.
 
-### Slide 12 — Zero-shot TSFMs beat both baselines on every log  [KEY]
+### Slide 13 — Zero-shot TSFMs beat both baselines on every log  [KEY]
 **Key message (headline):** **zero-shot TSFMs beat both baselines on every log.**
 **Audience Q:** "Does Q1 hold?"
 **Content:** the central result. **Group bars into TWO colours — baselines vs TSFMs** (NOT one
@@ -183,7 +207,7 @@ relative %Δ** (mean of the 3 latest TSFMs vs the best baseline per log, average
 **Constraint:** open with "two strongest baselines from our prior benchmark; full ranking on backup."
 **Transition out:** "Same data, same window — here's what that win looks like."
 
-### Slide 13 — Drift + sparsity, revealed  (revised)
+### Slide 14 — Drift + sparsity, revealed  (revised)
 **Key message:** on real **drift**, TSFMs track what XGBoost missed; on **sparsity**, be honest —
 the pattern is just hard / low-signal.
 **Audience Q:** "What does the win look like on real patterns?"
@@ -192,7 +216,7 @@ the pattern is just hard / low-signal.
 message (TSFM hits the boundary / little signal). Retitle beyond "drift".
 **Transition out:** "TSFMs win zero-shot. Can we make them better?"
 
-### Slide 14 — Fine-tuning isn't necessary  (revised)
+### Slide 15 — Fine-tuning isn't necessary  (revised)
 **Key message:** fine-tuning gives **marginal — sometimes negative** — gains for **large extra
 training cost**: skip it at PMF scale.
 **Audience Q:** "Does Q2 (fine-tuning) help? Is it worth it?"
@@ -203,7 +227,7 @@ approximate train:inference ratio). Footer: "Marginal accuracy. Large extra cost
 data scale."
 **Provenance:** slope from paper Table 2 (`results_2.tex`).
 
-### Slide 15 — ER: two findings  (revised — bottleneck MOVED OUT)
+### Slide 16 — ER: two findings  (revised — bottleneck MOVED OUT)
 **Key message (two, sequential callouts):**
 1. **Forecast ≫ no-forecast** — reusing the historical (Training) model is far worse than any
    forecast → PMF has value (callback to discovery's static model).
@@ -214,19 +238,19 @@ data scale."
 **Two `<Callout v-click>` revealed in sequence.** Define **Entropic Relevance** in one line.
 **Colour fix:** the shared message must NOT be in a single TSFM's colour (Chronos blue) — it
 applies to all TSFMs; use neutral/ink.
-**The "bottleneck has moved" line moves to S16** (do not put it here).
+**The "bottleneck has moved" line moves to S17** (do not put it here).
 **Speech:** deliver the memorized ER rebuttal aloud (see `SLIDES.md`) — load-bearing.
 
-### Slide 16 — Discussion / limitations + future work  [NEW]
+### Slide 17 — Discussion / limitations + future work  [NEW]
 **Key message:** the **bottleneck has moved from forecasting accuracy to process-aware
 representation** — DFGs capture only the workflow aspect; richer relations are missing.
 **Audience Q:** "So what's the real open problem?"
-**Content:** the bottleneck framing (separated from S15) + sharp limitations / future work
+**Content:** the bottleneck framing (separated from S16) + sharp limitations / future work
 (richer-than-DFG representation; drift-aware adaptive forecasting; more/bigger event-log corpora;
 resources/decisions dimensions). Keep points sharp; can reference the paper.
 **Note:** "future work" folds in here (no dedicated future-work slide, per `SLIDES.md`).
 
-### Slide 17 — Takeaways  (revised)
+### Slide 18 — Takeaways  (revised)
 **Key message:** practical recommendation + scientific signals.
 **Content:**
 - **Practitioner (condense to one point):** these TSFMs are **small vs LLMs**, deploy locally,
@@ -235,15 +259,15 @@ resources/decisions dimensions). Keep points sharp; can reference the paper.
   the bottleneck is process-aware representation, not accuracy; richer representation is next.
 **Constraint:** signal 1 contains the **"four logs is not a paradigm"** hedge.
 **Closing anchor line** (rehearse cold; in `SLIDES.md`): "…What else can we borrow?"
-**Note:** code/artifact links **move to S18** (not here).
+**Note:** code/artifact links **move to S19** (not here).
 
-### Slide 18 — Artifacts  (revised)
+### Slide 19 — Artifacts  (revised)
 **Key message:** the work is **reproducible and usable**.
 **Content:** GitHub URL · demo URL · deployment matrix ("runs on laptop MPS / Linux CUDA / HPC") ·
 **demo recording (placeholder)** · optional QR for the demo.
 **Note:** the demo screencast stays a `[PLACEHOLDER]` until recorded.
 
-### Slide 19 — Thank you
+### Slide 20 — Thank you
 - Contact + repo; Q&A.
 
 ---
@@ -261,11 +285,11 @@ B7 Multivariate experiments — tried, no consistent gains, consistent with Yu 2
 ---
 
 ## Attention-risk points (carried from v1/v2)
-1. **S10 (candidates)** — dense; let the timeline carry the load, not the voice.
-2. **S15 (ER)** — concedes parity; the memorized rebuttal must be delivered with energy.
-3. **S14 → S15 transition** — "fine-tuning doesn't help" (clean negative) → "ER parity" (a
-   concession) is the lowest-energy moment; open S15 with the question, not the result.
+1. **S11 (candidates)** — dense; let the timeline carry the load, not the voice.
+2. **S16 (ER)** — concedes parity; the memorized rebuttal must be delivered with energy.
+3. **S15 → S16 transition** — "fine-tuning doesn't help" (clean negative) → "ER parity" (a
+   concession) is the lowest-energy moment; open S16 with the question, not the result.
 
 ## Single slide that, if cut, most weakens the talk
-**S7 (What is a TSFM, vs LLM).** Without it, half the room spends the results section wondering
+**S8 (What is a TSFM, vs LLM).** Without it, half the room spends the results section wondering
 whether you fine-tuned GPT. Cutting it is not recoverable.
