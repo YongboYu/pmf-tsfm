@@ -15,6 +15,10 @@ talk_design/_prep/
 # Slidev export output (regenerate with `pnpm export`)
 template/slides-export.pdf
 template/screenshots/
+template/export/
+
+# PPTX video-embed helper (local post-processing of the exported pptx)
+template/_pptx_video.py
 
 # Private speaker prep — verbatim manuscript + Q&A notes; NOT for the public repo
 talk_design/manuscript.md
