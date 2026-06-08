@@ -1381,18 +1381,48 @@ layout: assertion-evidence
 class: backup
 hideInToc: true
 locator: Backup
+assertion: Latest zero-shot TSFMs lead MAE across all variants
+---
+
+<img src="/figures/mae-full.png" class="block mx-auto w-full max-h-[430px] object-contain rounded-lg" alt="Full MAE table across all four event logs (paper Table 4) — amber = best per log, gray = baseline rows; the latest zero-shot TSFM per family is best or competitive on every log" />
+
+<div class="flex justify-center mt-3">
+  <Callout>Best or competitive on every log — all 14 variants</Callout>
+</div>
+
+<!-- speaker note: The full MAE table behind the S13 headline bars — paper Table 4, all 14 variants across the four logs. The headline compared the latest TSFM per family against the two baselines; this is the complete field. The story holds variant by variant: the latest Chronos / MOIRAI / TimesFM are best or statistically competitive on every log, and the occasional baseline-level number sits with the small/older variants. Amber marks the best (lowest) per log; gray rows are the two baselines. -->
+
+---
+layout: assertion-evidence
+class: backup
+hideInToc: true
+locator: Backup
 assertion: RMSE confirms the MAE ranking on every log
 ---
 
-<img src="/figures/rmse-full.png" class="block mx-auto w-full max-h-[430px] object-contain rounded-lg" alt="Full RMSE table across all four event logs — figure self-titles; blue = best per log, gray = baseline rows; latest zero-shot TSFMs are best or competitive on every log" />
+<img src="/figures/rmse-full.png" class="block mx-auto w-full max-h-[430px] object-contain rounded-lg" alt="Full RMSE table across all four event logs (paper Table 5) — amber = best per log, gray = baseline rows; latest zero-shot TSFMs are best or competitive on every log" />
 
-<div class="flex justify-center mt-3" v-click="1">
+<div class="flex justify-center mt-3">
   <Callout>Latest zero-shot TSFMs best or competitive on all four logs</Callout>
 </div>
 
-<div class="caption text-center mt-2" style="color:var(--neutral)">RMSE from our re-run (paper Table 4 reports MAE); baselines may differ slightly from the camera-ready.</div>
+<!-- speaker note: Same field, RMSE instead of MAE — sourced from the paper's dedicated RMSE table (Table 5), so it is camera-ready faithful. Switching the error metric does not change the story: the latest zero-shot TSFM per family is best or statistically competitive on every one of the four logs, the same ranking as MAE. -->
 
-<!-- speaker note: RMSE has no dedicated paper table — Table 4 reports MAE only. This table is built from the same results CSVs as the MAE bars, re-run on our side, so baseline rows can drift a hair from the camera-ready. The ranking is the point: switching the error metric to RMSE does not change the story — the latest zero-shot TSFM per family is best or statistically competitive on every one of the four logs, same as MAE. -->
+---
+layout: assertion-evidence
+class: backup
+hideInToc: true
+locator: Backup
+assertion: LoRA and full fine-tuning rarely beat zero-shot
+---
+
+<img src="/figures/ft-table.png" class="block mx-auto w-full max-h-[430px] object-contain rounded-lg" alt="Fine-tuning results (paper Table 6) — MAE and RMSE for zero-shot, LoRA and full fine-tuning on five TSFMs across the four logs; gains over zero-shot are small and inconsistent, and MOIRAI-1.1-R-large full fine-tuning degrades sharply on BPI2019-1 (23.06 vs 12.30)" />
+
+<div class="flex justify-center mt-3">
+  <Callout>Gains are marginal and inconsistent — full fine-tuning can degrade</Callout>
+</div>
+
+<!-- speaker note: [S-backup-FT] Paper Table 6 — the detail behind the S15 slope. Five fine-tunable models (Chronos-2 has no LoRA, hence two rows); MAE and RMSE per log for zero-shot vs LoRA vs full tune, grouped by model. Gains over zero-shot are small and dataset-dependent, and several rows get worse — the extreme is MOIRAI-1.1-R-large full fine-tuning on BPI2019-1 (23.06 vs 12.30 zero-shot). This is the per-number evidence behind "skip fine-tuning at PMF data scale." -->
 
 ---
 layout: assertion-evidence
@@ -1404,11 +1434,9 @@ assertion: ER reaches parity on three logs — Sepsis is the exception
 
 <img src="/figures/er-bars.png" class="block mx-auto w-full max-h-[400px] object-contain rounded-lg" alt="Entropic Relevance across four logs — TSFMs match baselines on BPI2017, BPI2019-1 and Hospital Billing, but trail far behind on Sepsis (bottom-left panel)" />
 
-<div class="flex justify-center mt-3" v-click="1">
+<div class="flex justify-center mt-3">
   <Callout>Sepsis (bottom-left): ER far above the rest — TSFMs worst</Callout>
 </div>
-
-<div class="caption text-center mt-2" style="color:var(--neutral)">Parity on BPI2017 / BPI2019-1 / Hospital Billing · Source: paper ER table</div>
 
 <!-- speaker note: The main ER slide showed only Hospital Billing; this generalises it. On three of four logs TSFMs sit at parity with the baselines. Sepsis is the lone exception — it is both heterogeneous (many rare variants) and intrinsically hard to encode, so ER stays high. This sets up the next Sepsis-specific frame. -->
 
@@ -1452,7 +1480,7 @@ assertion: DF series are hard on transition, shifting, non-Gaussianity
 
 <div class="relative">
   <img src="/figures/df-complexity-radar.png" class="block mx-auto w-full max-h-[400px] object-contain rounded-lg" alt="Radar of seven complexity metrics for DF series — seasonality, trend, stationarity, transition, shifting, correlation, non-Gaussianity, with transition, shifting and non-Gaussianity markedly elevated" />
-  <div class="absolute" style="right:0;top:50%;transform:translateY(-50%)" v-click="1">
+  <div class="absolute" style="right:0;top:50%;transform:translateY(-50%)">
     <Callout style="text-align:center">Elevated:<br/>Transition · Shifting<br/>· Non-Gaussianity</Callout>
   </div>
 </div>
@@ -1488,7 +1516,7 @@ assertion: Sepsis is an ER exception — extreme behavioral heterogeneity
 
 </div>
 
-<div class="flex justify-center mt-4" v-click="1">
+<div class="flex justify-center mt-4">
   <Callout>ER exception only — Sepsis still wins on MAE (MOIRAI-2.0 ↓28%)</Callout>
 </div>
 

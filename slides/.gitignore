@@ -9,6 +9,9 @@ components.d.ts
 # throwaway theme/palette prototype (not part of the build)
 prototype/
 
+# JIT per-slide drafting prep (reference packs) — local scaffolding, not deck content
+talk_design/_prep/
+
 # Slidev export output (regenerate with `pnpm export`)
 template/slides-export.pdf
 template/screenshots/
