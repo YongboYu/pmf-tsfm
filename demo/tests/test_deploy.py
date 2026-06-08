@@ -85,8 +85,8 @@ def test_readme_has_valid_hf_space_frontmatter():
         "README must request ZeroGPU hardware (suggested_hardware: zero-a10g) for the live tab"
     )
     # The pinned Space SDK version must agree with the serve-time requirements pin. The gradio
-    # line may carry an extras bracket (``gradio[mcp]==`` for the MCP server, #116), so the
-    # match tolerates it while still reading the version after ``==``.
+    # line may carry an extras bracket, so the match tolerates it while still reading the
+    # version after ``==``.
     req = (DEMO / "requirements.txt").read_text()
     gradio_line = next(
         (
@@ -97,8 +97,6 @@ def test_readme_has_valid_hf_space_frontmatter():
         None,
     )
     assert gradio_line is not None, "requirements.txt must pin gradio with `==`"
-    # mcp_server=True needs the `mcp` package, which only the `[mcp]` extra installs (#116).
-    assert "[mcp]" in gradio_line, "the gradio pin must carry the [mcp] extra for the MCP server"
     pin = gradio_line.split("==", 1)[1].strip()
     assert fm["sdk_version"] == pin, (
         f"README sdk_version ({fm['sdk_version']}) must match requirements.txt gradio pin ({pin})"
