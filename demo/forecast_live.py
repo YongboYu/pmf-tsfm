@@ -6,21 +6,15 @@ window and compares it against the **last-known-window** DFG. There is no future
 truth for an upload, so this path reports **drift** (DF relations the forecast
 adds/removes vs the recent past) and **never** an accuracy metric (ER/MAE/RMSE).
 
-The public :func:`forecast_live` is agent-clean (typed args + docstring, no Gradio
-objects) — its signature is the future MCP/REST tool schema. The actual
-preprocessing + model inference sits behind :func:`_live_windows`, which is wired
-to ZeroGPU in a follow-up slice (#115); the assembly, guard, and drift logic here
-are GPU-free and tested in isolation.
+:func:`forecast_live` takes typed args and no Gradio objects. The preprocessing + model
+inference sits behind :func:`_live_windows` (wired to ZeroGPU in ``app.py``); the assembly,
+guard, and drift logic here are GPU-free and tested in isolation.
 """
 
 from __future__ import annotations
 
-import os
-import tempfile
 from pathlib import Path
 from typing import Any
-from urllib.parse import urlparse
-from urllib.request import urlopen
 
 import numpy as np
 import upload_guard
@@ -29,12 +23,9 @@ from dfg_diff import dfg_diff
 from log_to_series import log_to_df_series
 from render import dfg_json_to_svg, diff_svg
 
-# The agent-facing tool (#116) can't drive a browser file picker, so it takes a *source
-# string* the GUI upload widget has no equivalent of. The committed sample (also the live
-# tab's one-click example) doubles as a zero-setup input keyword for that tool.
+# The committed sample (a dense six-week slice of the bundled sepsis log) is the live tab's
+# one-click "Try an example"; re-exported by app.py.
 EXAMPLE_LOG = Path(__file__).resolve().parent / "examples" / "sepsis_sample.xes"
-_EXAMPLE_ALIASES = frozenset({"example", "sepsis_sample"})
-_DOWNLOAD_CHUNK = 1 << 16  # 64 KiB streamed reads, so the size cap trips before a full buffer
 
 # Chronos-2 is the only model wired on the hosted live path this slice (#115);
 # moirai2 / timesfm2.5 stay a documented follow-up. The id matches
@@ -176,68 +167,6 @@ def drift_report(
         "removed": [entry(e) for e in diff["added"]],  # in recent past, not in forecast
         "stable": [entry(e) for e in diff["matched"]],
     }
-
-
-def _download_xes(url: str) -> str:
-    """Stream an http(s) XES log to a local temp file, capped at the upload size limit.
-
-    The stream is read in chunks and aborted the moment it crosses
-    :data:`upload_guard.MAX_UPLOAD_BYTES`, so a malicious/oversized URL can't fill the
-    disk before the byte-size guard would have rejected it. The caller must have already
-    confirmed the scheme is http(s).
-    """
-    cap = upload_guard.MAX_UPLOAD_BYTES
-    fd, path = tempfile.mkstemp(suffix=".xes")
-    size = 0
-    try:
-        with os.fdopen(fd, "wb") as out, urlopen(url) as resp:  # noqa: S310 - scheme checked by caller
-            while chunk := resp.read(_DOWNLOAD_CHUNK):
-                size += len(chunk)
-                if size > cap:
-                    raise upload_guard.UploadRejected(
-                        f"the log at {url} exceeds the {cap / 1e6:.1f} MB upload cap."
-                    )
-                out.write(chunk)
-    except BaseException:
-        Path(path).unlink(missing_ok=True)  # never leave a partial/oversize download behind
-        raise
-    return path
-
-
-def resolve_source(source: str) -> str:
-    """Resolve an agent-supplied source string to a local XES path.
-
-    The MCP/REST tool (#116) can't drive the GUI's browser upload, so it names a log by a
-    string instead. Two forms are accepted:
-
-    * an **http(s) URL** to an XES log — downloaded to a size-capped temp file;
-    * the keyword **"example"** — the committed sepsis sample (a zero-setup input).
-
-    Bundled dataset names (``sepsis``, ``bpi2017`` …) are *not* live inputs: their full
-    logs aren't hosted on the live surface and their accuracy is a GUI-only concern
-    (ADR-0003), so they're rejected with a pointer to the Bundled tab. No other scheme is
-    fetched (no local-file / ``file://`` / ``ftp://`` reads — path/SSRF safety).
-
-    Args:
-        source: an ``http(s)`` URL to an XES log, or the keyword ``"example"``.
-
-    Returns:
-        A local filesystem path to an XES log, ready for :func:`forecast_live`.
-
-    Raises:
-        UploadRejected: the source is neither a supported keyword nor an http(s) URL, or
-            the downloaded log exceeds the upload size cap.
-    """
-    key = source.strip()
-    if key.lower() in _EXAMPLE_ALIASES:
-        return str(EXAMPLE_LOG)
-    if urlparse(key).scheme.lower() in ("http", "https"):
-        return _download_xes(key)
-    raise upload_guard.UploadRejected(
-        f"cannot resolve source {source!r}: provide an http(s) URL to an XES log, or the "
-        "keyword 'example' for the bundled sample. Bundled datasets (with their accuracy "
-        "metrics) are explorable in the GUI's Bundled tab, not via this tool."
-    )
 
 
 def forecast_live(

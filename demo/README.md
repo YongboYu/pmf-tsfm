@@ -49,50 +49,12 @@ DFGs at request time (so the Space carries graphviz + the model libs; see `packa
 Run it locally:
 
 ```bash
-uv run --with 'gradio[mcp]' python app.py
+uv run --with gradio python app.py
 ```
 
-## Self-host with Docker
+## Self-host & agent API
 
-The same `demo/` code also ships as a self-host image (ADR-0003, "one codebase, two packagings") —
-the GUI by default, with **no HF upload caps and no ZeroGPU cold-start**. Build the context from the
-repo root so it picks up `demo/`:
-
-```bash
-docker build -t pmf-tsfm-demo demo/
-docker run -p 7860:7860 pmf-tsfm-demo
-```
-
-Then open <http://localhost:7860>. The bundled tab is instant (precomputed assets). The live tab runs
-on **plain CPU** here — the image omits the `spaces` package, so the ZeroGPU decorator no-ops and the
-same forecast runs without a GPU (slower, but no wall-time limit). The **first** live forecast
-downloads the Chronos-2 weights from `s3://autogluon/chronos-2/` (one-off, a few minutes). Persist
-that cache across runs with a volume:
-
-```bash
-docker run -p 7860:7860 -v pmf-hf-cache:/app/.cache/huggingface pmf-tsfm-demo
-```
-
-## Agent API (REST + MCP)
-
-The same app launches with `mcp_server=True`, so beyond the GUI it serves an auto-generated **REST
-API** and an **MCP server** (endpoint `…/gradio_api/mcp/sse`). Exactly **one** tool is exposed — the
-live forecast — and its schema is derived from the function's type hints + docstring (no hand-written
-schema). The bundled accuracy path is **GUI-only** and never reachable as a tool.
-
-**`forecast_from_source(source, model="chronos2")`** — `source` is an `http(s)` URL to an XES log, or
-the keyword `"example"` (the bundled sepsis sample). It returns a **drift** bundle
-(`forecast_dfg`, `comparison_dfg`, `drift`) — DF relations the forecast adds/drops vs the log's
-last-known window — and **never** an accuracy metric (an upload has no future truth).
-
-Call it over REST with `gradio_client`:
-
-```python
-from gradio_client import Client
-
-client = Client("http://127.0.0.1:7860")  # or the Space URL
-bundle = client.predict("example", "chronos2", api_name="/forecast_from_source")
-print(bundle["drift"])  # {"added": [...], "removed": [...], "stable": [...]}
-```
-
-or point any MCP client at `…/gradio_api/mcp/sse` and call the `forecast_from_source` tool.
+This folder is the hosted **HF Space GUI** only. To run the core forecasting pipeline on your own
+data — a self-host **Docker** image (GUI + Hydra CLIs, no caps) or an **MCP** agent server — use the
+dedicated `docker/` and `mcp/` artifacts at the repo root, which wrap `pmf_tsfm.api` directly
+(ADR-0008). See `docker/README.md` and `mcp/README.md`.
