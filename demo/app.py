@@ -33,10 +33,9 @@ from upload_guard import MAX_UPLOAD_BYTES, SMALL_LOG_BYTES, UploadRejected
 DATASETS: list[str] = ["bpi2017", "bpi2019_1", "sepsis", "hospital_billing"]
 MODELS: list[str] = ["chronos2", "moirai2", "timesfm2.5"]
 
-# The live path runs on ZeroGPU and now offers all three TSFMs (parity with the bundled
-# tab). The heavy two (moirai2 / timesfm2.5) are gated to small logs by ``upload_guard`` so
-# a single GPU call stays under the ZeroGPU wall-time cap.
-LIVE_MODELS: list[str] = list(MODELS)
+# The live path runs on ZeroGPU. Only Chronos-2 is wired this slice (#115); moirai2 /
+# timesfm2.5 stay gated (a follow-up), so the live picker offers Chronos-2 alone.
+LIVE_MODELS: list[str] = ["chronos2"]
 
 # A tiny committed sample (a dense six-week slice of the bundled sepsis log) so the live
 # tab has a one-click "Try an example" — no one needs their own XES to see the path work.
@@ -52,10 +51,9 @@ EXAMPLE_LOG = Path(__file__).resolve().parent / "examples" / "sepsis_sample.xes"
 # module level" guidance relies on the emulation intercepting `.to('cuda')`, which it does
 # for standard transformers/diffusers — but NOT for the autogluon Chronos-2 loader
 # (`BaseChronosPipeline.from_pretrained(device_map="cuda")`), which inits real CUDA in the
-# parent and breaks the fork. So *every* model (Chronos-2, Moirai-2, TimesFM-2.5) is loaded
-# lazily INSIDE the @spaces.GPU call (see forecast_live._load_chronos2 / _load_moirai2 /
-# _load_timesfm), where a real GPU exists. The weights cache to disk on first download, so
-# later calls are fast.
+# parent and breaks the fork. So Chronos-2 is loaded lazily INSIDE the @spaces.GPU call
+# (see forecast_live._chronos2_forecast), where a real GPU exists. The weights cache to disk
+# on first download, so later calls are fast.
 try:
     import spaces
 
@@ -407,7 +405,7 @@ def _build_live_tab() -> None:
             LIVE_MODELS,
             value=LIVE_MODELS[0],
             label="Model",
-            info="All three TSFMs run on the hosted GPU; Moirai-2 / TimesFM are limited to small logs",
+            info="Chronos-2 is wired on the hosted GPU; more models are a follow-up",
         )
         run = gr.Button("Forecast", variant="primary")
     gr.Examples(
