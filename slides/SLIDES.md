@@ -155,7 +155,7 @@ Full beat-by-beat content lives in `talk_design/outline.md` (v3).
 > Foundation models, pretrained on millions of diverse series, are designed to not."
 
 ### Results transition (into beat 7)
-> "Three families. Eight model variants. No event logs in pretraining.
+> "Three families. Twelve model variants. No event logs in pretraining.
 > Here's what happens when you point them at DF time series."
 
 ### ER memorized rebuttal — LOAD-BEARING, REHEARSE COLD (beat 9)

@@ -14,7 +14,7 @@ export const dfgData = {
     { id: 'sent', label: 'Sent', kind: 'activity', x: 34, y: 53 },
     { id: 'returned', label: 'Returned', kind: 'activity', x: 34, y: 69 },
     { id: 'accepted', label: 'Accepted', kind: 'activity', x: 34, y: 84 },
-    { id: 'cancelled', label: 'Cancelled', kind: 'activity', x: 80, y: 66 },
+    { id: 'cancelled', label: 'Canceled', kind: 'activity', x: 80, y: 66 },
     { id: 'end', label: '■', kind: 'end', x: 50, y: 95 },
   ],
   edges: [
@@ -29,7 +29,7 @@ export const dfgData = {
   ],
   // Arcs shown in the S4 middle STACK (top→bottom, hero first) — point: "we forecast ALL arcs".
   stack: [
-    { id: 'sent__cancelled', label: 'Sent → Cancelled', hero: true },
+    { id: 'sent__cancelled', label: 'Sent → Canceled', hero: true },
     { id: 'created__sent', label: 'Created → Sent', hero: false },
     { id: 'sent__returned', label: 'Sent → Returned', hero: false },
   ],

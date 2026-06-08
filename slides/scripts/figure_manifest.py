@@ -310,6 +310,11 @@ OUT = {
     "s5_intermittent_truth": FIG_OUT / "s5-intermittent-truth.png",
     "s6_drift_xgb": FIG_OUT / "s6-drift-xgb.png",
     "s6_intermittent_xgb": FIG_OUT / "s6-intermittent-xgb.png",
+    # S6 — same two panels with a baked-in amber attention mark (static, no click): box over the
+    # drift back-half (XGBoost stuck high), arrow at an XGBoost overshoot peak. Separate files so
+    # the plain s6-*.png stay clean for S14's pre-click "before" state.
+    "s6_drift_xgb_box": FIG_OUT / "s6-drift-xgb-box.png",
+    "s6_intermittent_xgb_arrow": FIG_OUT / "s6-intermittent-xgb-arrow.png",
     # S14 — drift+sparsity callback with MOIRAI-2.0 revealed + baked-in amber attention marks
     # (same axes/ylim as the S6 panels so the click-swap overlays exactly).
     "s14_drift_tsfm": FIG_OUT / "s14-drift-tsfm.png",

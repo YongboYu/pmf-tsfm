@@ -74,7 +74,7 @@ assertion: Process discovery gives one static model, but processes drift
         <colgroup><col style="width: 30%" /><col style="width: 36%" /><col style="width: 34%" /></colgroup>
         <tbody>
           <tr><td>App 9043</td><td>Accepted</td><td>Oct 16 14:20</td></tr>
-          <tr><td>App 9043</td><td>Cancelled</td><td>Oct 16 15:02</td></tr>
+          <tr><td>App 9043</td><td>Canceled</td><td>Oct 16 15:02</td></tr>
           <tr><td>App 9047</td><td>Sent</td><td>Oct 16 16:48</td></tr>
         </tbody>
       </table>
@@ -103,10 +103,10 @@ assertion: Process discovery gives one static model, but processes drift
 
 <div class="mt-6" style="max-width: 1180px; margin-left: auto; margin-right: auto">
   <p style="font-size: 20px; color: #334155; line-height: 1.5; margin: 0 0 12px; white-space: nowrap">
-    A <strong style="color: var(--brand)">Directly-Follows Graph (DFG)</strong>: nodes are activities, arrows are directly-follows relations with counts.
+    A <strong style="color: var(--brand)">Directly-Follows Graph (DFG)</strong> is one kind of <strong style="color: var(--brand)">process model</strong>.
   </p>
   <p style="font-size: 20px; color: #334155; line-height: 1.5; margin: 0">
-    <strong style="color: var(--brand)">Process discovery</strong> returns one static snapshot — <strong style="color: var(--brand)">Process Model Forecasting (PMF)</strong> predicts the next.
+    <strong style="color: var(--brand)">Process discovery</strong> → one static snapshot · <strong style="color: var(--brand)">Process Model Forecasting (PMF)</strong> predicts the next.
   </p>
 </div>
 
@@ -136,13 +136,13 @@ two very different prediction problems." → S3 (PMF vs PPM)
 ---
 layout: two-col-evidence
 locator: Predictive process mining
-assertion: PPM forecasts one case — PMF the whole process model
+assertion: PPM forecasts one case · PMF the whole process model
 ---
 
 ::left::
 
-<div class="ae-collabel">Predictive Process Monitoring (PPM) · case-level</div>
-<div class="ae-lead">One ongoing case → its future.</div>
+<div class="s3-collabel">Predictive Process Monitoring (PPM)</div>
+<div class="s3-level">Scope: case-level</div>
 
 <div class="s3-trace">
   <span class="s3-pill">Create</span>
@@ -154,25 +154,19 @@ assertion: PPM forecasts one case — PMF the whole process model
 
 <div class="s3-tasks">
   <div class="s3-task">
-    <span class="s3-task-label">Next event</span>
+    <span class="s3-task-q">"Will <strong>this</strong> loan be canceled?"</span>
+  </div>
+  <div class="s3-task">
     <span class="s3-task-q">"What does <strong>this</strong> applicant do next?"</span>
-  </div>
-  <div class="s3-task">
-    <span class="s3-task-label">Remaining time</span>
-    <span class="s3-task-q">"How long until <strong>this</strong> case is decided?"</span>
-  </div>
-  <div class="s3-task">
-    <span class="s3-task-label">Outcome</span>
-    <span class="s3-task-q">"Will <strong>this</strong> loan application be cancelled?"</span>
   </div>
 </div>
 
-<div class="s3-horizon">Horizon — the rest of one case</div>
+<div class="s3-horizon">Horizon: the rest of one case</div>
 
 ::right::
 
-<div class="ae-collabel">Process Model Forecasting (PMF) · system-level</div>
-<div class="ae-lead">A log window → the next process model.</div>
+<div class="s3-collabel">Process Model Forecasting (PMF)</div>
+<div class="s3-level">Scope: system-level</div>
 
 <div class="s3-flow">
   <span class="s3-pill">Log window</span>
@@ -206,22 +200,24 @@ assertion: PPM forecasts one case — PMF the whole process model
   </div>
 </div>
 
-<div class="s3-ask">"How often does <strong>offer sent → cancelled</strong> occur?"</div>
-<div class="s3-horizon">Horizon — the near-term system future</div>
+<div class="s3-ask">"How often does <strong>offer sent → canceled</strong> occur?"</div>
+<div class="s3-horizon">Horizon: the near-term system future</div>
 
 <style>
-.s3-trace, .s3-flow { display: flex; align-items: center; gap: 10px; margin: 20px 0 14px; flex-wrap: wrap; }
+.s3-collabel { font-size: 23px; font-weight: 700; color: var(--brand); letter-spacing: 0.01em; margin-bottom: 6px; }
+.s3-level { font-size: 20px; font-weight: 700; letter-spacing: 0.01em; color: var(--brand); }
+.s3-trace, .s3-flow { display: flex; align-items: center; gap: 10px; margin: 28px 0 18px; flex-wrap: wrap; }
+.s3-trace { justify-content: center; }
 .s3-pill { display: inline-flex; align-items: center; justify-content: center; border: 1px solid var(--hairline); border-radius: 999px; padding: 7px 15px; font-size: 18px; font-weight: 600; color: var(--ink); background: #fff; white-space: nowrap; }
 .s3-pill-q { border-color: var(--brand); color: var(--brand); font-weight: 800; min-width: 36px; }
 .s3-arrow { color: var(--neutral); font-size: 18px; font-weight: 700; }
-.s3-tasks { display: flex; flex-direction: column; gap: 16px; margin: 20px 0 24px; }
+.s3-tasks { display: flex; flex-direction: column; gap: 24px; margin: 30px 0 36px; }
 .s3-task { display: flex; flex-direction: column; gap: 2px; }
-.s3-task-label { font-size: 16px; font-weight: 600; letter-spacing: 0.03em; text-transform: uppercase; color: var(--neutral); }
-.s3-task-q { font-size: 23px; font-style: italic; color: var(--ink); }
-.s3-task-q strong { color: var(--brand); font-weight: 800; }
-.s3-ask { font-size: 23px; font-style: italic; color: var(--ink); margin: 40px 0 30px; }
+.s3-task-q { font-size: 20px; font-style: italic; color: var(--neutral); }
+.s3-task-q strong { color: var(--brand); font-weight: 700; }
+.s3-ask { font-size: 20px; font-style: italic; color: var(--neutral); margin: 30px 0 28px; }
 .s3-ask strong { font-style: normal; color: var(--brand); }
-.s3-horizon { font-size: 17px; font-weight: 600; letter-spacing: 0.02em; color: var(--neutral); margin-top: 12px; }
+.s3-horizon { font-size: 22px; font-weight: 700; letter-spacing: 0.01em; color: var(--brand); margin-top: 16px; }
 .s3-dfg { display: flex; flex-direction: column; align-items: center; flex: 0 0 auto; }
 .s3-dfg-cap { font-size: 14px; font-weight: 600; text-align: center; color: var(--neutral); margin-top: 4px; }
 </style>
@@ -232,10 +228,10 @@ Q: PMF vs the PPM I already know?
 
 Same loan log, two different prediction problems. PPM is case-level: take ONE ongoing
 application and predict its future — the next event, the remaining time, or the outcome
-("will THIS loan be cancelled?"). Horizon = the rest of that one case.
+("will THIS loan be canceled?"). Horizon = the rest of that one case.
 
 PMF is system-level: take a WINDOW of the whole log, and forecast the next process model —
-how often each transition fires next, e.g. how often "offer sent → cancelled" occurs across
+how often each transition fires next, e.g. how often "offer sent → canceled" occurs across
 ALL cases. Horizon = the near-term system future (conceptually weeks-to-months; the 7-day
 experimental horizon is setup detail for S12 — don't say it here).
 
@@ -257,7 +253,7 @@ import { frameForClicks } from './components/frameForClicks.js'
 </script>
 
 <div style="font-size:21px; color:var(--ink); margin-top:8px">
-directly-follows (DF) relations = one transition A→B — we aggregate it <strong>daily</strong> and forecast <strong>7 days</strong> ahead.
+directly-follows (DF) relation = one A→B transition <span style="margin:0 16px; color:var(--neutral-soft)">·</span> aggregated <strong>daily</strong> <span style="margin:0 16px; color:var(--neutral-soft)">·</span> forecast <strong>7 days</strong> ahead
 </div>
 
 <div class="mt-3" style="height: 392px">
@@ -287,23 +283,23 @@ Transition OUT (to S5): "So it's a forecasting problem. Why isn't it already sol
 ---
 layout: assertion-evidence
 locator: The challenge
-assertion: DF series are hard — drift, intermittency, and heterogeneity
+assertion: "DF series are hard: drift, intermittency, and heterogeneity"
 ---
 
 <div class="grid grid-cols-2 gap-8 mt-3" style="height: 350px">
 
   <!-- LEFT — drift (truth only) -->
   <div class="flex flex-col">
-    <div class="s5-panel-label">① Drift — a real level shift</div>
+    <div class="s5-panel-label">① Drift: a real level shift</div>
     <img src="/figures/s5-drift-truth.png"
          class="block w-full object-contain rounded-lg" style="max-height: 280px"
-         alt="BPI2017 Sent→Cancelled daily values — drops from ~46 to ~3 over the test period" />
-    <div class="s5-panel-cap">BPI2017 · Sent → Cancelled</div>
+         alt="BPI2017 Sent→Canceled daily values — drops from ~46 to ~3 over the test period" />
+    <div class="s5-panel-cap">BPI2017 · Sent → Canceled</div>
   </div>
 
   <!-- RIGHT — intermittency (truth only) -->
   <div class="flex flex-col">
-    <div class="s5-panel-label">② Intermittent — long zeros, sudden spikes</div>
+    <div class="s5-panel-label">② Intermittent: long zeros, sudden spikes</div>
     <img src="/figures/s5-intermittent-truth.png"
          class="block w-full object-contain rounded-lg" style="max-height: 280px"
          alt="BPI2019-1 Cancel→Record Invoice Receipt daily values — mostly zero with spikes to 29" />
@@ -313,8 +309,7 @@ assertion: DF series are hard — drift, intermittency, and heterogeneity
 </div>
 
 <div class="mt-4 text-center" style="font-size: 20px; color: #334155">
-  ③ <strong style="color: var(--brand)">Heterogeneous</strong> — the pattern differs
-  <strong>within</strong> a log and <strong>across</strong> logs (two logs here, two very different shapes).
+  ③ <strong style="color: var(--brand)">Heterogeneous</strong> · pattern differs <strong>within</strong> and <strong>across</strong> logs
 </div>
 
 <style>
@@ -329,7 +324,7 @@ Q: What makes these series difficult?
 Transition IN (from S4): "So it's a forecasting problem. Why isn't it already solved?"
 
 Three data challenges, shown with REAL ground-truth series (no model lines yet):
-  ① Drift — BPI2017 Sent → Cancelled: a genuine level shift, fires ~46/day early, decays to ~3.
+  ① Drift — BPI2017 Sent → Canceled: a genuine level shift, fires ~46/day early, decays to ~3.
   ② Intermittent — BPI2019-1 Cancel → Record Invoice Receipt: ~80% zeros, sudden spikes to ~29.
   ③ Heterogeneous — the two panels are different logs with completely different shapes; DF
     relations also differ within a single log. Neither is white noise, neither is a smooth trend.
@@ -344,34 +339,33 @@ any model line here.
 ---
 layout: assertion-evidence
 locator: Prior work
-assertion: Trained-from-scratch ML/DL don't win on these series
+assertion: Machine Learning (ML) / Deep Learning (DL) underperform
 ---
 
-<div class="grid grid-cols-2 gap-8 mt-3" style="height: 330px">
+<div class="grid grid-cols-2 gap-8 mt-3" style="height: 350px">
 
   <!-- LEFT — drift: XGBoost misses the drop -->
   <div class="flex flex-col">
-    <div class="s6-panel-label">Drift — XGBoost stays high, misses the drop</div>
-    <img src="/figures/s6-drift-xgb.png"
-         class="block w-full object-contain rounded-lg" style="max-height: 270px"
-         alt="BPI2017 drift — XGBoost stays elevated while the truth collapses late" />
-    <div class="s6-cap">BPI2017 · Sent → Cancelled</div>
+    <div class="s6-panel-label">Drift: XGBoost stays high, misses the drop</div>
+    <img src="/figures/s6-drift-xgb-box.png"
+         class="block w-full object-contain rounded-lg" style="max-height: 280px"
+         alt="BPI2017 drift — XGBoost stays elevated while the truth collapses late, amber box over the back-half" />
+    <div class="s6-cap">BPI2017 · Sent → Canceled</div>
   </div>
 
   <!-- RIGHT — intermittent: XGBoost overshoots the zeros -->
   <div class="flex flex-col">
-    <div class="s6-panel-label">Intermittent — XGBoost overshoots the zeros</div>
-    <img src="/figures/s6-intermittent-xgb.png"
-         class="block w-full object-contain rounded-lg" style="max-height: 270px"
-         alt="BPI2019-1 intermittent — XGBoost hallucinates 40–71 where the truth is mostly zero" />
+    <div class="s6-panel-label">Intermittent: XGBoost overshoots the zeros</div>
+    <img src="/figures/s6-intermittent-xgb-arrow.png"
+         class="block w-full object-contain rounded-lg" style="max-height: 280px"
+         alt="BPI2019-1 intermittent — XGBoost hallucinates 40–71 where the truth is mostly zero, amber arrow at an overshoot peak" />
     <div class="s6-cap">BPI2019-1 · Cancel → Record Invoice Receipt</div>
   </div>
 
 </div>
 
-<div class="mt-4 text-center" style="font-size: 20px; color: #334155; line-height: 1.5">
-  <div>Small, complex, heterogeneous data → from-scratch ML/DL <strong style="color: var(--brand)">overfit</strong>.</div>
-  <div>Even <strong>XGBoost</strong> — the prior benchmark's top ML (Yu et al. 2025) — loses.</div>
+<div class="mt-4 text-center" style="font-size: 20px; color: #334155">
+  <strong style="color: var(--brand)">XGBoost</strong>: the recommended top forecaster in the prior benchmark (Yu et al. 2025)
 </div>
 
 <style>
@@ -407,57 +401,58 @@ locator: Diagnosis
 assertion: DF series are shorter and statistically harder
 ---
 
-<div class="grid items-center mt-2" style="grid-template-columns: 46% 54%; gap: 26px; height: 400px">
-  <!-- LEFT — complexity radar (3 harder-than-benchmark axes in amber) -->
-  <div class="flex flex-col" style="min-height: 0">
-    <img src="/figures/s7-complexity-radar.png" class="block w-full object-contain" style="max-height: 360px" alt="DF complexity radar — 7 metrics across 4 logs; Transition, Shifting, Non-Gaussianity highlighted" />
-    <div class="s7-cap">band = min–max across the 4 logs · line = median</div>
-  </div>
-  <!-- RIGHT — the three elevated metrics (def + range) + small-data stats -->
-  <div class="flex flex-col justify-center" style="min-height: 0; gap: 20px">
-    <div>
-      <div class="s7-section">Complexity Measurement</div>
-      <div class="s7-metrics">
-        <div class="s7-metric"><span class="s7-m-name">Transition</span><span class="s7-m-def">abrupt regime changes</span><span class="s7-m-val">.06–.23</span></div>
-        <div class="s7-metric"><span class="s7-m-name">Shifting</span><span class="s7-m-def">level / timing moves</span><span class="s7-m-val">.27–.48</span></div>
-        <div class="s7-metric"><span class="s7-m-name">Non-Gaussianity</span><span class="s7-m-def">spiky, not bell-curved</span><span class="s7-m-val">.33–.59</span></div>
-        <div class="s7-badge">▸ higher than 21 public time series datasets (Li et al. 2025)</div>
-      </div>
-    </div>
-    <table class="s7-stats">
-      <colgroup><col style="width: 29%" /><col style="width: 14%" /><col style="width: 13%" /><col style="width: 22%" /><col style="width: 22%" /></colgroup>
-      <thead>
-        <tr><th>Event log</th><th class="hot">Days</th><th>DFs</th><th>Cases</th><th>Events</th></tr>
-      </thead>
-      <tbody>
-        <tr><td>BPI2017</td><td class="hot">319</td><td>21</td><td>40,229</td><td>248,236</td></tr>
-        <tr><td>BPI2019_1</td><td class="hot">307</td><td class="b">149</td><td>197,521</td><td>1,298,887</td></tr>
-        <tr><td>Sepsis</td><td class="hot">459</td><td class="b">135</td><td>999</td><td>16,009</td></tr>
-        <tr><td>Hospital Billing</td><td class="hot">726</td><td>73</td><td>78,828</td><td>570,803</td></tr>
-      </tbody>
-    </table>
-  </div>
-</div>
+<div class="s7-wrap mt-6">
+  <table class="s7-stats">
+    <colgroup>
+      <col style="width: 22%" /><col style="width: 11%" /><col style="width: 11%" />
+      <col style="width: 18.67%" /><col style="width: 18.67%" /><col style="width: 18.67%" />
+    </colgroup>
+    <thead>
+      <tr class="s7-grouprow">
+        <th colspan="3" class="s7-nogroup"></th>
+        <th colspan="3" class="s7-cxgroup">Complexity measurements</th>
+      </tr>
+      <tr>
+        <th>Event log</th><th class="hot">Days</th><th>DFs</th>
+        <th class="cx">Transition</th><th class="cx">Shifting</th><th class="cx">Non-Gaussianity</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td>BPI2017</td><td class="hot">319</td><td>21</td><td class="cx">.06</td><td class="cx">.27</td><td class="cx">.33</td></tr>
+      <tr><td>BPI2019_1</td><td class="hot">307</td><td class="b">149</td><td class="cx">.15</td><td class="cx">.36</td><td class="cx">.47</td></tr>
+      <tr><td>Sepsis</td><td class="hot">459</td><td class="b">135</td><td class="cx">.23</td><td class="cx">.28</td><td class="cx">.59</td></tr>
+      <tr><td>Hospital Billing</td><td class="hot">726</td><td>73</td><td class="cx">.17</td><td class="cx">.48</td><td class="cx">.46</td></tr>
+    </tbody>
+    <tfoot>
+      <tr class="s7-footrow">
+        <td colspan="3" class="s7-foot-blank"></td>
+        <td colspan="3" class="s7-foot-note">higher than 21 public time-series datasets (Li et al. 2025)</td>
+      </tr>
+    </tfoot>
+  </table>
 
-<div class="mt-8 text-center" style="font-size: 22px; color: #334155">
-  Complex signal + little data → from-scratch ML/DL <strong style="color: var(--brand)">overfit</strong>.
+  <div class="s7-punch flex justify-center mt-8" v-click>
+    <Callout>Complex signal + little data → <strong>trained-from-scratch</strong> ML/DL <strong>overfit</strong></Callout>
+  </div>
 </div>
 
 <style>
-.s7-cap { font-size: 14px; color: var(--neutral); text-align: center; margin-top: 6px }
-.s7-section { font-size: 14px; font-weight: 700; color: var(--neutral); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 7px }
-.s7-metrics { background: #fbedd8; border-radius: 10px; padding: 13px 16px }
-.s7-metric { display: grid; grid-template-columns: 160px 1fr auto; align-items: baseline; gap: 10px; padding: 4px 0 }
-.s7-m-name { font-size: 19px; font-weight: 700; color: var(--brand) }
-.s7-m-def { font-size: 17px; color: var(--ink); width: 200px; justify-self: center; text-align: left }
-.s7-m-val { font-size: 18px; font-weight: 700; color: var(--ink); font-variant-numeric: tabular-nums }
-.s7-badge { margin-top: 11px; background: var(--accent); color: var(--ink); font-size: 16px; font-weight: 600; border-radius: 7px; padding: 7px 10px; text-align: center }
-.s7-stats { width: 100%; border-collapse: collapse; font-size: 16px; color: var(--ink); table-layout: fixed }
-.s7-stats th { text-align: right; font-weight: 700; color: var(--neutral); border-bottom: 1.5px solid #cbd5e1; padding: 6px 8px; font-size: 14px; text-transform: uppercase; letter-spacing: .02em }
+.s7-wrap { max-width: 1000px; margin-left: auto; margin-right: auto }
+.s7-stats { width: 100%; border-collapse: collapse; font-size: 19px; color: var(--ink); table-layout: fixed }
+.s7-stats th { text-align: right; font-weight: 700; color: var(--neutral); border-bottom: 1.5px solid #cbd5e1; padding: 9px 12px; font-size: 15px; text-transform: uppercase; letter-spacing: .02em }
 .s7-stats th:first-child, .s7-stats td:first-child { text-align: left }
-.s7-stats td { padding: 6px 8px; border-bottom: 1px solid #eef2f6; text-align: right; font-variant-numeric: tabular-nums }
+.s7-stats td { padding: 9px 12px; border-bottom: 1px solid #eef2f6; text-align: right; font-variant-numeric: tabular-nums }
 .s7-stats .hot { background: #fbedd8 }
+.s7-stats .cx { background: #f4f8fc }
 .s7-stats .b { font-weight: 700 }
+.s7-grouprow th { border-bottom: none; padding-bottom: 6px }
+.s7-nogroup { background: transparent }
+.s7-stats th.s7-cxgroup { background: var(--brand); color: #fff; text-align: center; font-weight: 700; font-size: 15px; text-transform: uppercase; letter-spacing: .04em; padding: 8px 12px; border-bottom: none }
+.s7-footrow td { border-bottom: none; padding-top: 12px }
+.s7-foot-blank { background: transparent }
+.s7-stats td.s7-foot-note { background: #e3edf6; color: var(--brand); font-weight: 700; font-size: 18px; text-align: center; padding: 12px 10px; border-radius: 0 0 8px 8px; white-space: nowrap }
+.s7-punch .ae-callout { font-size: 20px !important; padding: 9px 16px !important }
+.s7-punch .ae-callout strong { font-weight: 800 }
 </style>
 
 <!--
@@ -525,34 +520,34 @@ assertion: Foundation models are the new direction in forecasting
 </div>
 
 <div class="s8-defs">
-  <div class="s8-def"><strong>zero-shot</strong> — frozen parameters, run as-is</div>
-  <div class="s8-def"><strong>fine-tuning</strong> — tweak the parameters on your own data</div>
+  <div class="s8-def"><strong>zero-shot</strong>: frozen parameters, run as-is</div>
+  <div class="s8-def"><strong>fine-tuning</strong>: tweak the parameters on your own data</div>
 </div>
 
 <style>
 .s8-evidence { position: relative }
-.s8-card { position: relative; border: 1.5px solid #cdd6e0; border-radius: 12px; padding: 20px 24px; display: flex; flex-direction: column; gap: 16px }
+.s8-card { position: relative; border: 1.5px solid #cdd6e0; border-radius: 12px; padding: 22px 24px 26px; min-height: 218px; display: flex; flex-direction: column; gap: 16px }
 .s8-card--tsfm { border: 2px solid var(--brand); background: #f4f8fc }
 .s8-badge { position: absolute; top: -13px; right: 18px; background: var(--accent); color: var(--ink); font-size: 14px; font-weight: 700; border-radius: 6px; padding: 3px 10px; box-shadow: 0 2px 8px rgba(221, 138, 46, 0.3) }
 .s8-name { font-size: 22px; font-weight: 700; color: var(--neutral); white-space: nowrap }
 .s8-name--brand { color: var(--brand) }
-.s8-ex { display: flex; align-items: center; gap: 12px; font-size: 23px; color: var(--ink); font-variant-numeric: tabular-nums }
+.s8-ex { display: flex; align-items: center; align-self: center; gap: 10px; font-size: 19px; color: var(--ink); font-variant-numeric: tabular-nums }
 .s8-ex-q { font-weight: 500 }
 .s8-blank { display: inline-block; min-width: 24px; text-align: center; color: var(--neutral-soft); font-weight: 700; border-bottom: 2px dashed var(--neutral-soft); line-height: 1.1 }
 .s8-ex-arrow { color: var(--neutral-soft); font-weight: 800 }
-.s8-ex-a { font-weight: 700; color: var(--ink); background: #eef2f6; border-radius: 6px; padding: 2px 11px }
+.s8-ex-a { font-weight: 700; color: var(--ink); background: #eef2f6; border-radius: 6px; padding: 1px 9px }
 .s8-ex-a--brand { color: #fff; background: var(--brand) }
 .s8-rows { margin-top: auto; display: flex; flex-direction: column; gap: 16px }
 .s8-row { display: flex; align-items: baseline; gap: 14px }
-.s8-rk { font-size: 18px; color: var(--neutral); font-weight: 600; width: 112px; flex: none }
-.s8-rv { font-size: 22px; color: var(--ink) }
+.s8-rk { font-size: 17px; color: var(--neutral); font-weight: 600; width: 104px; flex: none }
+.s8-rv { font-size: 21px; color: var(--ink) }
 .s8-rv--brand { font-weight: 600 }
 .s8-link { position: absolute; left: 50%; transform: translate(-50%, 50%); display: flex; align-items: center; gap: 6px; white-space: nowrap; z-index: 5 }
 .s8-link--data { bottom: 88px }
 .s8-link--task { bottom: 38px }
-.s8-link .ae-callout { font-size: 19px !important; font-weight: 700 !important; padding: 6px 14px !important; box-shadow: 0 4px 14px rgba(221, 138, 46, 0.35) }
+.s8-link .ae-callout { font-size: 22px !important; font-weight: 700 !important; padding: 8px 18px !important; box-shadow: 0 4px 14px rgba(221, 138, 46, 0.35) }
 .s8-larr, .s8-rarr { color: var(--accent); font-size: 22px; font-weight: 800; line-height: 1 }
-.s8-defs { margin: 30px auto 0; width: fit-content; text-align: left; display: flex; flex-direction: column; gap: 10px; font-size: 23px; color: var(--neutral) }
+.s8-defs { margin: 46px auto 0; width: fit-content; text-align: left; display: flex; flex-direction: column; gap: 10px; font-size: 23px; color: var(--neutral) }
 .s8-def strong { color: var(--ink) }
 </style>
 
@@ -584,13 +579,12 @@ assertion: Foundation models are built not to overfit
 ---
 
 <div class="s9-flow">
-  <!-- ROW 1 — our data: the diagnosis carried from S7 -->
+  <!-- ROW 1 — our data: complex + short (number dropped; "small" sharpened to short series → few samples) -->
   <div class="s9-row">
     <div class="s9-tag">our data</div>
     <div class="s9-line">
       <div class="s9-sub">
-        <span class="s9-lead">complex + small</span>
-        <span class="s9-chip s9-chip--small">307–726 points / log</span>
+        <span class="s9-lead">complex signal · <strong class="s9-em">short series (few samples)</strong></span>
       </div>
       <div class="s9-sub">
         <span class="s9-arr">→</span>
@@ -602,7 +596,7 @@ assertion: Foundation models are built not to overfit
   <!-- pivot connector -->
   <div class="s9-so">so</div>
 
-  <!-- ROW 2 — the bet: a foundation model brings a prior -->
+  <!-- THE BET — the focal claim: a foundation model brings a prior -->
   <div class="s9-row s9-row--bet">
     <div class="s9-tag s9-tag--brand">the bet</div>
     <div class="s9-line">
@@ -621,7 +615,7 @@ assertion: Foundation models are built not to overfit
 <div class="s9-caveat">No event logs in pretraining, <em>to our knowledge</em>.</div>
 
 <style>
-.s9-flow { margin-top: 34px; display: flex; flex-direction: column; align-items: center; gap: 10px }
+.s9-flow { margin-top: 40px; display: flex; flex-direction: column; align-items: center; gap: 10px }
 .s9-row { display: grid; grid-template-columns: 110px 1fr; align-items: center; gap: 20px; width: 100%; max-width: 880px; border: 1.5px solid #cdd6e0; border-radius: 12px; padding: 18px 24px }
 .s9-row--bet { border: 2px solid var(--brand); background: #f4f8fc }
 .s9-tag { font-size: 16px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--neutral) }
@@ -631,10 +625,10 @@ assertion: Foundation models are built not to overfit
 .s9-lead { font-weight: 600; color: var(--neutral) }
 .s9-lead--brand { color: var(--brand) }
 .s9-chip { font-size: 20px; font-weight: 700; border-radius: 7px; padding: 3px 12px; font-variant-numeric: tabular-nums }
-.s9-chip--small { background: #eef2f6; color: var(--neutral) }
 .s9-chip--big { background: var(--brand); color: #fff; letter-spacing: .01em }
 .s9-arr { color: var(--neutral); font-weight: 800 }
 .s9-arr--brand { color: var(--brand) }
+.s9-em { color: var(--ink); font-weight: 700 }
 .s9-out--bad { color: var(--neutral) }
 .s9-out--bad strong { color: var(--ink) }
 .s9-out--good { color: var(--ink) }
@@ -795,8 +789,9 @@ assertion: 3 model families, 12 variants, 3 settings
 </div>
 
 <style>
-.s11-evidence svg { display:block; max-width:940px; margin:6px auto 0 }
-.s11-strip { display:flex; justify-content:center; gap:14px; margin-top:26px }
+.s11-evidence { margin-top:-16px }
+.s11-evidence svg { display:block; max-width:940px; margin:0 auto }
+.s11-strip { display:flex; justify-content:center; gap:14px; margin-top:12px }
 .s11-pill { font-size:19px; border:1.5px solid var(--neutral-soft); border-radius:999px; padding:6px 18px; color:var(--neutral); font-weight:600 }
 .s11-pill .ct { color:var(--ink); font-weight:800 }
 .s11-pill--zs { border-color:var(--brand); color:var(--brand); background:#f4f8fc }
@@ -901,16 +896,16 @@ assertion: The latest zero-shot TSFMs beat both baselines on every log
 <div class="text-center mb-2" style="font-size:15px;color:var(--neutral)">
   Mean Absolute Error (MAE), lower is better ·
   <span style="color:var(--baseline);font-weight:600">gray = baselines</span> ·
-  colour = latest TSFM per family
+  color = latest TSFM per family
 </div>
 
 <div class="relative">
-  <img src="/figures/results-mae-bars.png" class="block mx-auto w-full max-h-[400px] object-contain rounded-lg" alt="Zero-shot MAE across 4 event logs — gray baselines (Seasonal-Naive, XGBoost) vs the latest TSFM of each family (Chronos-2, MOIRAI-2.0, TimesFM-2.5); coloured bars lower on every log" />
+  <img src="/figures/results-mae-bars.png" class="block mx-auto w-full max-h-[400px] object-contain rounded-lg" alt="Zero-shot MAE across 4 event logs — gray baselines (Seasonal-Naive, XGBoost) vs the latest TSFM of each family (Chronos-2, MOIRAI-2.0, TimesFM-2.5); colored bars lower on every log" />
   <div class="absolute" style="left:0;top:50%;transform:translateY(-50%)" v-click="1">
-    <Callout style="text-align:center">−21% mean MAE<br/>vs best baseline</Callout>
+    <Callout style="text-align:center;line-height:1.5">−21% mean MAE<br/>vs best baseline</Callout>
   </div>
   <div class="absolute" style="right:0;top:50%;transform:translateY(-50%)" v-click="2">
-    <Callout style="text-align:center">All 12 variants:<br/>92% beat baseline<br/>−15% mean MAE</Callout>
+    <Callout style="text-align:center;line-height:1.5">All 12 variants:<br/>92% beat baseline<br/>−15% mean MAE</Callout>
   </div>
 </div>
 
@@ -950,19 +945,19 @@ assertion: Zero-shot tracks the drift, stays controlled on sparsity
 
   <!-- LEFT — drift: reveal MOIRAI-2.0 + amber adaptation box -->
   <div class="flex flex-col">
-    <div class="s14-panel-label">Drift — tracked</div>
+    <div class="s14-panel-label">Drift: tracked</div>
     <div class="s14-stack">
       <img src="/figures/s6-drift-xgb.png" v-click.hide="1" class="s14-img"
            alt="BPI2017 drift — XGBoost stays high while truth collapses late" />
       <img src="/figures/s14-drift-tsfm.png" v-click="1" class="s14-img s14-img--over"
            alt="BPI2017 drift revealed — MOIRAI-2.0 dips toward the truth in the boxed back-half where XGBoost stays elevated" />
     </div>
-    <div class="s14-cap">BPI2017 · Sent → Cancelled</div>
+    <div class="s14-cap">BPI2017 · Sent → Canceled</div>
   </div>
 
   <!-- RIGHT — sparsity: reveal MOIRAI-2.0 + amber arrow to the zero line -->
   <div class="flex flex-col">
-    <div class="s14-panel-label">Sparsity — controlled</div>
+    <div class="s14-panel-label">Sparsity: controlled</div>
     <div class="s14-stack">
       <img src="/figures/s6-intermittent-xgb.png" v-click.hide="1" class="s14-img"
            alt="BPI2019-1 intermittent — XGBoost hallucinates 40–71 where truth is mostly zero" />
@@ -975,8 +970,8 @@ assertion: Zero-shot tracks the drift, stays controlled on sparsity
 </div>
 
 <div class="mt-4 text-center" style="font-size: 20px; color: #334155; line-height: 1.5">
-  <div>Drift: misses the drop, then <strong style="color: var(--brand)">adapts</strong> — online context, no retraining.</div>
-  <div>Sparsity: holds near zero — no false bursts, but <strong>no spikes either</strong>.</div>
+  <div>Drift: misses the drop, then <strong style="color: var(--brand)">adapts</strong>. Online context, no retraining.</div>
+  <div>Sparsity: holds near zero. No false bursts, but <strong>no spikes either</strong>.</div>
 </div>
 
 <style>
@@ -1023,7 +1018,7 @@ assertion: Fine-tuning barely helps
 </div>
 
 <div style="flex: 0 0 23%" v-click class="space-y-8">
-<Callout dir="left">53% of fine-tuning runs got worse</Callout>
+<Callout dir="left" style="line-height:1.5">53% of fine-tuning runs got worse</Callout>
 <div class="font-semibold text-xl" style="color: var(--brand)">Skip fine-tuning at PMF data scale.</div>
 </div>
 
@@ -1038,7 +1033,7 @@ Transition in: "TSFMs win zero-shot. Natural next question — can we make them 
 Panel order (logs are small on screen — name them aloud): top-left BPI2017, top-right BPI2019-1,
 bottom-left Sepsis, bottom-right Hospital Billing.
 
-Read the slope: most lines hug the 1.0 zero-shot baseline (grey bundle — fine-tuning barely moves
+Read the slope: most lines hug the 1.0 zero-shot baseline (gray bundle — fine-tuning barely moves
 accuracy), while a few full-FT lines shoot up in amber (overfitting on small logs):
 MOIRAI-1.1-R-large +87% on BPI2019-1, +31% on Sepsis; Chronos-2 +16% on Sepsis. Click reveals the
 tally: across all 36 LoRA + full fine-tuning runs, 19 (53%) landed worse than zero-shot. The few real
@@ -1057,11 +1052,11 @@ process model?"
 ---
 layout: assertion-evidence
 locator: Evaluation
-assertion: Forecasting beats reuse — but better forecasts don't make better models
+assertion: Forecasting beats reuse, but better forecasts don't make better models
 ---
 
 <div class="text-center mb-3" style="font-size:19px;max-width:1040px;margin-left:auto;margin-right:auto">
-  <b style="color:var(--ink)">Entropic Relevance (ER)</b> <span style="color:var(--neutral)">— average bits to encode one log trace with the forecasted process model ·</span> <b style="color:var(--brand)">lower = better</b>
+  <b style="color:var(--ink)">Entropic Relevance (ER):</b> <span style="color:var(--neutral)">average bits to encode one log trace with the forecasted process model ·</span> <b style="color:var(--brand)">lower = better</b>
 </div>
 
 <div class="relative">
@@ -1119,30 +1114,25 @@ assertion: The bottleneck has moved from forecasting accuracy to process-aware r
 
 <div class="s17">
 <div class="s17-rows">
-<div class="s17-row">
-<div class="s17-row-t">Beyond control flow</div>
-<div class="s17-row-d"><span class="lim">DFGs model only control flow</span><span class="to">→</span><span class="fut">add resources, decisions, richer relations</span></div>
+<div class="s17-row" v-click="1">
+<span class="s17-t">Beyond control flow</span> <span class="s17-sep">—</span> <span class="s17-d">add resources, decisions, richer relations</span>
 </div>
-<div class="s17-row">
-<div class="s17-row-t">Smarter adaptation</div>
-<div class="s17-row-d"><span class="lim">fine-tuning gains were marginal</span><span class="to">→</span><span class="fut">find better adaptation methods for PMF</span></div>
+<div class="s17-row" v-click="1">
+<span class="s17-t">Smarter fine-tuning</span> <span class="s17-sep">—</span> <span class="s17-d">lightweight, incremental tuning for PMF</span>
 </div>
-<div class="s17-row">
-<div class="s17-row-t">Larger log corpora</div>
-<div class="s17-row-d"><span class="lim">only four event logs</span><span class="to">→</span><span class="fut">bigger, higher-quality logs for a process-native model</span></div>
+<div class="s17-row" v-click="1">
+<span class="s17-t">Larger log corpora</span> <span class="s17-sep">—</span> <span class="s17-d">bigger, higher-quality logs for a process-native model</span>
 </div>
 </div>
 </div>
 
 <style>
-.s17 { margin-top: 52px }
-.s17-rows { display: flex; flex-direction: column; gap: 40px }
-.s17-row { border-left: 4px solid var(--brand); padding: 2px 0 2px 20px }
-.s17-row-t { font-size: 24px; font-weight: 700; color: var(--ink); margin-bottom: 6px }
-.s17-row-d { font-size: 21px; line-height: 1.4 }
-.s17-row-d .lim { color: var(--neutral) }
-.s17-row-d .to { color: var(--brand); font-weight: 800; margin: 0 10px }
-.s17-row-d .fut { color: var(--brand); font-weight: 600 }
+.s17 { margin-top: 70px }
+.s17-rows { display: flex; flex-direction: column; gap: 48px }
+.s17-row { border-left: 4px solid var(--brand); padding: 4px 0 4px 20px; font-size: 23px; line-height: 1.35 }
+.s17-t { font-weight: 700; color: var(--ink) }
+.s17-sep { color: var(--neutral); font-weight: 700; margin: 0 4px }
+.s17-d { color: var(--brand); font-weight: 600 }
 </style>
 
 <!--
@@ -1173,50 +1163,45 @@ with incremental / lightweight fine-tuning for adaptive retraining (paper §Disc
 ---
 layout: assertion-evidence
 locator: Takeaways
-assertion: The best forecaster for your process model isn't one you train — and it's cheap to run
+assertion: Off-the-shelf forecasting is strong enough to build on
 ---
 
 <div class="s18">
 
-  <!-- Practitioner — ONE condensed point (brand-tinted banner) -->
-  <div class="s18-prac">
-    <div class="s18-prac-label">For practitioners</div>
-    <div class="s18-prac-body">
-      These TSFMs are <strong>tiny beside LLMs</strong> — deploy locally, forecast fast on a
-      laptop or a cheap GPU, with little compute.
-      <strong>Fine-tuning is doable, but rarely needed.</strong>
+  <!-- For Process Model Forecasting — the two PMF-specific signals, boxed (four-logs hedge stays spoken) -->
+  <div class="s18-prac s18-pmf">
+    <div class="s18-prac-label">For process mining</div>
+    <div class="s18-pmf-rows">
+      <div class="s18-pmf-row"><strong>Zero-shot</strong> is the new default of PMF&ensp;·&ensp;<strong>Fine-tuning is marginal</strong> at this data scale</div>
     </div>
   </div>
 
-  <!-- Scientific signals -->
-  <div class="s18-sig-head">What it signals</div>
-  <ol class="s18-sigs">
-    <li>
-      <span class="s18-num">1</span>
-      <span><strong>Zero-shot is the new PMF default.</strong>
-        <span class="s18-hedge">Four logs is not a paradigm — but a strong enough first signal.</span>
-      </span>
-    </li>
-    <li>
-      <span class="s18-num">2</span>
-      <span><strong>Fine-tuning is marginal</strong> at this data scale.</span>
-    </li>
-  </ol>
+  <!-- For practitioners — applied guidance (brand-tinted banner) -->
+  <div class="s18-prac">
+    <div class="s18-prac-label">For practitioners</div>
+    <div class="s18-prac-body">
+      These TSFMs are <strong>tiny beside LLMs</strong>: deploy locally, forecast fast on a
+      laptop, with little compute.
+    </div>
+  </div>
+
+  <!-- General CTA — the broadening close, the one amber Callout, on click -->
+  <div class="flex justify-center mt-3 s18-cta" v-click>
+    <Callout>Try TSFMs for your forecasts</Callout>
+  </div>
 
 </div>
 
 <style>
-.s18 { display: flex; flex-direction: column; gap: 26px; margin-top: 6px }
+.s18 { display: flex; flex-direction: column; gap: 22px; margin-top: 6px }
 .s18-prac { border: 2px solid var(--brand); background: #f4f8fc; border-radius: 12px; padding: 18px 22px }
-.s18-prac-label { font-size: 18px; font-weight: 700; color: var(--brand); margin-bottom: 6px }
+.s18-prac-label { font-size: 14px; font-weight: 700; color: var(--neutral); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 9px }
 .s18-prac-body { font-size: 23px; color: var(--ink); line-height: 1.4 }
 .s18-prac-body strong { color: var(--brand) }
-.s18-sig-head { font-size: 26px; font-weight: 600; color: var(--brand) }
-.s18-sigs { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 16px }
-.s18-sigs li { display: flex; align-items: baseline; gap: 14px; font-size: 23px; color: var(--ink); line-height: 1.4; padding-left: 0 }
-.s18-sigs li::before { content: none } /* suppress the global .ae-body li "–" marker */
-.s18-num { flex: none; width: 30px; height: 30px; border-radius: 50%; background: var(--brand); color: #fff; font-size: 16px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; transform: translateY(3px) }
-.s18-hedge { display: block; margin-top: 2px; color: var(--neutral); font-style: italic }
+.s18-pmf-rows { display: flex; flex-direction: column; gap: 8px }
+.s18-pmf-row { font-size: 23px; color: var(--ink); line-height: 1.35 }
+.s18-pmf-row strong { color: var(--brand); font-weight: 700 }
+.s18-cta .ae-callout { font-size: 27px !important; font-weight: 700 !important; padding: 11px 24px !important }
 </style>
 
 <!--
@@ -1439,7 +1424,7 @@ assertion: ER reaches parity on three logs — Sepsis is the exception
   <Callout>Sepsis (bottom-left): ER far above the rest — TSFMs worst</Callout>
 </div>
 
-<!-- speaker note: The main ER slide showed only Hospital Billing; this generalises it. On three of four logs TSFMs sit at parity with the baselines. Sepsis is the lone exception — it is both heterogeneous (many rare variants) and intrinsically hard to encode, so ER stays high. This sets up the next Sepsis-specific frame. -->
+<!-- speaker note: The main ER slide showed only Hospital Billing; this generalizes it. On three of four logs TSFMs sit at parity with the baselines. Sepsis is the lone exception — it is both heterogeneous (many rare variants) and intrinsically hard to encode, so ER stays high. This sets up the next Sepsis-specific frame. -->
 
 ---
 layout: assertion-evidence
