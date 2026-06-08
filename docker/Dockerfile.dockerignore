@@ -1,0 +1,35 @@
+# Build-context ignore for `docker build -f docker/Dockerfile .` (context = repo root).
+#
+# BuildKit honours `<dockerfile-path>.dockerignore` (this file) in preference to a
+# context-root `.dockerignore`, so the ignore rules live in docker/ with the Dockerfile.
+# Patterns are relative to the build context (the repo root).
+
+# Heavy / irrelevant data — sepsis & co. are MOUNTED (-v $PWD/data:/data), not baked in.
+data/
+outputs/
+results/
+wandb/
+
+# Other tracks — not part of the core image.
+demo/
+slides/
+manuscript/
+notebooks/
+
+# Dev cruft.
+.venv/
+.git/
+.github/
+.idea/
+.vscode/
+**/__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.DS_Store
+HANDOFF_*.md
+
+# Kept (NOT ignored), for reference: src/, configs/, docker/, pyproject.toml,
+# uv.lock, .python-version, README.md
