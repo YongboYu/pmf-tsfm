@@ -1234,7 +1234,7 @@ Transition out (to S19 artifacts): "And all of this is yours to run."
 ---
 layout: two-col-evidence
 locator: Artifacts
-assertion: Public, reproducible — and live to try right now
+assertion: Public, reproducible, and live to try right now
 ---
 
 ::left::
@@ -1242,19 +1242,16 @@ assertion: Public, reproducible — and live to try right now
 <!-- Live deck: poster frame → ONE click swaps in the screencast, which plays once (no loop).
      PDF/PPTX export fallback (e.g. the 5-shot carousel) to be designed later. -->
 <div class="demo-vstack">
-<img src="/figures/demo-screencast-poster.png" v-click.hide="1" class="demo-vlayer" alt="Demo app — click to play the ~29s live walkthrough" />
+<img src="/figures/demo-screencast-poster.png" v-click.hide="1" class="demo-vlayer" alt="Demo app · click to play the ~29s live walkthrough" />
 <SlidevVideo v-click="1" autoplay="once" class="demo-vlayer demo-vlayer--over" poster="/figures/demo-screencast-poster.png" print-poster="/figures/demo-screencast-poster.png">
 <source src="/figures/demo-screencast.mp4" type="video/mp4" />
 </SlidevVideo>
 </div>
 
-<div class="caption demo-cap-one">Live app · ~29 s walkthrough — click to play (once)</div>
-
 <style>
-.demo-vstack { position: relative; width: 100%; aspect-ratio: 16 / 10; border: 1px solid var(--hairline); border-radius: 8px; overflow: hidden; background: #fff }
+.demo-vstack { position: relative; width: 100%; aspect-ratio: 16 / 11.5; border: 1px solid var(--hairline); border-radius: 8px; overflow: hidden; background: #fff }
 .demo-vlayer { display: block; width: 100%; height: 100%; object-fit: contain }
 .demo-vlayer--over { position: absolute; inset: 0 }
-.demo-cap-one { text-align: center; margin-top: 8px }
 </style>
 
 ::right::
@@ -1263,7 +1260,7 @@ assertion: Public, reproducible — and live to try right now
 <div class="border-2 rounded-lg flex items-center gap-4 px-4 py-3" style="border-color: var(--accent); background: var(--surface-alt)">
 <img src="/figures/demo-qr.png" class="w-[120px] h-[120px]" alt="QR to the live demo on Hugging Face Spaces" />
 <div>
-<div class="font-semibold" style="color: var(--brand)">Live demo — scan or visit</div>
+<div class="font-semibold" style="color: var(--brand)">Live demo · scan or visit</div>
 <div class="dense--xs">huggingface.co/spaces/YongboYu/pmf-tsfm-demo</div>
 <div class="dense--xs" style="color: var(--neutral)">Chronos-2 on HF ZeroGPU</div>
 </div>
@@ -1274,6 +1271,7 @@ assertion: Public, reproducible — and live to try right now
 <div class="border rounded-lg px-4 py-2" style="border-color: var(--hairline)">
 <div class="font-semibold" style="color: var(--brand)">Code</div>
 <div class="dense--xs">github.com/YongboYu/pmf-tsfm</div>
+<div class="dense--xs" style="color: var(--neutral)">MCP server · Docker image (experimental, in repo)</div>
 </div>
 
 </div>
