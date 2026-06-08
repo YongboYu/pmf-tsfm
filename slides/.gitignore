@@ -15,3 +15,7 @@ talk_design/_prep/
 # Slidev export output (regenerate with `pnpm export`)
 template/slides-export.pdf
 template/screenshots/
+
+# Private speaker prep — verbatim manuscript + Q&A notes; NOT for the public repo
+talk_design/manuscript.md
+talk_design/qa-prep.md
