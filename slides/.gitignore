@@ -9,8 +9,10 @@ components.d.ts
 # throwaway theme/palette prototype (not part of the build)
 prototype/
 
-# JIT per-slide drafting prep (reference packs) — local scaffolding, not deck content
-talk_design/_prep/
+# Private design docs / speaker prep — kept local, NOT for the public repo
+talk_design/
+prompts/
+SLIDES.md
 
 # Slidev export output (regenerate with `pnpm export`)
 template/slides-export.pdf

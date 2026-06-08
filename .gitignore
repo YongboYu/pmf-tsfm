@@ -256,3 +256,6 @@ skills-lock.json
 
 # Local idea / todo inbox (personal, machine-specific)
 TodoList/
+
+# Architecture decision records — kept local for now, NOT for the public repo
+docs/adr/
