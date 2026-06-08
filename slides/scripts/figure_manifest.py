@@ -51,6 +51,19 @@ DRIFT_EDGE_INDEX = 3
 DRIFT_EDGE_NAME = "O_Sent → O_Cancelled"
 DRIFT_HORIZON_INDEX = -1  # last day
 
+# --- intermittent edge (S5 right panel / S6 / S14 reveal) -------------------
+# BPI2019-1 "Cancel Invoice Receipt -> Record Invoice Receipt" (feature index 59):
+# the chosen intermittent exemplar — ~80% zeros, spikes to 29. XGBoost overfits and
+# hallucinates 40–71 in the long zero stretches (MAE 18.4); MOIRAI-2.0 stays controlled
+# (MAE 2.0, −89%). This is the "ML/DL overfit" exhibit (S6) and the TSFM-better reveal (S14).
+# Targets come from baseline/xgboost/<DS>_chronos_targets.npy (same windows as XGBoost).
+INTERMITTENT_DATASET = "BPI2019_1"
+INTERMITTENT_EDGE_INDEX = 59
+INTERMITTENT_EDGE_NAME = "Cancel Invoice Receipt → Record Invoice Receipt"
+INTERMITTENT_HORIZON_INDEX = -1  # last (7th) forecast day
+# best TSFM on this series (revealed at S14): (subdir, file-key) under RESULTS/zero_shot
+INTERMITTENT_TSFM = ("moirai_2", "moirai2_uni")  # MOIRAI-2.0
+
 # --- style (KU Leuven house-style; CVD-verified family trio; from palette.json) -
 ACCENT = PALETTE["accent"]  # attention-only highlight (KU Leuven orange)
 BASELINE_GRAY = PALETTE["baseline"]
@@ -239,9 +252,26 @@ OUT = {
     "mae_bars": FIG_OUT / "results-mae-bars.png",
     "drift_xgb": FIG_OUT / "bpi2017-drift-xgb-only.png",
     "drift_tsfm": FIG_OUT / "bpi2017-drift-with-tsfm.png",
+    "s5_drift_truth": FIG_OUT / "s5-drift-truth.png",
+    "s5_intermittent_truth": FIG_OUT / "s5-intermittent-truth.png",
+    "s6_drift_xgb": FIG_OUT / "s6-drift-xgb.png",
+    "s6_intermittent_xgb": FIG_OUT / "s6-intermittent-xgb.png",
+    # S14 — drift+sparsity callback with MOIRAI-2.0 revealed + baked-in amber attention marks
+    # (same axes/ylim as the S6 panels so the click-swap overlays exactly).
+    "s14_drift_tsfm": FIG_OUT / "s14-drift-tsfm.png",
+    "s14_intermittent_tsfm": FIG_OUT / "s14-intermittent-tsfm.png",
     "ft_slope": FIG_OUT / "ft-slope.png",
     "er_bars": FIG_OUT / "er-bars.png",
     "er_single": FIG_OUT / "er-hospital-billing.png",
     "rmse_full": FIG_OUT / "rmse-full.png",
     "df_complexity": FIG_OUT / "df-complexity-radar.png",
+    # S7 — highlighted complexity radar: navy min–max band across the 4 logs with the
+    # 3 harder-than-benchmark axes (Transition/Shifting/Non-Gaussianity) emphasised in
+    # amber. The plain full per-log radar above stays the B4 backup.
+    "s7_complexity": FIG_OUT / "s7-complexity-radar.png",
 }
+
+# --- S7 highlighted complexity radar -----------------------------------------
+# The three metrics the paper reports as HIGHER than the 21 public benchmarks
+# (Li et al. 2025): emphasise these axes in amber. main.tex line 211.
+COMPLEXITY_HIGHLIGHT = ["Transition", "Shifting", "Non-Gaussianity"]
