@@ -1111,106 +1111,240 @@ which means the open problem has moved somewhere else."
 -->
 
 ---
+layout: assertion-evidence
+locator: Discussion
+assertion: The bottleneck has moved from forecasting accuracy to process-aware representation
+---
 
-# Takeaways
-
-<div class="space-y-5 mt-6">
-
-<div class="border-l-4 pl-4" style="border-color: #1d4ed8">
-<div class="font-semibold mb-1">For practitioners</div>
-<div class="text-sm opacity-90">
-Zero-shot TSFMs are the new PMF default — skip fine-tuning at PMF data scale.
-<span class="opacity-70 italic">Four logs is not a paradigm — but it is a strong enough signal to make zero-shot the right new starting baseline.</span>
+<div class="s17">
+<div class="s17-rows">
+<div class="s17-row">
+<div class="s17-row-t">Beyond control flow</div>
+<div class="s17-row-d"><span class="lim">DFGs model only control flow</span><span class="to">→</span><span class="fut">add resources, decisions, richer relations</span></div>
 </div>
+<div class="s17-row">
+<div class="s17-row-t">Smarter adaptation</div>
+<div class="s17-row-d"><span class="lim">fine-tuning gains were marginal</span><span class="to">→</span><span class="fut">find better adaptation methods for PMF</span></div>
 </div>
-
-<div class="border-l-4 pl-4" style="border-color: #1d4ed8">
-<div class="font-semibold mb-1">For PMF research</div>
-<div class="text-sm opacity-90">
-The bottleneck has moved from forecasting accuracy to process-aware representation.
-DFGs are a lossy target.
+<div class="s17-row">
+<div class="s17-row-t">Larger log corpora</div>
+<div class="s17-row-d"><span class="lim">only four event logs</span><span class="to">→</span><span class="fut">bigger, higher-quality logs for a process-native model</span></div>
 </div>
-</div>
-
-<div class="border-l-4 pl-4" style="border-color: #1d4ed8">
-<div class="font-semibold mb-1">For process mining</div>
-<div class="text-sm opacity-90">
-PM can borrow from adjacent fields cheaply — a process-native FM is the next frontier,
-but needs a corpus of event logs we don't yet have.
 </div>
 </div>
 
-</div>
-
-<div class="mt-8 pt-4 border-t border-gray-300 flex justify-between items-center text-xs opacity-80">
-<div>
-<strong>github.com/YongboYu/pmf-tsfm</strong> · demo URL · paper
-</div>
-<div class="italic">
-Runs on laptop (MPS) · GPU server (CUDA) · HPC
-</div>
-</div>
+<style>
+.s17 { margin-top: 52px }
+.s17-rows { display: flex; flex-direction: column; gap: 40px }
+.s17-row { border-left: 4px solid var(--brand); padding: 2px 0 2px 20px }
+.s17-row-t { font-size: 24px; font-weight: 700; color: var(--ink); margin-bottom: 6px }
+.s17-row-d { font-size: 21px; line-height: 1.4 }
+.s17-row-d .lim { color: var(--neutral) }
+.s17-row-d .to { color: var(--brand); font-weight: 800; margin: 0 10px }
+.s17-row-d .fut { color: var(--brand); font-weight: 600 }
+</style>
 
 <!--
-Q: What do I do with this? Where do I go next?
+[S-17]
+Q: Where does process model forecasting go from here?
 
-Transition in: "So what do we walk away with?"
+Transition in (from S16): "So the forecasting is solved — the open problem has moved somewhere else."
 
-~2 min. CRITIQUE CONSTRAINT: signal 1 must contain "four logs is not a paradigm" hedge.
+LEAD WITH THE HEADER (say it first): the bottleneck has moved from forecasting accuracy
+(solved — zero-shot TSFMs beat the baselines) to PROCESS-AWARE REPRESENTATION. DFGs capture
+only the control-flow / workflow aspect — a lossy target (callback to S16's ER parity). This
+slide OWNS the "bottleneck has moved" line — S18 must not repeat it.
 
-CLOSING ANCHOR LINE (rehearse cold):
-"Zero-shot TSFMs are the new PMF default. Four logs is not a paradigm — but it is
-a strong enough signal that the right new default is to try a zero-shot TSFM first.
-The deeper signal is that time-series forecasting just became cheap enough that
-process mining can borrow from it without paying the training tax.
-What else can we borrow?"
+Then the three future directions (paper §Discussion):
+1. Beyond control flow — directly-follows is a control-flow-only view; enrich to other process
+   dimensions (resources, bottlenecks, decisions) and richer relations (loops, long-range deps).
+2. Smarter adaptation — fine-tuning gains were marginal at this data scale; resource/method
+   constraints limited what we tried; better adaptation methods are open.
+3. Larger log corpora — only four logs; larger, higher-quality collections would generalize the
+   findings and could support a process-native foundation model.
+
+Also mention aloud (kept off-slide): concept drift is a key challenge — combine drift detection
+with incremental / lightweight fine-tuning for adaptive retraining (paper §Discussion).
+
+~1 min. Transition out (to S18 Takeaways): "So what do we actually walk away with?"
 -->
 
 ---
-layout: center
+layout: assertion-evidence
+locator: Takeaways
+assertion: The best forecaster for your process model isn't one you train — and it's cheap to run
 ---
 
-# Demo
+<div class="s18">
 
-<div class="border-2 border-dashed border-gray-400 rounded-lg p-6 mt-4 mb-4 min-h-[280px] flex items-center justify-center">
-<div class="text-center opacity-60 text-sm">
-[PLACEHOLDER]<br/>
-Pre-recorded screencast (~2 min)<br/><br/>
-1. Open small event log<br/>
-2. Pick TSFM checkpoint<br/>
-3. Run zero-shot inference<br/>
-4. Render forecasted DFG vs ground truth
-</div>
+  <!-- Practitioner — ONE condensed point (brand-tinted banner) -->
+  <div class="s18-prac">
+    <div class="s18-prac-label">For practitioners</div>
+    <div class="s18-prac-body">
+      These TSFMs are <strong>tiny beside LLMs</strong> — deploy locally, forecast fast on a
+      laptop or a cheap GPU, with little compute.
+      <strong>Fine-tuning is doable, but rarely needed.</strong>
+    </div>
+  </div>
+
+  <!-- Scientific signals -->
+  <div class="s18-sig-head">What it signals</div>
+  <ol class="s18-sigs">
+    <li>
+      <span class="s18-num">1</span>
+      <span><strong>Zero-shot is the new PMF default.</strong>
+        <span class="s18-hedge">Four logs is not a paradigm — but a strong enough first signal.</span>
+      </span>
+    </li>
+    <li>
+      <span class="s18-num">2</span>
+      <span><strong>Fine-tuning is marginal</strong> at this data scale.</span>
+    </li>
+  </ol>
+
 </div>
 
-<div class="text-center text-sm opacity-80">
-Try it yourself · <strong>[demo URL]</strong> · QR code below
-</div>
+<style>
+.s18 { display: flex; flex-direction: column; gap: 26px; margin-top: 6px }
+.s18-prac { border: 2px solid var(--brand); background: #f4f8fc; border-radius: 12px; padding: 18px 22px }
+.s18-prac-label { font-size: 18px; font-weight: 700; color: var(--brand); margin-bottom: 6px }
+.s18-prac-body { font-size: 23px; color: var(--ink); line-height: 1.4 }
+.s18-prac-body strong { color: var(--brand) }
+.s18-sig-head { font-size: 26px; font-weight: 600; color: var(--brand) }
+.s18-sigs { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 16px }
+.s18-sigs li { display: flex; align-items: baseline; gap: 14px; font-size: 23px; color: var(--ink); line-height: 1.4; padding-left: 0 }
+.s18-sigs li::before { content: none } /* suppress the global .ae-body li "–" marker */
+.s18-num { flex: none; width: 30px; height: 30px; border-radius: 50%; background: var(--brand); color: #fff; font-size: 16px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; transform: translateY(3px) }
+.s18-hedge { display: block; margin-top: 2px; color: var(--neutral); font-style: italic }
+</style>
 
 <!--
-~2-3 min. Live demo NOT recommended in single-screen room (Wi-Fi/projector risk).
-Pre-recorded screencast is the safe play.
-Audience can scan QR during Q&A.
+[S-18]
+Q: What do I walk away with — and what do I do next?
+
+Transition in: "So what do we walk away with?"  ~75s. Two audiences: practitioners (what to do)
+and the field (what we learned).
+
+Practitioner — ONE point: these models are small. Run them on a laptop or a cheap GPU, get a
+forecast fast, little compute. You CAN fine-tune, but at PMF data scale it's rarely worth it.
+
+Two signals:
+  1. Zero-shot is the new PMF default. CRITIQUE CONSTRAINT — say the hedge verbatim:
+     "four logs is not a paradigm" — but a strong enough signal that the right new default is to
+     TRY a zero-shot TSFM first.
+  2. Fine-tuning is marginal at this data scale (callback to S15's flat slope).
+
+Do NOT say the "bottleneck has moved" line here (that's S17). No artifact/code links here (S19).
+
+CLOSING ANCHOR — rehearse COLD, deliver in SPEECH (not on slide):
+"Zero-shot TSFMs are the new PMF default. Four logs is not a paradigm — but it is a strong enough
+signal that the right new default is to try a zero-shot TSFM first. The deeper signal is that
+time-series forecasting just became cheap enough that process mining can borrow from it without
+paying the training tax. What else can we borrow?"
+
+Transition out (to S19 artifacts): "And all of this is yours to run."
+-->
+
+---
+layout: two-col-evidence
+locator: Artifacts
+assertion: Public, reproducible — and live to try right now
+---
+
+::left::
+
+<div class="border-2 border-dashed rounded-lg p-6 min-h-[300px] flex items-center justify-center" style="border-color: var(--neutral-soft)">
+<div class="text-center dense--xs" style="color: var(--neutral)">
+[PLACEHOLDER]<br/>
+Pre-recorded walkthrough (~2 min)<br/><br/>
+1. Open a small event log<br/>
+2. Pick a TSFM checkpoint<br/>
+3. Run zero-shot inference<br/>
+4. Forecasted DFG vs ground truth
+</div>
+</div>
+
+<div class="caption mt-3">Screencast — the safe play; live demo on request.</div>
+
+::right::
+
+<!-- live demo = QR block (QR + readable URL in one): top of column, the single amber emphasis -->
+<div class="border-2 rounded-lg flex items-center gap-4 px-4 py-3" style="border-color: var(--accent); background: var(--surface-alt)">
+<img src="/figures/demo-qr.png" class="w-[120px] h-[120px]" alt="QR to the live demo on Hugging Face Spaces" />
+<div>
+<div class="font-semibold" style="color: var(--brand)">Live demo — scan or visit</div>
+<div class="dense--xs">huggingface.co/spaces/YongboYu/pmf-tsfm-demo</div>
+<div class="dense--xs" style="color: var(--neutral)">Chronos-2 on HF ZeroGPU</div>
+</div>
+</div>
+
+<div class="space-y-3 mt-4">
+
+<div class="border rounded-lg px-4 py-2" style="border-color: var(--hairline)">
+<div class="font-semibold" style="color: var(--brand)">Code</div>
+<div class="dense--xs">github.com/YongboYu/pmf-tsfm</div>
+</div>
+
+</div>
+
+<div class="flex gap-2 mt-4 dense--xs" style="color: var(--neutral)">
+<span class="border rounded px-2 py-1" style="border-color: var(--hairline)">laptop · MPS</span>
+<span class="border rounded px-2 py-1" style="border-color: var(--hairline)">Linux · CUDA</span>
+<span class="border rounded px-2 py-1" style="border-color: var(--hairline)">HPC · H100 / Slurm</span>
+</div>
+
+<div class="mt-3 caption">yongbo.yu@kuleuven.be · arXiv:2512.07624</div>
+
+<!--
+[S-19]
+~2–3 min. THE DEMO BEAT — the work is reproducible and usable.
+
+Transition in: "Everything I've shown is public and runs out of the box."
+
+Walk the screencast (pre-recorded = the safe play; a live demo on the room projector
+is a Wi-Fi/projector risk on a single screen). Point at the QR: "scan it now — the live
+Space, Chronos-2 on HF ZeroGPU, is in your pocket for the Q&A."
+
+Reproducibility: the same code path runs on a laptop (MPS), a CUDA box, or the HPC
+cluster (H100 via Slurm) — nothing in the paper needs special hardware.
+
+Live demo NOT driven live on the projector; point to the QR / offer on request.
 -->
 
 ---
 layout: end
+class: ty-light
 ---
+
+<style>
+.slidev-layout.ty-light {
+  background:
+    radial-gradient(1100px 500px at 78% -8%, #eaf1f8 0%, rgba(234,241,248,0) 60%),
+    var(--surface) !important;
+  color: var(--ink) !important;
+  text-align: center;
+}
+.slidev-layout.ty-light h1 { color: var(--brand) !important; }
+</style>
 
 # Thank you
 
-<div class="text-lg opacity-80 mt-6">
+<div class="text-2xl mt-4" style="color: var(--neutral)">
 Questions, please.
 </div>
 
-<div class="text-sm opacity-60 mt-8">
-yongbo.yu@kuleuven.be · github.com/YongboYu/pmf-tsfm
+<div class="mt-10 text-lg">
+<a href="mailto:yongbo.yu@kuleuven.be" style="color: var(--brand); font-weight: 600">yongbo.yu@kuleuven.be</a>
+<span style="color: var(--neutral-soft)">&nbsp;·&nbsp;</span>
+<a href="https://github.com/YongboYu/pmf-tsfm" style="color: var(--brand); font-weight: 600">github.com/YongboYu/pmf-tsfm</a>
 </div>
 
+<img src="/logos/kuleuven-liris.png" class="h-12 mx-auto mt-12" alt="KU Leuven · LIRIS" />
+
 <!--
-10 min Q&A.
-Backup slides follow. Have answers to the ranked hostile questions rehearsed cold
-(see SLIDES.md "Required backup slides" and Q&A defense section).
+[S-20]
+10 min Q&A. Backup slides follow, hidden from ToC (each backup carries `hideInToc: true`).
+Hostile-Q answers rehearsed cold — see SLIDES.md "Required backup slides" + the Q&A defense section.
 -->
 
 ---
