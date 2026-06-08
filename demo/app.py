@@ -217,7 +217,7 @@ def _drift_summary(drift: dict[str, list[dict[str, Any]]]) -> str:
         f"{len(drift['removed'])} it **drops**, "
         f"{len(drift['stable'])} unchanged. "
         "_This is change from the recent past, not accuracy — an upload has no future "
-        "truth to score against (ADR-0004)._"
+        "truth to score against._"
     )
 
 
@@ -297,9 +297,10 @@ def _build_bundled_tab() -> tuple[Any, list[Any], list[Any]]:
     initial render happens once the Blocks context is open).
     """
     gr.Markdown(
-        "Holdout backtest (ADR-0004): the real last week is **held out** and forecast "
-        "from the rest, then compared against what actually happened — so ER / MAE / RMSE "
-        "are genuine accuracy."
+        "The real last week is **held out** and forecast from the rest, then scored "
+        "against what actually happened. The right-hand graph is that **same-period "
+        "actual week** — the held-out **ground truth** — so ER / MAE / RMSE are genuine "
+        "accuracy."
     )
     with gr.Accordion("What am I looking at?", open=False):
         gr.Markdown(
@@ -307,7 +308,8 @@ def _build_bundled_tab() -> tuple[Any, list[Any], list[Any]]:
             "**directly-follows (DF) relation** (b directly follows a), the number on it the "
             "count over the week.\n\n"
             "- **Forecast** — the held-out last week, as the model predicted it from prior weeks.\n"
-            "- **Actual future** — what really happened that week.\n"
+            "- **Actual future** — the real **same-period** week, held out as **ground truth** "
+            "for scoring (contrast the Live tab, where the comparison is the recent *past*).\n"
             "- **ER / MAE / RMSE** — how accurate the forecast was against that actual future. "
             "**Entropic Relevance (ER)** scores how well a DFG explains the real behaviour "
             "(lower is better; the *truth (baseline)* box is the ER of the actual DFG itself — the "
@@ -334,7 +336,7 @@ def _build_bundled_tab() -> tuple[Any, list[Any], list[Any]]:
             gr.Markdown("### Forecast — the held-out last week, predicted")
             forecast_pane = gr.HTML(elem_classes=["dfg-pane"])
         with gr.Column():
-            gr.Markdown("### Actual future — what really happened that week")
+            gr.Markdown("### Actual future — the same week's real DFG (held-out ground truth)")
             actual_pane = gr.HTML(elem_classes=["dfg-pane"])
     with gr.Column(visible=False) as diff_overlay:
         gr.Markdown("### Diff — forecast vs actual future")
@@ -383,10 +385,11 @@ def _build_bundled_tab() -> tuple[Any, list[Any], list[Any]]:
 def _build_live_tab() -> None:
     """The live upload tab (slice 3b): upload → ZeroGPU forecast → drift view."""
     gr.Markdown(
-        "Upload a custom **XES** log to forecast its genuine next week (forecast origin = "
-        "the log end) on ZeroGPU, then read the **drift** of that forecast vs the "
-        "**last-known window** — DF relations the forecast adds or drops. There is no "
-        "future truth for an upload, so this path shows **drift, never accuracy** (ADR-0004)."
+        "Upload a custom **XES** log to forecast its **genuine next week** (forecast origin "
+        "= the log end) on ZeroGPU. The right-hand graph is **not** a future truth — it is "
+        "your log's **last-known window** (its recent *past*) — so the comparison is **drift** "
+        "(DF relations the forecast adds or drops), **never accuracy**. (Contrast the Bundled "
+        "tab, where the right-hand graph is the real same-period week.)"
     )
     with gr.Accordion("What am I looking at?", open=False):
         gr.Markdown(
@@ -398,7 +401,7 @@ def _build_live_tab() -> None:
             "- **Last-known window** — the most recent week already in your log.\n"
             "- **Drift** — the DF relations the forecast **adds** or **drops** vs that recent past.\n\n"
             "No accuracy metric (ER / MAE / RMSE) is shown: an upload has no future ground truth to "
-            "score against (ADR-0004). For scored accuracy, see the **Bundled explorer** tab."
+            "score against. For scored accuracy, see the **Bundled explorer** tab."
         )
     with gr.Row():
         upload = gr.File(label="XES event log", file_types=[".xes"], type="filepath")
@@ -406,7 +409,7 @@ def _build_live_tab() -> None:
             LIVE_MODELS,
             value=LIVE_MODELS[0],
             label="Model",
-            info="Forecasts run with Chronos-2 on the hosted GPU; Moirai-2 / TimesFM-2.5 live in the Bundled explorer tab",
+            info="Forecasts run with Chronos-2 on the hosted GPU",
         )
         run = gr.Button("Forecast", variant="primary")
     gr.Examples(
@@ -431,7 +434,9 @@ def _build_live_tab() -> None:
             gr.Markdown("### Forecast — the genuine next week, predicted")
             forecast_pane = gr.HTML(elem_classes=["dfg-pane"])
         with gr.Column():
-            gr.Markdown("### Last-known window — the recent past it is compared against")
+            gr.Markdown(
+                "### Last-known window — your log's recent past (drift baseline, *not* a future truth)"
+            )
             comparison_pane = gr.HTML(elem_classes=["dfg-pane"])
     with gr.Column(visible=False) as drift_overlay:
         gr.Markdown("### Drift — forecast vs the last-known window")
