@@ -5,17 +5,16 @@ Reads from the authoritative sources pinned in figure_manifest.py and writes PNG
 slides/template/public/figures/. Idempotent: re-running overwrites in place.
 
 Sourcing (see manifest header for provenance):
-  * MAE bars                        -> paper Table 4 (TABLE4_MAE), cross-checked vs results/ CSVs.
+  * MAE bars + full MAE table       -> paper Table 4 (TABLE4_MAE), cross-checked vs results/ CSVs.
         Baselines on results/ are a re-run that differs from camera-ready (esp. XGBoost Sepsis);
         the slide must be paper-faithful (SLIDES.md), so we plot the paper and print result deltas.
-  * FT slope, RMSE table            -> results/ comprehensive_evaluation CSVs (machine precise).
-        RMSE is results-only — the paper reports MAE (Table 4); RMSE is a backup/verbal claim, so
-        its baselines carry the same re-run caveat (flagged in the slide caption).
+  * Full RMSE table                 -> paper Table 5 (TABLE5_RMSE), transcribed (paper-faithful).
+  * FT slope                        -> results/ comprehensive_evaluation CSVs (machine precise).
   * Drift pair                      -> results/ .npy arrays (only source of per-window series;
         XGBoost line is the re-run — matches paper Fig 1 qualitatively, no paper machine data).
   * ER bars, DF-complexity radar    -> transcribed paper Tables 7 / 3 (no clean machine source)
 
-MAE/FT/RMSE cross-check TSFM values against the paper tables and print any delta.
+MAE/FT cross-check TSFM values against the paper tables and print any delta.
 
     python slides/scripts/make_figures.py [--only mae_bars,drift,...]
 """
@@ -504,18 +503,17 @@ def fig_er_single():
 
 
 # ---------------------------------------------------------------------------
-# backup — full RMSE table (all variants × 4 datasets)
+# backup — full metric tables (all variants × 4 datasets), paper-faithful.
+# MAE from paper Table 4 (M.TABLE4_MAE), RMSE from paper Table 5 (M.TABLE5_RMSE).
 # ---------------------------------------------------------------------------
-def fig_rmse_full():
-    rows, cell, best = [], [], dict.fromkeys(M.DATASETS, (None, 1000000000.0))
-    for label, kind, subdir in M.ALL_VARIANTS:
-        vals = {}
+def _full_metric_table(values, title, out_key):
+    """Render an all-variants metric table. `values` maps model label -> {dataset: value}.
+    Rows follow M.ALL_VARIANTS order; best (min) per log is highlighted amber, baselines gray."""
+    best = dict.fromkeys(M.DATASETS, (None, 1000000000.0))
+    rows = []
+    for label, kind, _subdir in M.ALL_VARIANTS:
+        vals = {ds: values[label][ds] for ds in M.DATASETS}
         for ds in M.DATASETS:
-            try:
-                vals[ds] = _read_rmse(_root_for(kind), subdir, ds)
-            except FileNotFoundError:
-                vals[ds] = None
-                DELTAS.append(f"RMSE table: missing {label}/{ds}")
             if vals[ds] is not None and vals[ds] < best[ds][1]:
                 best[ds] = (label, vals[ds])
         rows.append((label, kind, vals))
@@ -555,14 +553,72 @@ def fig_rmse_full():
     tbl.scale(1, 1.4)
     for c in range(len(col_labels)):
         tbl[(0, c)].set_text_props(fontweight="bold")
-    ax.set_title(
-        "Zero-shot RMSE — all variants  (amber = best per log, gray = baselines)",
-        fontweight="bold",
-        pad=12,
-    )
-    fig.savefig(M.OUT["rmse_full"])
+    ax.set_title(title, fontweight="bold", pad=12)
+    fig.savefig(M.OUT[out_key])
     plt.close(fig)
-    print(f"  wrote {M.OUT['rmse_full'].name}")
+    print(f"  wrote {M.OUT[out_key].name}")
+
+
+def fig_mae_full():
+    _full_metric_table(
+        M.TABLE4_MAE,
+        "Zero-shot MAE — all variants  (amber = best per log, gray = baselines)",
+        "mae_full",
+    )
+
+
+def fig_rmse_full():
+    _full_metric_table(
+        M.TABLE5_RMSE,
+        "Zero-shot RMSE — all variants  (amber = best per log, gray = baselines)",
+        "rmse_full",
+    )
+
+
+# ---------------------------------------------------------------------------
+# backup — fine-tuning table (paper Table 6): MAE & RMSE for zero-shot / LoRA /
+# full tune on the five fine-tunable TSFMs. Model name shown once per group; the
+# five model groups alternate a faint shade so LoRA/full read against zero-shot.
+# ---------------------------------------------------------------------------
+def fig_ft_table():
+    group_shade = "#eef2f7"
+    metric_cols = [(ds, metric) for ds in M.DATASETS for metric in ("MAE", "RMSE")]
+
+    def _log_label(ds):
+        return "Hosp. Bill." if ds == "Hospital_Billing" else M.DATASET_LABELS[ds]
+
+    col_labels = ["Model", "Strategy"] + [f"{_log_label(ds)}\n{metric}" for ds, metric in metric_cols]
+
+    text, colors = [], []
+    prev_model, group_idx = None, -1
+    for model, strategy, vals in M.TABLE6_FT:
+        if model != prev_model:
+            group_idx += 1
+        first = model != prev_model
+        prev_model = model
+        shade = group_shade if group_idx % 2 else "white"
+        line = [model if first else "", strategy]
+        for ds, metric in metric_cols:
+            mae, rmse = vals[ds]
+            line.append(f"{(mae if metric == 'MAE' else rmse):.2f}")
+        text.append(line)
+        colors.append([shade] * len(col_labels))
+
+    fig, ax = plt.subplots(figsize=(13, 5.5))
+    ax.axis("off")
+    tbl = ax.table(
+        cellText=text, colLabels=col_labels, cellColours=colors, cellLoc="center", loc="center"
+    )
+    tbl.auto_set_font_size(False)
+    tbl.set_fontsize(8)
+    tbl.auto_set_column_width(col=list(range(len(col_labels))))
+    tbl.scale(1, 1.6)
+    for c in range(len(col_labels)):
+        tbl[(0, c)].set_text_props(fontweight="bold")
+    ax.set_title("Fine-tuning — MAE & RMSE", fontweight="bold", pad=12)
+    fig.savefig(M.OUT["ft_table"])
+    plt.close(fig)
+    print(f"  wrote {M.OUT['ft_table'].name}")
 
 
 # ---------------------------------------------------------------------------
@@ -675,7 +731,9 @@ FIGURES = {
     "ft_slope": fig_ft_slope,
     "er_bars": fig_er_bars,
     "er_single": fig_er_single,
+    "mae_full": fig_mae_full,
     "rmse_full": fig_rmse_full,
+    "ft_table": fig_ft_table,
     "df_complexity": fig_df_complexity,
     "s7_complexity": fig_s7_complexity,
 }
