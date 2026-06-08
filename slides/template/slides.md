@@ -1254,18 +1254,23 @@ assertion: Public, reproducible — and live to try right now
 
 ::left::
 
-<div class="border-2 border-dashed rounded-lg p-6 min-h-[300px] flex items-center justify-center" style="border-color: var(--neutral-soft)">
-<div class="text-center dense--xs" style="color: var(--neutral)">
-[PLACEHOLDER]<br/>
-Pre-recorded walkthrough (~2 min)<br/><br/>
-1. Open a small event log<br/>
-2. Pick a TSFM checkpoint<br/>
-3. Run zero-shot inference<br/>
-4. Forecasted DFG vs ground truth
-</div>
+<!-- Live deck: poster frame → ONE click swaps in the screencast, which plays once (no loop).
+     PDF/PPTX export fallback (e.g. the 5-shot carousel) to be designed later. -->
+<div class="demo-vstack">
+<img src="/figures/demo-screencast-poster.png" v-click.hide="1" class="demo-vlayer" alt="Demo app — click to play the ~29s live walkthrough" />
+<SlidevVideo v-click="1" autoplay="once" class="demo-vlayer demo-vlayer--over" poster="/figures/demo-screencast-poster.png" print-poster="/figures/demo-screencast-poster.png">
+<source src="/figures/demo-screencast.mp4" type="video/mp4" />
+</SlidevVideo>
 </div>
 
-<div class="caption mt-3">Screencast — the safe play; live demo on request.</div>
+<div class="caption demo-cap-one">Live app · ~29 s walkthrough — click to play (once)</div>
+
+<style>
+.demo-vstack { position: relative; width: 100%; aspect-ratio: 16 / 10; border: 1px solid var(--hairline); border-radius: 8px; overflow: hidden; background: #fff }
+.demo-vlayer { display: block; width: 100%; height: 100%; object-fit: contain }
+.demo-vlayer--over { position: absolute; inset: 0 }
+.demo-cap-one { text-align: center; margin-top: 8px }
+</style>
 
 ::right::
 
@@ -1298,18 +1303,23 @@ Pre-recorded walkthrough (~2 min)<br/><br/>
 
 <!--
 [S-19]
-~2–3 min. THE DEMO BEAT — the work is reproducible and usable.
+~1.5–2 min. THE DEMO BEAT — the work is reproducible and usable.
 
 Transition in: "Everything I've shown is public and runs out of the box."
 
-Walk the screencast (pre-recorded = the safe play; a live demo on the room projector
-is a Wi-Fi/projector risk on a single screen). Point at the QR: "scan it now — the live
-Space, Chronos-2 on HF ZeroGPU, is in your pocket for the Q&A."
+ONE click plays the ~29s screencast (once, no loop) — a real recording of the live app.
+What it walks through:
+  • Forecast vs actual future — the bundled backtest, forecast DFG beside the held-out truth.
+  • Accuracy — ER / MAE / RMSE against that real future (ER truth = the floor to beat).
+  • Diff — where the forecast matched, missed (amber), or over-called (red): absolute, then relative %.
+  • Upload your own log — the live ZeroGPU path, forecast vs the last-known window.
+Talk over it as it plays (~29s); let it finish before the next click advances the slide.
+
+Point at the QR: "scan it now — the live Space, Chronos-2 on HF ZeroGPU, is in your
+pocket for the Q&A; upload your own log."
 
 Reproducibility: the same code path runs on a laptop (MPS), a CUDA box, or the HPC
 cluster (H100 via Slurm) — nothing in the paper needs special hardware.
-
-Live demo NOT driven live on the projector; point to the QR / offer on request.
 -->
 
 ---
