@@ -33,8 +33,10 @@ from upload_guard import MAX_UPLOAD_BYTES, SMALL_LOG_BYTES, UploadRejected
 DATASETS: list[str] = ["bpi2017", "bpi2019_1", "sepsis", "hospital_billing"]
 MODELS: list[str] = ["chronos2", "moirai2", "timesfm2.5"]
 
-# The live path runs on ZeroGPU. Only Chronos-2 is wired this slice (#115); moirai2 /
-# timesfm2.5 stay gated (a follow-up), so the live picker offers Chronos-2 alone.
+# The live path runs on ZeroGPU and offers Chronos-2 only — by design, not a stopgap.
+# Moirai-2 / TimesFM-2.5 stay in the Bundled explorer tab: uni2ts pins numpy~=1.26, which
+# breaks the numpy-2.x Chronos/torch ZeroGPU stack on the shared Space (live parity was
+# attempted in #122, reverted in #123). The upload guard still recognises them as gated.
 LIVE_MODELS: list[str] = ["chronos2"]
 
 # A tiny committed sample (a dense six-week slice of the bundled sepsis log) so the live
@@ -405,7 +407,7 @@ def _build_live_tab() -> None:
             LIVE_MODELS,
             value=LIVE_MODELS[0],
             label="Model",
-            info="Chronos-2 is wired on the hosted GPU; more models are a follow-up",
+            info="Forecasts run with Chronos-2 on the hosted GPU; Moirai-2 / TimesFM-2.5 live in the Bundled explorer tab",
         )
         run = gr.Button("Forecast", variant="primary")
     gr.Examples(
