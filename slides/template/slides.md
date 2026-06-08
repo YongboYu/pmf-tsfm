@@ -1,5 +1,6 @@
 ---
 theme: default
+colorSchema: light
 title: Time Series Foundation Models for Process Model Forecasting
 info: |
   CAiSE 2026 presentation — pmf-tsfm
