@@ -34,7 +34,7 @@ process evolve over time.
 **Live upload (your log).** Upload a custom **XES** log and forecast its genuine next week (forecast
 origin = the log end) on **ZeroGPU**. Because an upload has no future ground truth, this tab reports
 **drift** — the DF relations the forecast adds or drops vs the **last-known window** — and **never**
-an accuracy metric (ADR-0004). Live forecasts run with **Chronos-2** (Moirai-2 and TimesFM-2.5 are
+an accuracy metric. Live forecasts run with **Chronos-2** (Moirai-2 and TimesFM-2.5 are
 available in the Bundled explorer tab); oversize logs are rejected so a call stays under the GPU
 time limit.
 
