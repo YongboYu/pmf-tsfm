@@ -1,0 +1,86 @@
+name: Deploy slides to HF Space
+
+# Build the Slidev deck (slides/template) and publish the static dist/ to a Hugging Face
+# Static-SDK Space, so the live, interactive deck is reachable at a public URL during the talk.
+# Mirrors deploy-demo.yml: HfApi.upload_folder with delete_patterns="*" + the HF_TOKEN secret.
+#
+# One-time setup (HITL): the Space YongboYu/pmf-tsfm-slides (sdk: static) is created by the manual
+# deploy; the HF_TOKEN repo secret (write-scoped) already exists for deploy-demo and is reused here.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "slides/template/**"
+      - ".github/workflows/deploy-slides.yml"
+  workflow_dispatch: {}
+
+concurrency:
+  group: deploy-slides
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+          cache-dependency-path: slides/template/pnpm-lock.yaml
+
+      - name: Build the deck
+        working-directory: slides/template
+        run: |
+          set -euo pipefail
+          pnpm install --frozen-lockfile
+          pnpm build
+          cp dist/index.html dist/404.html   # SPA fallback for static hosts
+
+      - name: Stage the Space (dist + static-SDK README)
+        run: |
+          set -euo pipefail
+          rm -rf _space && mkdir -p _space
+          cp -r slides/template/dist/. _space/
+          cat > _space/README.md <<'EOF'
+          ---
+          title: PMF-TSFM CAiSE 2026 Slides
+          emoji: 📈
+          colorFrom: blue
+          colorTo: yellow
+          sdk: static
+          pinned: false
+          ---
+
+          Live Slidev deck for the CAiSE 2026 talk (Process Model Forecasting with Time Series
+          Foundation Models). Built from `slides/template` in github.com/YongboYu/pmf-tsfm.
+          EOF
+
+      - name: Push to the HF Space
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          set -euo pipefail
+          pip install --upgrade "huggingface_hub>=0.25"
+          python - <<'PY'
+          import os
+          from huggingface_hub import HfApi
+
+          api = HfApi(token=os.environ["HF_TOKEN"])
+          space_id = "YongboYu/pmf-tsfm-slides"
+          api.upload_folder(
+              folder_path="_space",
+              repo_id=space_id,
+              repo_type="space",
+              commit_message=f"Deploy slides from {os.environ.get('GITHUB_SHA', 'main')[:8]}",
+              # Purge anything on the Space no longer in the freshly built dist.
+              delete_patterns="*",
+          )
+          print(f"Deployed to https://huggingface.co/spaces/{space_id}")
+          PY
