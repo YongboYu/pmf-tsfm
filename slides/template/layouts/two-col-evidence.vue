@@ -14,6 +14,6 @@
       <div class="ae-col"><slot name="left" /></div>
       <div class="ae-col"><slot name="right" /></div>
     </div>
-    <div class="pageno">{{ $nav.currentPage }} / {{ $nav.total }}</div>
+    <PageNo :current="$nav.currentPage" :slides="$nav.slides" />
   </div>
 </template>

@@ -17,6 +17,6 @@
     <div class="ae-body">
       <slot />
     </div>
-    <div class="pageno">{{ $nav.currentPage }} / {{ $nav.total }}</div>
+    <PageNo :current="$nav.currentPage" :slides="$nav.slides" />
   </div>
 </template>
