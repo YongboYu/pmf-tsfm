@@ -54,6 +54,11 @@ timesfm_v25 = [
     # Update by fetching the latest master SHA and replacing the hash below.
     "timesfm @ https://github.com/google-research/timesfm/archive/ed29ec5ef7e2d86c48b632859de3b63856ef9cad.zip ; python_version >= '3.11'",
 ]
+# Headless MCP/agent server over pmf_tsfm.api (#133). The official Model Context Protocol
+# SDK provides FastMCP, which auto-derives each tool's schema from type hints + docstrings.
+# An extra (not a dev group) so the self-host Docker image (#134) can install it via
+# `pip install .[mcp]` and expose `docker run img mcp`.
+mcp = ["mcp>=1.2"]
 
 [project.scripts]
 pmf-inference = "pmf_tsfm.inference:main"
@@ -158,8 +163,8 @@ ignore_errors = true
 # =============================================================================
 
 [tool.pytest.ini_options]
-testpaths = ["tests", "demo/tests"]
-pythonpath = ["src", "demo"]
+testpaths = ["tests", "demo/tests", "mcp/tests"]
+pythonpath = ["src", "demo", "mcp"]
 norecursedirs = ["data", "logs", "outputs", "results", "temp"]
 addopts = "-v --tb=short --strict-markers"
 markers = [
