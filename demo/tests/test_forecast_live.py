@@ -156,17 +156,10 @@ def test_example_log_is_a_usable_live_input():
 # --- _live_windows (the seam: preprocess + forecast) ------------------------
 
 
-# A distinct stub constant per model so a dispatch test can confirm each model id routes
-# to *its own* adapter (not just "some forecast came back").
-_STUB_FORECAST = {"chronos2": 9.0, "moirai2": 8.0, "timesfm2.5": 7.0}
-
-
 @pytest.fixture
 def stub_live_seam(monkeypatch):
-    """Stand in for the two halves of the seam: the log→series converter and each
-    per-model forecast call. A 5-day series over 3 relations; every model's stub forecasts
-    its own constant (``_STUB_FORECAST``) so dispatch routing is checkable, and CI never
-    loads a real model lib (chronos / uni2ts / timesfm)."""
+    """Stand in for the two halves of the seam: the log→series converter and the
+    Chronos-2 call. A 5-day series over 3 relations; the forecast is a constant 9.0."""
     import forecast_live
 
     cols = ["▶ -> A", "A -> B", "B -> ■"]
@@ -176,35 +169,28 @@ def stub_live_seam(monkeypatch):
         index=pd.date_range("2020-01-01", periods=5),
     )
     monkeypatch.setattr(forecast_live, "log_to_df_series", lambda log, **k: frame)
-    for fn_name, value in (
-        ("_chronos2_forecast", _STUB_FORECAST["chronos2"]),
-        ("_moirai2_forecast", _STUB_FORECAST["moirai2"]),
-        ("_timesfm_forecast", _STUB_FORECAST["timesfm2.5"]),
-    ):
-        monkeypatch.setattr(
-            forecast_live,
-            fn_name,
-            lambda context, horizon, _v=value: np.full((horizon, context.shape[1]), _v),
-        )
+    monkeypatch.setattr(
+        forecast_live,
+        "_chronos2_forecast",
+        lambda context, horizon: np.full((horizon, context.shape[1]), 9.0),
+    )
     return frame
 
 
-@pytest.mark.parametrize("model", ["chronos2", "moirai2", "timesfm2.5"])
-def test_live_windows_forecasts_from_end_and_tails_the_recent_window(
-    tmp_path, stub_live_seam, model
-):
+def test_live_windows_forecasts_from_end_and_tails_the_recent_window(tmp_path, stub_live_seam):
     """Both windows are ``(horizon, F)`` in one feature space: the forecast from the log
-    end, and the actual last ``horizon`` days (the recent past). Each of the three live
-    models routes to its own adapter (the distinct stub constant proves the dispatch)."""
+    end, and the actual last ``horizon`` days (the recent past)."""
     from forecast_live import _live_windows
 
-    forecast_window, last_known_window, feature_names = _live_windows(tmp_path / "x.xes", model, 2)
+    forecast_window, last_known_window, feature_names = _live_windows(
+        tmp_path / "x.xes", "chronos2", 2
+    )
 
     assert feature_names == list(stub_live_seam.columns)
     assert forecast_window.shape == (2, 3) and last_known_window.shape == (2, 3)
     # last-known = the recent tail of the series; forecast = the model's true-future call.
     np.testing.assert_array_equal(last_known_window, stub_live_seam.to_numpy()[-2:])
-    np.testing.assert_array_equal(forecast_window, np.full((2, 3), _STUB_FORECAST[model]))
+    np.testing.assert_array_equal(forecast_window, np.full((2, 3), 9.0))
 
 
 def test_live_windows_rejects_log_with_too_little_history(tmp_path, monkeypatch):
@@ -219,16 +205,16 @@ def test_live_windows_rejects_log_with_too_little_history(tmp_path, monkeypatch)
         forecast_live._live_windows(tmp_path / "x.xes", "chronos2", 7)
 
 
-def test_live_windows_rejects_unknown_model_before_preprocessing(tmp_path, monkeypatch):
-    """All three wired models dispatch; an unknown model id is rejected before any work runs."""
+def test_live_windows_rejects_unwired_model_before_preprocessing(tmp_path, monkeypatch):
+    """Only chronos2 is wired this slice; a gated model is rejected before any work runs."""
     import forecast_live
 
     def _boom(*a, **k):
-        raise AssertionError("preprocessing ran for an unknown model")
+        raise AssertionError("preprocessing ran for an unwired model")
 
     monkeypatch.setattr(forecast_live, "log_to_df_series", _boom)
-    with pytest.raises(UploadRejected, match="not available"):
-        forecast_live._live_windows(tmp_path / "x.xes", "gpt5", 7)
+    with pytest.raises(UploadRejected, match="chronos2"):
+        forecast_live._live_windows(tmp_path / "x.xes", "moirai2", 7)
 
 
 def test_forecast_live_runs_through_the_real_seam(tmp_path, stub_live_seam):
