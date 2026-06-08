@@ -51,3 +51,24 @@ Run it locally:
 ```bash
 uv run --with gradio python app.py
 ```
+
+## Self-host with Docker
+
+The same `demo/` code also ships as a self-host image (ADR-0003, "one codebase, two packagings") —
+the GUI by default, with **no HF upload caps and no ZeroGPU cold-start**. Build the context from the
+repo root so it picks up `demo/`:
+
+```bash
+docker build -t pmf-tsfm-demo demo/
+docker run -p 7860:7860 pmf-tsfm-demo
+```
+
+Then open <http://localhost:7860>. The bundled tab is instant (precomputed assets). The live tab runs
+on **plain CPU** here — the image omits the `spaces` package, so the ZeroGPU decorator no-ops and the
+same forecast runs without a GPU (slower, but no wall-time limit). The **first** live forecast
+downloads the Chronos-2 weights from `s3://autogluon/chronos-2/` (one-off, a few minutes). Persist
+that cache across runs with a volume:
+
+```bash
+docker run -p 7860:7860 -v pmf-hf-cache:/app/.cache/huggingface pmf-tsfm-demo
+```

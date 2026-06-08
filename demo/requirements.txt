@@ -14,7 +14,9 @@ gradio==6.16.0
 spaces>=0.30
 graphviz>=0.20
 numpy>=1.24
-pandas>=2.2.3
+pandas>=2.2.3,<3  # pm4py's pandas backend isn't pandas-3 ready: pandas 3's pyarrow-backed
+                 # string columns break pm4py variant filtering ("is_in has no kernel for
+                 # list<string>"), which the live path hits during preprocessing.
 pm4py>=2.7.12.4
 torch>=2.2
 chronos-forecasting>=1.4.0
