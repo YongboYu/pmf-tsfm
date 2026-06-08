@@ -25,11 +25,22 @@ from dfg_diff import dfg_diff
 from log_to_series import log_to_df_series
 from render import dfg_json_to_svg, diff_svg
 
-# Chronos-2 is the only model wired on the hosted live path this slice (#115);
-# moirai2 / timesfm2.5 stay a documented follow-up. The id matches
-# configs/model/chronos/chronos2.yaml. Loading an ``s3://`` checkpoint needs boto3.
+# All three TSFMs are wired on the hosted live path (model parity with the bundled tab).
+# Each model has its own lazy loader + ``(context, horizon) -> forecast`` adapter below,
+# dispatched by ``_live_windows``. The heavy two (moirai2 / timesfm2.5) are gated to small
+# logs by ``upload_guard`` so a single GPU call stays under the ZeroGPU wall-time cap.
+#
+# Model ids match the paper configs: configs/model/chronos/chronos2.yaml,
+# configs/model/moirai/2_0_small.yaml, configs/model/timesfm/2_5_200m.yaml.
+# Loading the Chronos-2 ``s3://`` checkpoint needs boto3.
 _CHRONOS2_MODEL_ID = "s3://autogluon/chronos-2/"
-_chronos2_pipeline: object | None = None  # cache, loaded once per (forked) worker process
+_MOIRAI2_MODEL_ID = "Salesforce/moirai-2.0-R-small"
+_TIMESFM_MODEL_ID = "google/timesfm-2.5-200m-pytorch"
+# Per-model caches, each loaded once per (forked) worker process. See the ZeroGPU note on
+# _load_chronos2: every loader runs lazily INSIDE the @spaces.GPU worker, never at import.
+_chronos2_pipeline: object | None = None
+_moirai2_module: object | None = None
+_timesfm_model: object | None = None
 
 
 def _load_chronos2() -> object:
@@ -90,6 +101,136 @@ def _chronos2_forecast(context: np.ndarray, horizon: int) -> np.ndarray:
     return forecast
 
 
+def _load_moirai2() -> object:
+    """Load (and cache) the Moirai-2 module. Imports ``uni2ts`` lazily so the live-core
+    module stays importable — and testable — without the model libs.
+
+    Loaded only from inside the ``@spaces.GPU`` worker (via :func:`_moirai2_forecast`),
+    never at module import: ZeroGPU forks a worker per GPU call, and initialising CUDA in
+    the parent process breaks that fork with "process PID not found (pid=0)". The forecast
+    object built per call moves to the GPU that exists inside the worker. The weights cache
+    to disk on first download (~43 MB), so subsequent workers load fast.
+    """
+    global _moirai2_module
+    if _moirai2_module is None:
+        from uni2ts.model.moirai2 import Moirai2Module
+
+        _moirai2_module = Moirai2Module.from_pretrained(_MOIRAI2_MODEL_ID)
+    return _moirai2_module
+
+
+def _moirai2_forecast(context: np.ndarray, horizon: int) -> np.ndarray:
+    """Forecast the next ``horizon`` days of every DF relation with Moirai-2.
+
+    A minimal port of ``pmf_tsfm.models.moirai.MoiraiAdapter`` (the 2.0 path): batch every
+    feature into one GluonTS ``predict`` over a ``ListDataset``, take the median quantile —
+    kept here so the live path needs only ``uni2ts``/``gluonts``, not the full ``pmf_tsfm``
+    dep tree. **This is the GPU work** (wrapped by ``@spaces.GPU`` in the GUI) and is what
+    tests monkeypatch.
+
+    Args:
+        context: ``(n_days, n_features)`` history — the whole log's daily DF series.
+        horizon: number of future days to forecast.
+
+    Returns:
+        ``(horizon, n_features)`` forecast frequencies (median).
+    """
+    from gluonts.dataset.common import ListDataset
+    from uni2ts.model.moirai2 import Moirai2Forecast
+
+    module = _load_moirai2()
+    n_features = context.shape[1]
+    model = Moirai2Forecast(
+        module=module,
+        prediction_length=horizon,
+        context_length=context.shape[0],
+        target_dim=1,
+        feat_dynamic_real_dim=0,
+        past_feat_dynamic_real_dim=0,
+    )
+    predictor = model.create_predictor(batch_size=16)
+    dataset = ListDataset(
+        [{"target": context[:, i].tolist(), "start": "2020-01-01"} for i in range(n_features)],
+        freq="D",
+    )
+    forecasts = list(predictor.predict(dataset))
+    forecast = np.zeros((horizon, n_features))
+    for feat_idx, fc in enumerate(forecasts):
+        forecast[:, feat_idx] = np.asarray(fc.quantile(0.5))[:horizon]
+    return forecast
+
+
+def _load_timesfm() -> object:
+    """Load (and cache) the TimesFM-2.5 model. Imports ``timesfm`` lazily so the live-core
+    module stays importable — and testable — without the model libs.
+
+    Loaded only from inside the ``@spaces.GPU`` worker (via :func:`_timesfm_forecast`),
+    never at module import — same ZeroGPU fork rule as :func:`_load_chronos2`. The forecast
+    config mirrors configs/model/timesfm/2_5_200m.yaml. The weights cache to disk on first
+    download (~882 MB), so subsequent workers load fast.
+    """
+    global _timesfm_model
+    if _timesfm_model is None:
+        import timesfm
+
+        model_cls = timesfm.TimesFM_2p5_200M_torch
+        # huggingface_hub >= 0.24 passes transport kwargs (proxies, resume_download) to
+        # ``_from_pretrained``, which timesfm forwards into ``__init__`` and chokes on. Strip
+        # them for the duration of the load (mirrors pmf_tsfm.models.timesfm's workaround).
+        _orig = model_cls.__dict__.get("_from_pretrained")
+        if _orig is not None:
+            _orig_fn = _orig.__func__
+
+            @classmethod  # type: ignore[misc]
+            def _patched(cls, *, proxies=None, resume_download=None, **kwargs):
+                return _orig_fn(cls, **kwargs)
+
+            model_cls._from_pretrained = _patched
+        try:
+            model = model_cls.from_pretrained(_TIMESFM_MODEL_ID)
+        finally:
+            if _orig is not None:
+                model_cls._from_pretrained = _orig
+        model.compile(
+            timesfm.ForecastConfig(
+                max_context=1024,
+                max_horizon=64,
+                normalize_inputs=True,
+                per_core_batch_size=1,
+                use_continuous_quantile_head=True,
+                force_flip_invariance=True,
+                infer_is_positive=True,
+                fix_quantile_crossing=True,
+            )
+        )
+        _timesfm_model = model
+    return _timesfm_model
+
+
+def _timesfm_forecast(context: np.ndarray, horizon: int) -> np.ndarray:
+    """Forecast the next ``horizon`` days of every DF relation with TimesFM-2.5.
+
+    A minimal port of ``pmf_tsfm.models.timesfm.TimesFMAdapter`` (the 2.5 path): forecast
+    every feature as a univariate series in one ``model.forecast`` call, take the point
+    forecast — kept here so the live path needs only ``timesfm``, not the full ``pmf_tsfm``
+    dep tree. **This is the GPU work** (wrapped by ``@spaces.GPU`` in the GUI) and is what
+    tests monkeypatch.
+
+    Args:
+        context: ``(n_days, n_features)`` history — the whole log's daily DF series.
+        horizon: number of future days to forecast.
+
+    Returns:
+        ``(horizon, n_features)`` forecast frequencies (point forecast).
+    """
+    model = _load_timesfm()
+    n_features = context.shape[1]
+    inputs = [context[:, i].astype(np.float32) for i in range(n_features)]
+    point_forecast, _ = model.forecast(horizon=horizon, inputs=inputs)  # type: ignore[attr-defined]
+    # point_forecast is (n_features, horizon) — transpose to (horizon, n_features).
+    return np.asarray(point_forecast).T[:horizon]
+
+
 def _live_windows(
     log: str | Path, model: str, horizon: int
 ) -> tuple[np.ndarray, np.ndarray, list[str]]:
@@ -102,16 +243,22 @@ def _live_windows(
     days of the log (the recent past the drift is measured against).
 
     The whole daily series is the forecast context; its tail is the last-known window.
-    Tests monkeypatch ``log_to_df_series`` / ``_chronos2_forecast`` to keep real model
-    inference out of CI (as slice 3a kept this whole seam mocked).
+    Tests monkeypatch ``log_to_df_series`` / the per-model ``_*_forecast`` adapters to keep
+    real model inference out of CI (as slice 3a kept this whole seam mocked). The dispatch
+    map is built per call (not at module level) so those monkeypatches take effect.
 
     Raises:
         UploadRejected: the model is not wired on the hosted live path, or the log spans
             too few days to forecast a ``horizon``-day window from history.
     """
-    if model != "chronos2":
+    adapters = {
+        "chronos2": _chronos2_forecast,
+        "moirai2": _moirai2_forecast,
+        "timesfm2.5": _timesfm_forecast,
+    }
+    if model not in adapters:
         raise upload_guard.UploadRejected(
-            f"{model} is not yet available on the hosted live demo; use chronos2."
+            f"{model} is not available on the hosted live demo; choose one of {sorted(adapters)}."
         )
 
     series = log_to_df_series(log)
@@ -124,7 +271,7 @@ def _live_windows(
         )
 
     last_known_window = values[-horizon:]
-    forecast_window = _chronos2_forecast(values, horizon)
+    forecast_window = adapters[model](values, horizon)
     return forecast_window, last_known_window, feature_names
 
 

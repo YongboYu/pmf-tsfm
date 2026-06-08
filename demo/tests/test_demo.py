@@ -863,6 +863,15 @@ def test_app_builds_both_tabs():
     assert {"Bundled explorer", "Live upload (your log)"} <= labels
 
 
+def test_live_tab_offers_all_bundled_models():
+    """The live upload tab reaches model parity with the bundled explorer — all three TSFMs
+    are offered, not chronos2 alone (the heavy two are gated to small logs by the guard)."""
+    pytest.importorskip("gradio")
+    import app
+
+    assert app.LIVE_MODELS == app.MODELS == ["chronos2", "moirai2", "timesfm2.5"]
+
+
 def test_run_live_renders_panes_and_drift_on_success(monkeypatch):
     """A successful upload yields the twin panes, both drift overlays, and a drift tally."""
     pytest.importorskip("gradio")
