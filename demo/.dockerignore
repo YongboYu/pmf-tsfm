@@ -1,0 +1,26 @@
+# Build context is demo/. Keep what the image needs at runtime:
+#   assets/    pre-rendered SVGs + metrics the Bundled tab serves
+#   examples/  sepsis_sample.xes — the Live tab's one-click example
+#   static/    vendored svg-pan-zoom.min.js
+#   README.md  copied for in-image reference
+# Everything below is dev-only or regenerable and is excluded.
+
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+
+# Dev-only: tests + helper scripts aren't served by the app.
+tests/
+scripts/
+
+# Agent handoffs (dated markdown) — never part of the image.
+HANDOFF_*.md
+
+# Containerisation files themselves.
+Dockerfile
+.dockerignore
+
+# Local caches / virtualenvs that must never leak into the build.
+.venv/
+.cache/
