@@ -992,3 +992,108 @@ def test_tabs_carry_onboarding_accordions():
     explainers = [a for a in accordions if a.label == "What am I looking at?"]
     assert len(explainers) >= 2, "expected an onboarding accordion on each tab"
     assert all(not a.open for a in explainers), "the explainer should start collapsed"
+
+
+# ---------------------------------------------------------------------------
+# app.py — the agent surface (REST + MCP, slice 4, #116). Launching with
+# mcp_server=True turns each *public* API endpoint into an MCP tool whose schema
+# derives from its type hints + docstring. Only one endpoint is public — the live
+# forecast (forecast_from_source); every GUI/bundled listener is private, so the
+# bundled accuracy path never leaks to an agent (ADR-0003).
+# ---------------------------------------------------------------------------
+
+# A full live bundle (all seven keys forecast_live returns) for stubbing _run_live, so the
+# slim agent payload can be selected from it.
+_FULL_LIVE_BUNDLE = dict(
+    _LIVE_STUB_BUNDLE,
+    forecast_dfg={"nodes": [], "arcs": []},
+    comparison_dfg={"nodes": [], "arcs": []},
+)
+
+
+def _named_endpoints(app) -> set[str]:
+    """The public API endpoint names of the built app (the set MCP turns into tools)."""
+    return set(app.build().get_api_info()["named_endpoints"])
+
+
+def test_only_the_live_tool_is_a_public_api_endpoint():
+    """Exactly one public endpoint — the live forecast — is exposed, so flipping
+    mcp_server=True yields a single agent tool. Every GUI/bundled listener is private."""
+    pytest.importorskip("gradio")
+    import app
+
+    assert _named_endpoints(app) == {"/forecast_from_source"}
+
+
+def test_no_public_endpoint_exposes_the_bundled_path():
+    """The bundled handlers (load / load_diff / refresh) are never public endpoints, so an
+    agent can't reach precomputed accuracy through the API (AC#3)."""
+    pytest.importorskip("gradio")
+    import app
+
+    names = _named_endpoints(app)
+    for bundled in ("/load", "/load_diff", "/refresh", "/forecast_bundled"):
+        assert bundled not in names
+
+
+def test_forecast_from_source_returns_slim_drift_bundle(monkeypatch):
+    """The agent tool returns a *slim* bundle — DFG JSONs + drift only, no SVG strings and
+    never an accuracy metric — selected from the full live bundle."""
+    pytest.importorskip("gradio")
+    import app
+
+    monkeypatch.setattr(app, "_run_live", lambda path, model: dict(_FULL_LIVE_BUNDLE))
+    out = app.forecast_from_source("example", "chronos2")
+
+    assert set(out) == {"forecast_dfg", "comparison_dfg", "drift"}
+    assert not any(k.endswith("_svg") for k in out)
+    assert "metrics" not in out
+    blob = repr(out).lower()
+    assert "mae" not in blob and "rmse" not in blob and "actual" not in blob
+
+
+def test_forecast_from_source_resolves_example_to_the_committed_log(monkeypatch):
+    """'example' is resolved to the committed sample and handed to the GPU seam unchanged."""
+    pytest.importorskip("gradio")
+    import app
+
+    seen: dict[str, str] = {}
+
+    def _capture(path, model):
+        seen["path"], seen["model"] = path, model
+        return dict(_FULL_LIVE_BUNDLE)
+
+    monkeypatch.setattr(app, "_run_live", _capture)
+    app.forecast_from_source("example", "chronos2")
+
+    assert seen["path"] == str(app.EXAMPLE_LOG)
+    assert seen["model"] == "chronos2"
+
+
+def test_forecast_from_source_rejects_bad_source_before_gpu(monkeypatch):
+    """An unresolvable source (a bundled name) is rejected by resolve_source before the GPU
+    seam runs — the model is never reached for input the tool can't accept."""
+    pytest.importorskip("gradio")
+    import app
+    from upload_guard import UploadRejected
+
+    def _boom(path, model):
+        raise AssertionError("_run_live reached for an unresolved source")
+
+    monkeypatch.setattr(app, "_run_live", _boom)
+    with pytest.raises(UploadRejected):
+        app.forecast_from_source("sepsis")  # a bundled dataset name → GUI-only, rejected here
+
+
+def test_forecast_from_source_signature_is_the_mcp_schema():
+    """The tool's signature is the auto-derived MCP schema: every arg + the return typed,
+    and a docstring present (no hand-written schema anywhere)."""
+    import inspect
+
+    pytest.importorskip("gradio")
+    import app
+
+    sig = inspect.signature(app.forecast_from_source)
+    assert all(p.annotation is not inspect.Parameter.empty for p in sig.parameters.values())
+    assert sig.return_annotation is not inspect.Signature.empty
+    assert (app.forecast_from_source.__doc__ or "").strip()
