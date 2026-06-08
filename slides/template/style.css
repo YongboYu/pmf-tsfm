@@ -76,6 +76,10 @@
   border-radius: 6px;
   margin: 0 0 18px;
 }
+/* backup (Q&A-defense) frames carry `class: backup` in frontmatter — mute the locator
+   pill to slate so a backup reads as off-the-main-thread at a glance, while keeping the
+   same shape + JetBrains Mono identity as the navy mains. */
+.backup .locator { background: var(--neutral); }
 
 /* ---- zone 2: assertion headline (the claim — absorbs the old takeaway) ---- */
 .ae-slide h1,

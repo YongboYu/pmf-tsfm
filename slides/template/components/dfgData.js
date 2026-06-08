@@ -27,6 +27,18 @@ export const dfgData = {
     { id: 'accepted__end', source: 'accepted', target: 'end', hero: false },
     { id: 'cancelled__end', source: 'cancelled', target: 'end', hero: false },
   ],
+  // Arcs shown in the S4 middle STACK (top→bottom, hero first) — point: "we forecast ALL arcs".
+  stack: [
+    { id: 'sent__cancelled', label: 'Sent → Cancelled', hero: true },
+    { id: 'created__sent', label: 'Created → Sent', hero: false },
+    { id: 'sent__returned', label: 'Sent → Returned', hero: false },
+  ],
+  // NOTE: the per-frame `daily` maps below are PLACEHOLDER series — each week's 7 values are
+  // fabricated to sum to that edge's real weekly `weights`. The weekly weights/truth and the hero
+  // numbers are the real baked bpi2017 "offer" values; only the day-level shape is synthetic.
+  // TODO(figure-faithfulness, ADR-0006): regenerate `daily` from the actual bpi2017 daily DF counts
+  // (keeping each week's Σ = the weekly arc) before the slides PR ships. `dailyHero` is the real
+  // hero daily series and is unchanged.
   frames: [
     {
       label: 't₁ · Oct 02',
@@ -40,6 +52,11 @@ export const dfgData = {
       // Daily hero (sent__cancelled) series for this week; sums to weights.sent__cancelled
       // (the paper bins daily and sums the horizon into the weekly DFG arc).
       dailyHero: [48, 50, 49, 51, 47, 52, 49],
+      daily: {
+        sent__cancelled: [48, 50, 49, 51, 47, 52, 49], // Σ 346
+        created__sent: [121, 120, 122, 119, 121, 120, 121], // Σ 844
+        sent__returned: [68, 68, 68, 68, 68, 68, 69], // Σ 477
+      },
     },
     {
       label: 't₂ · Oct 09',
@@ -51,6 +68,11 @@ export const dfgData = {
         accepted__end: 353, cancelled__end: 412,
       },
       dailyHero: [46, 44, 45, 43, 47, 45, 44],
+      daily: {
+        sent__cancelled: [46, 44, 45, 43, 47, 45, 44], // Σ 314
+        created__sent: [116, 115, 117, 116, 116, 116, 116], // Σ 812
+        sent__returned: [68, 68, 68, 68, 68, 68, 67], // Σ 475
+      },
     },
     {
       label: 't₃ · Oct 16',
@@ -62,6 +84,11 @@ export const dfgData = {
         accepted__end: 306, cancelled__end: 435,
       },
       dailyHero: [45, 46, 44, 47, 45, 44, 45],
+      daily: {
+        sent__cancelled: [45, 46, 44, 47, 45, 44, 45], // Σ 316
+        created__sent: [111, 110, 111, 110, 111, 111, 111], // Σ 775
+        sent__returned: [62, 62, 62, 62, 62, 62, 64], // Σ 436
+      },
     },
     {
       label: 't₄ · Oct 23 (forecast)',
@@ -74,6 +101,11 @@ export const dfgData = {
       },
       // 7 daily forecast steps (prediction_length: 7); their Σ is the weekly forecast-DFG arc.
       dailyHero: [46, 45, 45, 44, 46, 45, 45],
+      daily: {
+        sent__cancelled: [46, 45, 45, 44, 46, 45, 45], // Σ 316
+        created__sent: [111, 111, 110, 111, 110, 111, 111], // Σ 775
+        sent__returned: [62, 62, 63, 62, 62, 62, 63], // Σ 436
+      },
       truth: {
         start__create: 903, create__created: 903, created__sent: 823,
         sent__cancelled: 315, sent__returned: 497, returned__accepted: 343,

@@ -22,10 +22,21 @@ results-sourced `fig_mae_bars` was a regression from it.
 - `results-mae-bars.png` is regenerated; baseline bars rise to camera-ready values (XGBoost Sepsis
   `0.17`, Hospital `2.67`, …). All three TSFM bars now sit below both baselines on every panel, and
   the headline holds cleanly. The "−21% mean MAE vs best baseline" callout matches the bars.
-- **MAE only.** The paper reports MAE (Table 4); it has no RMSE table. So the **RMSE backup**
-  (`rmse-full.png`) and the **drift** plot stay results-sourced — there is no paper machine source for
-  them. Their baselines carry the same re-run delta, flagged in `make_figures.py`'s header and in the
-  RMSE slide caption. The drift line matches paper Fig 1 qualitatively.
+- The **drift** plot stays results-sourced — there is no paper machine source for it (it matches
+  paper Fig 1 qualitatively).
 - This is a figure-data fix only. Per-slide verification that every number/bar matches the paper is
   the explicit job of the **content-revision phase** (the slide migration that follows this template
   work) — not claimed complete here.
+
+## Update (2026-06-08) — full MAE and RMSE backup tables are now paper-faithful too
+
+The manuscript now carries a dedicated RMSE table (Table 5, `results_1_rmse.tex` /
+`tab:results_1_RMSE`) alongside the MAE table (Table 4, `results_1_mae.tex`), so the earlier
+"MAE only / RMSE has no paper source" constraint no longer holds. Consequently:
+
+- `TABLE4_MAE` is extended to **all 14 variants** and a new full-MAE backup table figure
+  (`mae-full.png`, `fig_mae_full`) is plotted from it — the complete field behind the headline bars.
+- The **RMSE backup** (`rmse-full.png`, `fig_rmse_full`) now plots a new `TABLE5_RMSE` dict
+  transcribed from paper Table 5, replacing the results/ re-run. The "from our re-run … may differ
+  from the camera-ready" slide caveat is dropped, since both backup tables are now camera-ready
+  faithful. `fig_mae_full` / `fig_rmse_full` share one `_full_metric_table` renderer.
