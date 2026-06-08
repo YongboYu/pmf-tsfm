@@ -30,6 +30,7 @@ import matplotlib
 
 matplotlib.use("Agg")
 import figure_manifest as M
+import matplotlib.colors as mcolors
 import matplotlib.patches as mpatches
 import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
@@ -519,20 +520,30 @@ def fig_rmse_full():
                 best[ds] = (label, vals[ds])
         rows.append((label, kind, vals))
 
+    # best-per-log highlight: a light tint of the deck accent (amber), per the locked
+    # palette ("amber = our emphasis"); baselines a faint neutral gray. Tinting toward
+    # white keeps dark cell text legible while still reading unmistakably amber.
+    def _tint(hex_color, frac):  # frac = fraction toward white
+        r, g, b = mcolors.to_rgb(hex_color)
+        return (r + (1 - r) * frac, g + (1 - g) * frac, b + (1 - b) * frac)
+
+    best_amber = _tint(M.ACCENT, 0.62)
+    baseline_gray = "#eef0f3"
+
     fig, ax = plt.subplots(figsize=(10, 6))
     ax.axis("off")
     col_labels = ["Model"] + [M.DATASET_LABELS[d] for d in M.DATASETS]
     text, colors = [], []
     for label, kind, vals in rows:
         line = [label]
-        crow = ["#eef0f3" if kind == "baseline" else "white"]
+        crow = [baseline_gray if kind == "baseline" else "white"]
         for ds in M.DATASETS:
             v = vals[ds]
             line.append("—" if v is None else f"{v:.2f}")
             crow.append(
-                "#d7e3ff"
+                best_amber
                 if best[ds][0] == label
-                else ("#eef0f3" if kind == "baseline" else "white")
+                else (baseline_gray if kind == "baseline" else "white")
             )
         text.append(line)
         colors.append(crow)
@@ -545,7 +556,7 @@ def fig_rmse_full():
     for c in range(len(col_labels)):
         tbl[(0, c)].set_text_props(fontweight="bold")
     ax.set_title(
-        "Zero-shot RMSE — all variants  (blue = best per log, gray = baselines)",
+        "Zero-shot RMSE — all variants  (amber = best per log, gray = baselines)",
         fontweight="bold",
         pad=12,
     )

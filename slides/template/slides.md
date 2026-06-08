@@ -1348,184 +1348,212 @@ Hostile-Q answers rehearsed cold — see SLIDES.md "Required backup slides" + th
 -->
 
 ---
+layout: assertion-evidence
+class: backup
 hideInToc: true
+locator: Backup
+assertion: Both baselines are the strongest from our prior benchmark
 ---
 
-# Backup · Full baseline ranking (Yu 2025)
-
-<div class="border-2 border-dashed border-gray-400 rounded-lg p-4 flex items-center justify-center min-h-[400px]">
-<div class="text-center opacity-60 text-sm">
-[PLACEHOLDER]<br/>
-Full benchmark ranking from Yu et al. 2025<br/>
-All methods × all datasets<br/>
-Used to defend the 2-baseline choice on the main results slide
+<div class="ae-cols">
+  <div class="ae-col">
+    <div class="ae-collabel">Seasonal-Naive</div>
+    <div class="ae-lead">Strongest non-trained baseline</div>
+    <ul>
+      <li>7-day lag matches the weekly cadence</li>
+    </ul>
+  </div>
+  <div class="ae-col">
+    <div class="ae-collabel">XGBoost</div>
+    <div class="ae-lead">Strongest trained ML baseline</div>
+    <ul>
+      <li>Recommended by the Yu 2025 benchmark</li>
+    </ul>
+  </div>
 </div>
-</div>
 
-<!--
-Q&A defense: "We compare against the two strongest baselines from our prior
-benchmark — here's the full ranking."
--->
+<div class="text-center mt-10" style="font-size:20px;color:var(--neutral)">Not cherry-picked — the full ranking lives in the Yu 2025 benchmark.</div>
+
+<!-- speaker note: Honest answer to "why only two baselines?" We did not cherry-pick — these are the top non-trained and top trained methods from the external Yu 2025 benchmark. The full ranking table lives in that benchmark, not in this deck; happy to point to it offline. -->
 
 ---
+layout: assertion-evidence
+class: backup
 hideInToc: true
+locator: Backup
+assertion: RMSE confirms the MAE ranking on every log
 ---
 
-# Backup · Full RMSE table
+<img src="/figures/rmse-full.png" class="block mx-auto w-full max-h-[430px] object-contain rounded-lg" alt="Full RMSE table across all four event logs — figure self-titles; blue = best per log, gray = baseline rows; latest zero-shot TSFMs are best or competitive on every log" />
 
-<img src="/figures/rmse-full.png" class="block mx-auto rounded-lg w-full max-h-[420px] object-contain" alt="Full zero-shot RMSE table — all model variants × 4 logs; confirms the MAE ranking" />
+<div class="flex justify-center mt-3" v-click="1">
+  <Callout>Latest zero-shot TSFMs best or competitive on all four logs</Callout>
+</div>
 
-<div class="caption mt-2 text-center">RMSE from our re-run (paper reports MAE, Table 4); baselines may differ slightly from camera-ready.</div>
+<div class="caption text-center mt-2" style="color:var(--neutral)">RMSE from our re-run (paper Table 4 reports MAE); baselines may differ slightly from the camera-ready.</div>
 
-<!--
-Q&A defense: when asked "does RMSE tell the same story?" — yes, point at this.
-Provenance: RMSE has no paper table (paper Table 4 is MAE); built from results/ CSVs, so its
-baselines carry the re-run delta flagged in make_figures.py. Story (TSFMs win) unchanged.
--->
+<!-- speaker note: RMSE has no dedicated paper table — Table 4 reports MAE only. This table is built from the same results CSVs as the MAE bars, re-run on our side, so baseline rows can drift a hair from the camera-ready. The ranking is the point: switching the error metric to RMSE does not change the story — the latest zero-shot TSFM per family is best or statistically competitive on every one of the four logs, same as MAE. -->
 
 ---
+layout: assertion-evidence
+class: backup
 hideInToc: true
+locator: Backup
+assertion: ER reaches parity on three logs — Sepsis is the exception
 ---
 
-# Backup · ER across all four logs
+<img src="/figures/er-bars.png" class="block mx-auto w-full max-h-[400px] object-contain rounded-lg" alt="Entropic Relevance across four logs — TSFMs match baselines on BPI2017, BPI2019-1 and Hospital Billing, but trail far behind on Sepsis (bottom-left panel)" />
 
-<img src="/figures/er-bars.png" class="block mx-auto rounded-lg w-full max-h-[380px] object-contain" alt="Entropic Relevance across all 4 event logs — TSFMs match baselines except Sepsis" />
-
-<div class="mt-3 text-sm opacity-80 text-center">
-Parity on BPI2017 / BPI2019-1 / Hospital Billing. <strong>Sepsis is the exception</strong> — high behavioral heterogeneity defeats all models (TSFMs worst, tiny fitting ratios).
+<div class="flex justify-center mt-3" v-click="1">
+  <Callout>Sepsis (bottom-left): ER far above the rest — TSFMs worst</Callout>
 </div>
 
-<!--
-Q&A defense: the main ER slide shows Hospital Billing only. This is the full picture.
-Sepsis: ER far above Truth AND lowest fitting ratios — the process is both heterogeneous
-and hard to encode with any single forecasted model.
--->
+<div class="caption text-center mt-2" style="color:var(--neutral)">Parity on BPI2017 / BPI2019-1 / Hospital Billing · Source: paper ER table</div>
+
+<!-- speaker note: The main ER slide showed only Hospital Billing; this generalises it. On three of four logs TSFMs sit at parity with the baselines. Sepsis is the lone exception — it is both heterogeneous (many rare variants) and intrinsically hard to encode, so ER stays high. This sets up the next Sepsis-specific frame. -->
 
 ---
+layout: assertion-evidence
+class: backup
 hideInToc: true
+locator: Backup
+assertion: Baselines were tuned; the fine-tuning recipe is fully specified
 ---
 
-# Backup · Hyperparameter configuration
-
-<div class="grid grid-cols-2 gap-6 mt-4 text-sm">
-
-<div>
-<div class="font-semibold mb-2">XGBoost</div>
-<div class="opacity-80">
-- Optuna hyperparameter optimization<br/>
-- N trials per dataset (specify exact count)<br/>
-- Lagged features, daily aggregation
-</div>
-</div>
-
-<div>
-<div class="font-semibold mb-2">LoRA / Full FT</div>
-<div class="opacity-80">
-- LoRA: r=2, α=4, applied to Q/K/V/O<br/>
-- Patch size 16, batch 32<br/>
-- LR 1e-4, AdamW, 3 epochs<br/>
-- Full FT follows original model recipes
-</div>
+<div class="ae-cols">
+  <div class="ae-col">
+    <div class="ae-collabel">XGBoost</div>
+    <div class="ae-lead">Tuned per dataset, not left at defaults</div>
+    <ul>
+      <li>Optuna hyperparameter optimization, per dataset</li>
+      <li>Lagged features, daily aggregation</li>
+    </ul>
+  </div>
+  <div class="ae-col">
+    <div class="ae-collabel">LoRA / full fine-tuning</div>
+    <div class="ae-lead">Fully specified, reproducible recipe</div>
+    <ul>
+      <li>LoRA r=2, α=4 on Q/K/V/O attention</li>
+      <li>Patch 16 · batch 32 · AdamW · LR 1e-4 · 3 epochs</li>
+      <li>Full fine-tuning uses each model's original recipe</li>
+    </ul>
+  </div>
 </div>
 
-</div>
-
-<!--
-Q&A defense: pre-empts "was your baseline actually tuned?" and "what's your LoRA setup?"
--->
+<!-- speaker note: Pre-empts "was the baseline even tuned?" — yes, XGBoost gets per-dataset Optuna search over lagged daily-aggregated features, so the comparison is fair. And "what was the LoRA setup?" — rank 2, alpha 4 on the attention projections (Q/K/V/O), patch 16, batch 32, AdamW at 1e-4 for 3 epochs; full fine-tuning instead follows each model's own published recipe. Deliberately not quoting an Optuna trial count: the exact N isn't pinned in the repo, so I won't invent one — happy to confirm offline. -->
 
 ---
+layout: assertion-evidence
+class: backup
 hideInToc: true
+locator: Backup
+assertion: DF series are hard on transition, shifting, non-Gaussianity
 ---
 
-# Backup · DF complexity vs standard benchmarks
+<div class="relative">
+  <img src="/figures/df-complexity-radar.png" class="block mx-auto w-full max-h-[400px] object-contain rounded-lg" alt="Radar of seven complexity metrics for DF series — seasonality, trend, stationarity, transition, shifting, correlation, non-Gaussianity, with transition, shifting and non-Gaussianity markedly elevated" />
+  <div class="absolute" style="right:0;top:50%;transform:translateY(-50%)" v-click="1">
+    <Callout style="text-align:center">Elevated:<br/>Transition · Shifting<br/>· Non-Gaussianity</Callout>
+  </div>
+</div>
 
-<img src="/figures/df-complexity-radar.png" class="block mx-auto rounded-lg max-h-[400px] object-contain" alt="DF time-series complexity radar across 7 metrics for the 4 event logs (paper Table 3)" />
+<div class="text-center mt-2" style="font-size:18px;color:var(--neutral)">Higher than typical public benchmarks (Li et al. 2025)</div>
 
-<!--
-Q&A defense: backs the "DF time series are unusually hard" claim with the
-full quantitative profile.
--->
+<!-- speaker note: The full seven-metric profile — seasonality, trend, stationarity, transition, shifting, correlation, non-Gaussianity — backs the "DF series are unusually hard" claim. Three metrics stand out: frequent regime transitions, distribution shifting over time, and strong non-Gaussianity. The comparison to public forecasting benchmarks stays qualitative: we have no benchmark bars in the repo, so claim only that these three metrics run higher than typical public benchmarks (Li et al. 2025). -->
 
 ---
+layout: assertion-evidence
+class: backup
 hideInToc: true
+locator: Backup
+assertion: Sepsis is an ER exception — extreme behavioral heterogeneity
 ---
 
-# Backup · Sepsis — why it's hard
+<div class="dense" style="max-width:1000px;margin-left:auto;margin-right:auto">
 
-<div class="border-2 border-dashed border-gray-400 rounded-lg p-4 flex items-center justify-center min-h-[380px]">
-<div class="text-center opacity-60 text-sm">
-[PLACEHOLDER]<br/>
-Sepsis DFG sample or trace variant distribution<br/>
-Shows behavioral heterogeneity:<br/>
-many infrequent variants, low fitting ratio<br/><br/>
-Reinforces ER slide's Sepsis caveat
-</div>
+<div class="ae-lead text-center">790 trace variants over 999 cases — huge variant tail, sparse DF activity</div>
+
+<div class="text-center mt-4" style="font-size:16px;color:var(--neutral)">
+  ER fitting ratio — higher = easier to encode · lower = harder
 </div>
 
-<!--
-Q&A defense: "Why does Sepsis fail?" — show the variant tail and the sparse DF activity.
--->
+<div class="text-center mt-1" style="font-size:19px;color:var(--ink)">
+  Truth 100% &nbsp;·&nbsp; Training 77.9% &nbsp;·&nbsp; Naive 39.4% &nbsp;·&nbsp; XGBoost 74.6%
+</div>
+<div class="text-center mt-1" style="font-size:19px;color:var(--brand);font-weight:700">
+  Chronos-2 13.2% &nbsp;·&nbsp; MOIRAI-2.0 4.1% &nbsp;·&nbsp; TimesFM-2.5 17.5%
+</div>
+
+<div class="text-center mt-3" style="color:var(--neutral)">All models struggle; the TSFMs struggle most.</div>
+
+</div>
+
+<div class="flex justify-center mt-4" v-click="1">
+  <Callout>ER exception only — Sepsis still wins on MAE (MOIRAI-2.0 ↓28%)</Callout>
+</div>
+
+<!-- speaker note: Sepsis is the ER outlier. 790 variants over 999 cases means an enormous long tail and very sparse DF activity per relation — so the forecasted model encodes traces poorly and fitting ratios collapse (TSFMs 4–18%). High heterogeneity (variant tail + sparse DF) drives the tiny ratios. Crucially this is ER only: on MAE, Sepsis is still a win — MOIRAI-2.0 cuts error 28%. Don't conflate the two metrics. Sources: stats_log.tex, results_ER.tex, results_1_mae.tex. -->
 
 ---
+layout: assertion-evidence
+class: backup
 hideInToc: true
+locator: Backup
+assertion: We forecast a 7-day horizon; longer horizons are future work
 ---
 
-# Backup · Horizon sensitivity
-
-<div class="text-sm space-y-4 mt-4">
-
-<div>
-We forecast at a <strong>7-day horizon</strong>, matching:
-
-- The cadence used in the Yu 2025 benchmark
-- The operational reporting cadence of the source logs
-- Comparable to the horizons TSFMs were pretrained on (weather, traffic series)
+<div class="ae-cols">
+  <div class="ae-col">
+    <div class="ae-collabel">What we tested — 7 days</div>
+    <div class="ae-lead">Chosen to match every reference point</div>
+    <ul>
+      <li>Matches the Yu 2025 benchmark cadence</li>
+      <li>Matches the source logs' reporting cadence</li>
+      <li>Comparable to TSFM pretraining horizons</li>
+    </ul>
+  </div>
+  <div class="ae-col">
+    <div class="ae-collabel">What remains open — 30+ days</div>
+    <div class="ae-lead">Longer horizons stay future work</div>
+    <ul>
+      <li>Longer horizons untested here</li>
+      <li>Future work: pair forecasts with drift detection</li>
+    </ul>
+  </div>
 </div>
 
-<div>
-<strong>Open question:</strong> longer horizons (30+ days). Not tested here.
-Future work — pair TSFM forecasts with drift detection for adaptive multi-horizon prediction.
-</div>
-
-</div>
-
-<!--
-Q&A defense: "What about month-long horizons?" — acknowledge openly,
-flag as future work; don't pretend we tested it.
--->
+<!-- speaker note: 7 days is a deliberate choice, not a limitation we hide — it lines up with the Yu 2025 benchmark, the logs' own reporting cadence, and typical TSFM pretraining horizons, so comparisons are clean. We did NOT test month-long horizons; I'd flag that openly as future work, ideally paired with drift detection so a forecast is refreshed when the process shifts rather than extrapolated blindly. -->
 
 ---
+layout: assertion-evidence
+class: backup
 hideInToc: true
+locator: Backup
+assertion: Multivariate gave no consistent gains over univariate
 ---
 
-# Backup · Multivariate experiments
-
-<div class="text-sm space-y-4 mt-6">
-
-<div>
-MOIRAI, MOIRAI-MoE, and Chronos-2 support multivariate inference.
-We ran initial multivariate experiments.
+<div class="ae-cols">
+  <div class="ae-col">
+    <div class="ae-collabel">What we tried</div>
+    <div class="ae-lead">Multivariate inference, where the model supports it</div>
+    <ul>
+      <li>MOIRAI, MOIRAI-MoE, Chronos-2 all support it</li>
+      <li>No consistent gains over univariate</li>
+      <li>Consistent with Yu 2025</li>
+    </ul>
+  </div>
+  <div class="ae-col">
+    <div class="ae-collabel">Why &amp; what next</div>
+    <div class="ae-lead">Cross-DF heterogeneity makes shared attention hurt</div>
+    <ul>
+      <li>Cross-series attention hurts at this scale</li>
+      <li>Future work: dedicated multivariate fine-tuning for PMF</li>
+    </ul>
+  </div>
 </div>
 
-<div>
-<strong>Result:</strong> no consistent gains over univariate, consistent with the
-Yu 2025 finding that univariate outperforms multivariate on DF time series.
+<div class="mt-6 text-center">
+  <Callout>Univariate stays our default</Callout>
 </div>
 
-<div>
-<strong>Why?</strong> Likely the high heterogeneity across DF series in one log makes
-cross-series attention hurt more than it helps at this data scale.
-</div>
-
-<div>
-<strong>Open question:</strong> dedicated multivariate fine-tuning for PMF — not
-covered here. Future work.
-</div>
-
-</div>
-
-<!--
-Q&A defense: "Why didn't you use the multivariate capabilities of MOIRAI/Chronos-2?"
-Pre-empted on slide 3 (finding #2), reinforced here with the actual experiment.
--->
+<!-- speaker note: This was pre-empted on the DF-complexity slide — DF series are highly heterogeneous, so the cross-series attention that helps homogeneous panels does not transfer. Here it's reinforced with the actual experiment: we ran true multivariate inference on MOIRAI, MOIRAI-MoE, and Chronos-2 (all three support it natively), and saw no consistent improvement over univariate, matching Yu 2025. We don't claim multivariate is hopeless — only that off-the-shelf shared attention doesn't help at this scale; dedicated multivariate fine-tuning for PMF is the open direction. -->
