@@ -225,7 +225,7 @@ const spark = computed(() => {
 
       <!-- ③ per-edge time series -->
       <div class="wcol wcol-spark">
-        <div class="spark-title">O_Sent → O_Canceled, per day</div>
+        <div class="spark-title">O_Sent → O_Cancelled, per day</div>
         <div class="slot slot-spark">
     <!-- Accumulating hero-edge daily sparkline: each frame reveals its week's 7 daily points;
          the 7-day forecast horizon lands as a dashed accent tail, summing (Σ) to the weekly

@@ -157,6 +157,7 @@
 }
 .ae-cover h1 { font-size: 56px; font-weight: 700; line-height: 1.08; letter-spacing: -0.015em; color: var(--brand); max-width: 1000px; margin: 0; }
 .ae-cover .cover-eyebrow { font-family: 'JetBrains Mono', ui-monospace, monospace; font-weight: 600; font-size: 20px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--brand-strong); margin-bottom: 22px; }
+.ae-cover .cover-eyebrow-logo { height: 34px; width: auto; display: block; align-self: flex-start; margin-bottom: 22px; }
 .ae-cover .cover-bar { width: 72px; height: 5px; background: var(--accent); border-radius: 3px; margin: 26px 0; }
 .ae-cover .cover-authors { font-size: 23px; font-weight: 500; color: var(--ink); }
 .ae-cover .cover-affil { font-size: 19px; color: var(--neutral); margin-top: 6px; }
