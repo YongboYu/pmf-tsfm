@@ -228,7 +228,7 @@ These are local orchestration scripts: shell helpers for running sequential expe
 
 ## Run on Your Own Data (Self-Host & Agents)
 
-Beyond the research CLI above, the core pipeline ships as two self-host artifacts so you can run zero-shot DF-relation forecasting plus accuracy (MAE / RMSE + Entropic Relevance) on **your own** process log — a raw `.xes`/`.xes.gz` (auto-converted to the daily DF-relation series) or a prepared DF-relation `.parquet` — with no caps. Both wrap the same Gradio-free seam [`src/pmf_tsfm/api.py`](src/pmf_tsfm/api.py) (`forecast_backtest` / `forecast_only` / `list_models`), a zero-shot holdout backtest (ADR-0004) that reuses the real cores, so the numbers match the CLI and paper. See [ADR-0008](docs/adr/0008-core-forecasting-artifacts-mcp-docker.md) for the design.
+Beyond the research CLI above, the core pipeline ships as two self-host artifacts so you can run zero-shot DF-relation forecasting plus accuracy (MAE / RMSE + Entropic Relevance) on **your own** process log — a raw `.xes`/`.xes.gz` (auto-converted to the daily DF-relation series) or a prepared DF-relation `.parquet` — with no caps. Both wrap the same Gradio-free seam [`src/pmf_tsfm/api.py`](src/pmf_tsfm/api.py) (`forecast_backtest` / `forecast_only` / `list_models`) — a zero-shot holdout backtest that reuses the real cores, so the numbers match the CLI and paper. See the per-artifact READMEs below for setup and design details.
 
 - **Docker — self-host CLI** ([`docker/README.md`](docker/README.md)). Build the core image and forecast your own log:
   ```bash
