@@ -24,6 +24,7 @@ from __future__ import annotations
 import argparse
 import sys
 import traceback
+from pathlib import Path
 
 import matplotlib
 
@@ -36,15 +37,35 @@ from matplotlib.lines import Line2D
 import numpy as np
 import pandas as pd
 
-# --- deck font: match the Slidev deck (Inter) when installed, else fall back --
+# --- deck font: match the Slidev deck (Inter) on any machine -----------------
 from matplotlib import font_manager as _fm
+
+_FONT_DIR = Path(__file__).resolve().parent / "fonts"
+
+
+def _register_bundled_fonts() -> None:
+    """Register the repo-bundled Inter TTFs so figures match the deck font.
+
+    The static TTFs in `fonts/` (SIL OFL, Regular/Medium/SemiBold/Bold) all
+    report family name "Inter", so registering them makes `font.family = Inter`
+    resolve regardless of whether Inter is installed system-wide (deterministic
+    across dev machines / CI).
+    """
+    if not _FONT_DIR.is_dir():
+        return
+    for ttf in sorted(_FONT_DIR.glob("*.ttf")):
+        _fm.fontManager.addfont(str(ttf))
+
+
+_register_bundled_fonts()
 
 
 def _deck_font() -> str:
     """Return Inter if matplotlib can find it, else a clean sans fallback.
 
-    The deck is set in Inter; figures should echo it. If Inter is not installed
-    on this machine we degrade gracefully (no crash) and warn once.
+    The deck is set in Inter; figures should echo it. `_register_bundled_fonts()`
+    above adds the bundled Inter, so this normally returns "Inter". If those
+    files are ever missing we degrade gracefully (no crash) and warn once.
     """
     available = {f.name for f in _fm.fontManager.ttflist}
     for name in ("Inter", "Inter Variable"):
@@ -52,11 +73,12 @@ def _deck_font() -> str:
             return name
     # Fall back to DejaVu Sans, NOT a system sans like Helvetica Neue: DejaVu has
     # full glyph coverage (incl. the U+2192 arrow used in DF edge names), whereas
-    # Helvetica Neue drops it and renders missing-glyph boxes. To get true deck
-    # matching everywhere, install Inter (or bundle its TTFs and register them here).
+    # Helvetica Neue drops it and renders missing-glyph boxes. Inter is bundled in
+    # fonts/ and registered above, so this fallback should only trigger if those
+    # files are absent.
     print(
         "[make_figures] Inter not found in matplotlib's font cache; using DejaVu "
-        "Sans. Install/bundle Inter for figures that match the deck font exactly.",
+        "Sans. The bundled TTFs in slides/scripts/fonts/ may be missing.",
         file=sys.stderr,
     )
     return "DejaVu Sans"
