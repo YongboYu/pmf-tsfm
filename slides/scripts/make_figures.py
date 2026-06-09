@@ -296,6 +296,52 @@ def fig_s6_intermittent_xgb():
     )
 
 
+def fig_s6_drift_xgb_box():
+    """S6 drift, same as fig_s6_drift_xgb but with a static amber box over the back-half where
+    XGBoost stays stuck high while the truth collapses. Separate file from s6-drift-xgb.png so
+    S14 can still reuse the un-annotated panel as its pre-click 'before'."""
+    targ, xgb, *_ = _drift_series()
+    n = len(targ)
+
+    def _mark(ax):
+        x0, x1, y0, y1 = 30, n - 1, 0, 80
+        ax.add_patch(mpatches.Rectangle(
+            (x0, y0), x1 - x0, y1 - y0, fill=False,
+            edgecolor=M.ACCENT, lw=2.5, zorder=5))
+
+    _line_panel(
+        "s6_drift_xgb_box",
+        [(targ, M.TRUTH_LINE, 2.2, "Ground truth"), (xgb, M.BASELINE_GRAY, 1.8, "XGBoost")],
+        _drift_ylim(),
+        n, annotate=_mark,
+    )
+
+
+def fig_s6_intermittent_xgb_arrow():
+    """S6 intermittent, same as fig_s6_intermittent_xgb but with a static amber arrow pointing at
+    XGBoost's tallest overshoot spike (where the truth is near zero). Separate file from
+    s6-intermittent-xgb.png so S14 can still reuse the un-annotated panel."""
+    targ, xgb, _tsfm = _intermittent_series()
+    ylim = (0, max(float(targ.max()), float(xgb.max())) * 1.08)
+    # point at a tall overshoot LEFT of the global max — the global-max spike sits under the
+    # legend (upper right), so target the prominent spike in the day 27-32 window instead.
+    lo, hi = 27, 33
+    peak_x = lo + int(np.argmax(xgb[lo:hi]))
+    peak_y = float(xgb[peak_x])
+
+    def _mark(ax):
+        ax.annotate("", xy=(peak_x, peak_y), xytext=(peak_x - 9, peak_y + 14),
+                    arrowprops=dict(facecolor=M.ACCENT, edgecolor=M.ACCENT,
+                                    width=5, headwidth=14, headlength=12), zorder=5)
+
+    _line_panel(
+        "s6_intermittent_xgb_arrow",
+        [(targ, M.TRUTH_LINE, 2.2, "Ground truth"), (xgb, M.BASELINE_GRAY, 1.8, "XGBoost")],
+        ylim,
+        len(targ), annotate=_mark,
+    )
+
+
 def fig_s14_drift_tsfm():
     """S14 drift callback: S6 view + MOIRAI-2.0 revealed, amber box over the back-half
     region where it dips toward the truth while XGBoost stays stuck high."""
@@ -347,7 +393,7 @@ def fig_ft_slope():
     # baseline + amber overfit lines (full-FT). Chronos-2 is a dashed zs→full segment (no LoRA).
     P = M.PALETTE
     MUTED, AMBER, BAND = P["neutral_soft"], P["accent"], P["surface_alt"]
-    FS_TITLE, FS_LABEL, FS_TICK, FS_ANNO, FS_LEG = 12, 11.5, 11.5, 11.5, 11.5
+    FS_TITLE, FS_LABEL, FS_TICK, FS_ANNO, FS_LEG = 11, 11.5, 11.5, 11.5, 11.5
     OVERFIT_THRESH = 1.05
     xpos = {"zs": 0, "lora": 1, "full": 2}
     xlab = [M.FT_STAGE_LABELS[s] for s in M.FT_STAGES]  # Zero-shot, LoRA, Full-FT
@@ -378,17 +424,17 @@ def fig_ft_slope():
                         alpha=0.85, ls=ls, zorder=2)
         for label, xs, ys, ls in amber:
             ax.plot(xs, ys, marker="o", ms=5.5, lw=3.0, color=AMBER, ls=ls, zorder=4)
-            if ls != "-":  # dashed Chronos-2 -> label mid-line (avoids endpoint clash)
-                ax.annotate(label, xy=(1, (ys[0] + ys[-1]) / 2), xytext=(0, 6),
+            if ls != "-":  # dashed Chronos-2 -> label mid-line, nudged up-left so the rising line clears the "2"
+                ax.annotate(label, xy=(1, (ys[0] + ys[-1]) / 2), xytext=(-13, 11),
                             textcoords="offset points", ha="center", va="bottom",
                             fontsize=FS_ANNO, fontweight="bold", color=AMBER, zorder=5)
             else:
-                ax.annotate(label, xy=(xs[-1], ys[-1]), xytext=(-4, 6),
+                ax.annotate(label, xy=(xs[-1], ys[-1]), xytext=(-11, 2),
                             textcoords="offset points", ha="right", va="bottom",
                             fontsize=FS_ANNO, fontweight="bold", color=AMBER, zorder=5)
 
-        ax.set_title(M.DATASET_LABELS[ds], fontweight="normal",
-                     fontsize=FS_TITLE, color=P["neutral"], pad=4)
+        ax.set_title(M.DATASET_LABELS[ds], fontweight="bold",
+                     fontsize=FS_TITLE, color=P["ink"], pad=9)
         ax.set_xticks([0, 1, 2])
         ax.set_xticklabels(xlab if bottom_row else [], fontsize=FS_TICK)
         ax.tick_params(axis="y", labelsize=FS_TICK)
@@ -405,7 +451,7 @@ def fig_ft_slope():
     ]
     fig.legend(handles=legend, loc="lower center", ncol=3, frameon=False,
                fontsize=FS_LEG, bbox_to_anchor=(0.5, 0.01))
-    fig.tight_layout(rect=(0, 0.08, 1, 1.0), w_pad=3.0, h_pad=2.5)
+    fig.tight_layout(rect=(0, 0.08, 1, 1.0), w_pad=3.0, h_pad=1.1)
     fig.savefig(M.OUT["ft_slope"])
     plt.close(fig)
     print(f"  wrote {M.OUT['ft_slope'].name}")
@@ -726,6 +772,8 @@ FIGURES = {
     "s5_intermittent_truth": fig_s5_intermittent_truth,
     "s6_drift_xgb": fig_s6_drift_xgb,
     "s6_intermittent_xgb": fig_s6_intermittent_xgb,
+    "s6_drift_xgb_box": fig_s6_drift_xgb_box,
+    "s6_intermittent_xgb_arrow": fig_s6_intermittent_xgb_arrow,
     "s14_drift_tsfm": fig_s14_drift_tsfm,
     "s14_intermittent_tsfm": fig_s14_intermittent_tsfm,
     "ft_slope": fig_ft_slope,

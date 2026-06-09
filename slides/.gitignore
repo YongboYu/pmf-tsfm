@@ -17,3 +17,7 @@ SLIDES.md
 # Slidev export output (regenerate with `pnpm export`)
 template/slides-export.pdf
 template/screenshots/
+template/export/
+
+# PPTX video-embed helper (local post-processing of the exported pptx)
+template/_pptx_video.py
