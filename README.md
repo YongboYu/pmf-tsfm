@@ -27,8 +27,8 @@ Systematic evaluation of Time Series Foundation Models (TSFMs) for Process Model
 - Zero-shot coverage: 12 TSFM variants across Chronos, Moirai, and TimesFM.
 - Fine-tuning coverage: LoRA for Chronos-Bolt and Moirai-1.1; full fine-tuning for Chronos-Bolt, Chronos-2, and Moirai-1.1.
 - Data assets: daily DF-count time series in Parquet and XES logs for Entropic Relevance evaluation.
-- Outputs: predictions under `outputs/{task}/{dataset}/{model}/` and checkpoints/adapters under `results/{task}/{dataset}/{model}/`.
 - Orchestration: [Hydra](https://hydra.cc/)-driven Python entry points plus local orchestration scripts and [VSC](https://www.vscentrum.be/) HPC helpers.
+- Self-host & agents: run zero-shot forecasting on your own log via the [Docker image](docker/README.md) or the headless [MCP server](mcp/README.md).
 
 ## Supported Models
 
@@ -148,6 +148,8 @@ python -m pmf_tsfm.er.evaluate_er model=chronos/bolt_small data=bpi2017
 
 Add `logger=wandb` or `logger=wandb_offline` to any Hydra command if you want W&B tracking.
 
+Predictions are written under `outputs/{task}/{dataset}/{model}/` and fine-tuned checkpoints / LoRA adapters under `results/{task}/{dataset}/{model}/`. Both directories are generated per run and git-ignored.
+
 ## Common Workflows
 
 All experiment entry points are [Hydra](https://hydra.cc/)-based.
@@ -258,25 +260,6 @@ The capped Gradio demo in `demo/` remains the hosted visualization Space; these 
 
 For macOS with MPS, keep `training.num_workers=0`. For Linux systems with NVIDIA GPUs and for the HPC cluster, higher worker counts such as `training.num_workers=4` are the intended path.
 
-## Project Structure
-
-```text
-pmf-tsfm/
-├── src/pmf_tsfm/       # Python package: model adapters, data modules, evaluation, api.py seam
-├── configs/            # Hydra configs for tasks, models, datasets, loggers, paths
-├── scripts/            # Local orchestration scripts and HPC helpers
-├── docker/             # Self-host image for the core pipeline (see docker/README.md)
-├── mcp/                # Headless FastMCP server over the api.py seam (see mcp/README.md)
-├── demo/               # Gradio forecast explorer, hosted as a live HF Space (see demo/README.md)
-├── tests/              # pytest suite
-├── data/               # Zenodo assets plus generated processed splits
-├── outputs/            # Saved predictions and evaluation artifacts
-├── results/            # Checkpoints and LoRA adapters
-├── notebooks/          # Analysis notebooks
-├── manuscript/         # Paper assets
-└── slides/             # Slidev talk deck, published as a live HF Space
-```
-
 ## HPC (VSC wICE cluster)
 
 [Slurm](https://slurm.schedmd.com/) submission scripts for the [VSC](https://www.vscentrum.be/) wICE cluster live under `scripts/hpc/`. Use `scripts/hpc/.env.hpc.example` as the cluster-specific starting point.
@@ -294,6 +277,25 @@ LOGGER=wandb bash scripts/hpc/submit_pipeline.sh
 LOGGER=wandb_offline bash scripts/hpc/submit_pipeline.sh
 bash scripts/hpc/submit_zero_shot.sh   # Default: LOGGER=wandb for direct stage runs
 bash scripts/hpc/sync_wandb_offline.sh # Only after explicit offline runs
+```
+
+## Project Structure
+
+```text
+pmf-tsfm/
+├── src/pmf_tsfm/       # Python package: model adapters, data modules, evaluation, api.py seam
+├── configs/            # Hydra configs for tasks, models, datasets, loggers, paths
+├── scripts/            # Local orchestration scripts and HPC helpers
+├── docker/             # Self-host image for the core pipeline (see docker/README.md)
+├── mcp/                # Headless FastMCP server over the api.py seam (see mcp/README.md)
+├── demo/               # Gradio forecast explorer, hosted as a live HF Space (see demo/README.md)
+├── tests/              # pytest suite
+├── data/               # Zenodo assets plus generated processed splits
+├── outputs/            # Generated predictions and evaluation artifacts (git-ignored)
+├── results/            # Generated checkpoints and LoRA adapters (git-ignored)
+├── notebooks/          # Analysis notebooks
+├── manuscript/         # Paper assets
+└── slides/             # Slidev talk deck, published as a live HF Space
 ```
 
 ## Citation
