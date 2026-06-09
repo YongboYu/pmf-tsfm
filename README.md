@@ -11,6 +11,8 @@
 [![License](https://img.shields.io/badge/license-MIT-yellow.svg?style=flat-square&labelColor=2b3137)](https://opensource.org/licenses/MIT)
 [![arXiv](https://img.shields.io/badge/arXiv-2512.07624-b31b1b.svg?style=flat-square&labelColor=2b3137)](https://arxiv.org/abs/2512.07624)
 [![Dataset](https://img.shields.io/badge/dataset-Zenodo-007afc.svg?style=flat-square&logo=zenodo&logoColor=white&labelColor=2b3137)](https://zenodo.org/records/18327515)
+[![Demo](https://img.shields.io/badge/%F0%9F%A4%97%20demo-Space-ff9d00.svg?style=flat-square&labelColor=2b3137)](https://huggingface.co/spaces/YongboYu/pmf-tsfm-demo)
+[![Slides](https://img.shields.io/badge/%F0%9F%A4%97%20slides-Space-ffce00.svg?style=flat-square&labelColor=2b3137)](https://huggingface.co/spaces/YongboYu/pmf-tsfm-slides)
 
 </div>
 
@@ -18,20 +20,22 @@
 
 Systematic evaluation of Time Series Foundation Models (TSFMs) for Process Model Forecasting (PMF), predicting how directly-follows (DF) relations in a process evolve over time. The repository benchmarks Chronos, Moirai, and TimesFM across zero-shot, LoRA, and full fine-tuning settings on four real-world event logs, using MAE/RMSE alongside Entropic Relevance as a process-aware conformance metric.
 
+**Try it live:** an interactive [forecast explorer](https://huggingface.co/spaces/YongboYu/pmf-tsfm-demo) and the [talk slides](https://huggingface.co/spaces/YongboYu/pmf-tsfm-slides), both hosted as Hugging Face Spaces.
+
 ## At a Glance
 
-- Zero-shot coverage: 13 TSFM variants across Chronos, Moirai, and TimesFM.
+- Zero-shot coverage: 12 TSFM variants across Chronos, Moirai, and TimesFM.
 - Fine-tuning coverage: LoRA for Chronos-Bolt and Moirai-1.1; full fine-tuning for Chronos-Bolt, Chronos-2, and Moirai-1.1.
 - Data assets: daily DF-count time series in Parquet and XES logs for Entropic Relevance evaluation.
-- Outputs: predictions under `outputs/{task}/{dataset}/{model}/` and checkpoints/adapters under `results/{task}/{dataset}/{model}/`.
 - Orchestration: [Hydra](https://hydra.cc/)-driven Python entry points plus local orchestration scripts and [VSC](https://www.vscentrum.be/) HPC helpers.
+- Self-host & agents: run zero-shot forecasting on your own log via the [Docker image](docker/README.md) or the headless [MCP server](mcp/README.md).
 
 ## Supported Models
 
 | Family | Variants |
 |--------|----------|
 | **Chronos** | Bolt Tiny, Bolt Mini, Bolt Small, Bolt Base, Chronos-2 |
-| **Moirai** | 1.1 Small/Base/Large, 2.0 Small, MoE Base |
+| **Moirai** | 1.1 Small/Large, 2.0 Small, MoE Base |
 | **TimesFM** | 1.0-200M, 2.0-500M, 2.5-200M |
 
 - LoRA experiments in this repo cover `chronos/bolt_small`, `chronos/bolt_base`, `moirai/1_1_small`, and `moirai/1_1_large`.
@@ -144,6 +148,8 @@ python -m pmf_tsfm.er.evaluate_er model=chronos/bolt_small data=bpi2017
 
 Add `logger=wandb` or `logger=wandb_offline` to any Hydra command if you want W&B tracking.
 
+Predictions are written under `outputs/{task}/{dataset}/{model}/` and fine-tuned checkpoints / LoRA adapters under `results/{task}/{dataset}/{model}/`. Both directories are generated per run and git-ignored.
+
 ## Common Workflows
 
 All experiment entry points are [Hydra](https://hydra.cc/)-based.
@@ -228,7 +234,7 @@ These are local orchestration scripts: shell helpers for running sequential expe
 
 ## Run on Your Own Data (Self-Host & Agents)
 
-Beyond the research CLI above, the core pipeline ships as two self-host artifacts so you can run zero-shot DF-relation forecasting plus accuracy (MAE / RMSE + Entropic Relevance) on **your own** process log — a raw `.xes`/`.xes.gz` (auto-converted to the daily DF-relation series) or a prepared DF-relation `.parquet` — with no caps. Both wrap the same Gradio-free seam [`src/pmf_tsfm/api.py`](src/pmf_tsfm/api.py) (`forecast_backtest` / `forecast_only` / `list_models`), a zero-shot holdout backtest (ADR-0004) that reuses the real cores, so the numbers match the CLI and paper. See [ADR-0008](docs/adr/0008-core-forecasting-artifacts-mcp-docker.md) for the design.
+Beyond the research CLI above, the core pipeline ships as two self-host artifacts so you can run zero-shot DF-relation forecasting plus accuracy (MAE / RMSE + Entropic Relevance) on **your own** process log — a raw `.xes`/`.xes.gz` (auto-converted to the daily DF-relation series) or a prepared DF-relation `.parquet` — with no caps. Both wrap the same Gradio-free seam [`src/pmf_tsfm/api.py`](src/pmf_tsfm/api.py) (`forecast_backtest` / `forecast_only` / `list_models`) — a zero-shot holdout backtest that reuses the real cores, so the numbers match the CLI and paper. See the per-artifact READMEs below for setup and design details.
 
 - **Docker — self-host CLI** ([`docker/README.md`](docker/README.md)). Build the core image and forecast your own log:
   ```bash
@@ -254,22 +260,6 @@ The capped Gradio demo in `demo/` remains the hosted visualization Space; these 
 
 For macOS with MPS, keep `training.num_workers=0`. For Linux systems with NVIDIA GPUs and for the HPC cluster, higher worker counts such as `training.num_workers=4` are the intended path.
 
-## Project Structure
-
-```text
-pmf-tsfm/
-├── src/pmf_tsfm/       # Python package: model adapters, data modules, evaluation
-├── configs/            # Hydra configs for tasks, models, datasets, loggers, paths
-├── scripts/            # Local orchestration scripts and HPC helpers
-├── tests/              # pytest suite
-├── data/               # Zenodo assets plus generated processed splits
-├── outputs/            # Saved predictions and evaluation artifacts
-├── results/            # Checkpoints and LoRA adapters
-├── notebooks/          # Analysis notebooks
-├── manuscript/         # Paper assets
-└── slides/             # Presentation materials
-```
-
 ## HPC (VSC wICE cluster)
 
 [Slurm](https://slurm.schedmd.com/) submission scripts for the [VSC](https://www.vscentrum.be/) wICE cluster live under `scripts/hpc/`. Use `scripts/hpc/.env.hpc.example` as the cluster-specific starting point.
@@ -287,6 +277,25 @@ LOGGER=wandb bash scripts/hpc/submit_pipeline.sh
 LOGGER=wandb_offline bash scripts/hpc/submit_pipeline.sh
 bash scripts/hpc/submit_zero_shot.sh   # Default: LOGGER=wandb for direct stage runs
 bash scripts/hpc/sync_wandb_offline.sh # Only after explicit offline runs
+```
+
+## Project Structure
+
+```text
+pmf-tsfm/
+├── src/pmf_tsfm/       # Python package: model adapters, data modules, evaluation, api.py seam
+├── configs/            # Hydra configs for tasks, models, datasets, loggers, paths
+├── scripts/            # Local orchestration scripts and HPC helpers
+├── docker/             # Self-host image for the core pipeline (see docker/README.md)
+├── mcp/                # Headless FastMCP server over the api.py seam (see mcp/README.md)
+├── demo/               # Gradio forecast explorer, hosted as a live HF Space (see demo/README.md)
+├── tests/              # pytest suite
+├── data/               # Zenodo assets plus generated processed splits
+├── outputs/            # Generated predictions and evaluation artifacts (git-ignored)
+├── results/            # Generated checkpoints and LoRA adapters (git-ignored)
+├── notebooks/          # Analysis notebooks
+├── manuscript/         # Paper assets
+└── slides/             # Slidev talk deck, published as a live HF Space
 ```
 
 ## Citation
