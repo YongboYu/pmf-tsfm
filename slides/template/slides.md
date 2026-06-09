@@ -15,7 +15,7 @@ fonts:
   mono: JetBrains Mono
   weights: '400,500,600,700'
 layout: cover
-eyebrow: CAiSE 2026
+eyebrowImage: /logos/caise-2026.png
 logo: /logos/kuleuven-liris.png
 venue: |
   arXiv:2512.07624
@@ -29,9 +29,6 @@ venue: |
 <div class="cover-authors">Yongbo Yu · Jari Peeperkorn · Johannes De Smedt · Jochen De Weerdt</div>
 
 <style>
-/* eyebrow lives in cover.vue (child component): a plain .cover-eyebrow selector won't reach it —
-   pierce with :deep(). Defeats the global text-transform: uppercase so "CAiSE" keeps its lowercase i. */
-:deep(.cover-eyebrow) { text-transform: none !important; }
 /* nudge the kicker+title+author block up (cover layout is centred by default) */
 .ae-cover { justify-content: flex-start; padding-top: 175px; }
 </style>
@@ -74,7 +71,7 @@ assertion: Process discovery gives one static model, but processes drift
         <colgroup><col style="width: 30%" /><col style="width: 36%" /><col style="width: 34%" /></colgroup>
         <tbody>
           <tr><td>App 9043</td><td>Accepted</td><td>Oct 16 14:20</td></tr>
-          <tr><td>App 9043</td><td>Canceled</td><td>Oct 16 15:02</td></tr>
+          <tr><td>App 9043</td><td>Cancelled</td><td>Oct 16 15:02</td></tr>
           <tr><td>App 9047</td><td>Sent</td><td>Oct 16 16:48</td></tr>
         </tbody>
       </table>
@@ -154,7 +151,7 @@ assertion: PPM forecasts one case · PMF the whole process model
 
 <div class="s3-tasks">
   <div class="s3-task">
-    <span class="s3-task-q">"Will <strong>this</strong> loan be canceled?"</span>
+    <span class="s3-task-q">"Will <strong>this</strong> loan be cancelled?"</span>
   </div>
   <div class="s3-task">
     <span class="s3-task-q">"What does <strong>this</strong> applicant do next?"</span>
@@ -200,7 +197,7 @@ assertion: PPM forecasts one case · PMF the whole process model
   </div>
 </div>
 
-<div class="s3-ask">"How often does <strong>offer sent → canceled</strong> occur?"</div>
+<div class="s3-ask">"How often does <strong>offer sent → cancelled</strong> occur?"</div>
 <div class="s3-horizon">Horizon: the near-term system future</div>
 
 <style>
@@ -228,10 +225,10 @@ Q: PMF vs the PPM I already know?
 
 Same loan log, two different prediction problems. PPM is case-level: take ONE ongoing
 application and predict its future — the next event, the remaining time, or the outcome
-("will THIS loan be canceled?"). Horizon = the rest of that one case.
+("will THIS loan be cancelled?"). Horizon = the rest of that one case.
 
 PMF is system-level: take a WINDOW of the whole log, and forecast the next process model —
-how often each transition fires next, e.g. how often "offer sent → canceled" occurs across
+how often each transition fires next, e.g. how often "offer sent → cancelled" occurs across
 ALL cases. Horizon = the near-term system future (conceptually weeks-to-months; the 7-day
 experimental horizon is setup detail for S12 — don't say it here).
 
@@ -293,8 +290,8 @@ assertion: "DF series are hard: drift, intermittency, and heterogeneity"
     <div class="s5-panel-label">① Drift: a real level shift</div>
     <img src="/figures/s5-drift-truth.png"
          class="block w-full object-contain rounded-lg" style="max-height: 280px"
-         alt="BPI2017 Sent→Canceled daily values — drops from ~46 to ~3 over the test period" />
-    <div class="s5-panel-cap">BPI2017 · Sent → Canceled</div>
+         alt="BPI2017 Sent→Cancelled daily values — drops from ~46 to ~3 over the test period" />
+    <div class="s5-panel-cap">BPI2017 · Sent → Cancelled</div>
   </div>
 
   <!-- RIGHT — intermittency (truth only) -->
@@ -302,8 +299,8 @@ assertion: "DF series are hard: drift, intermittency, and heterogeneity"
     <div class="s5-panel-label">② Intermittent: long zeros, sudden spikes</div>
     <img src="/figures/s5-intermittent-truth.png"
          class="block w-full object-contain rounded-lg" style="max-height: 280px"
-         alt="BPI2019-1 Cancel→Record Invoice Receipt daily values — mostly zero with spikes to 29" />
-    <div class="s5-panel-cap">BPI2019-1 · Cancel → Record Invoice Receipt</div>
+         alt="BPI2019_1 Cancel→Record Invoice Receipt daily values — mostly zero with spikes to 29" />
+    <div class="s5-panel-cap">BPI2019_1 · Cancel → Record Invoice Receipt</div>
   </div>
 
 </div>
@@ -324,8 +321,8 @@ Q: What makes these series difficult?
 Transition IN (from S4): "So it's a forecasting problem. Why isn't it already solved?"
 
 Three data challenges, shown with REAL ground-truth series (no model lines yet):
-  ① Drift — BPI2017 Sent → Canceled: a genuine level shift, fires ~46/day early, decays to ~3.
-  ② Intermittent — BPI2019-1 Cancel → Record Invoice Receipt: ~80% zeros, sudden spikes to ~29.
+  ① Drift — BPI2017 Sent → Cancelled: a genuine level shift, fires ~46/day early, decays to ~3.
+  ② Intermittent — BPI2019_1 Cancel → Record Invoice Receipt: ~80% zeros, sudden spikes to ~29.
   ③ Heterogeneous — the two panels are different logs with completely different shapes; DF
     relations also differ within a single log. Neither is white noise, neither is a smooth trend.
 
@@ -350,7 +347,7 @@ assertion: Machine Learning (ML) / Deep Learning (DL) underperform
     <img src="/figures/s6-drift-xgb-box.png"
          class="block w-full object-contain rounded-lg" style="max-height: 280px"
          alt="BPI2017 drift — XGBoost stays elevated while the truth collapses late, amber box over the back-half" />
-    <div class="s6-cap">BPI2017 · Sent → Canceled</div>
+    <div class="s6-cap">BPI2017 · Sent → Cancelled</div>
   </div>
 
   <!-- RIGHT — intermittent: XGBoost overshoots the zeros -->
@@ -358,8 +355,8 @@ assertion: Machine Learning (ML) / Deep Learning (DL) underperform
     <div class="s6-panel-label">Intermittent: XGBoost overshoots the zeros</div>
     <img src="/figures/s6-intermittent-xgb-arrow.png"
          class="block w-full object-contain rounded-lg" style="max-height: 280px"
-         alt="BPI2019-1 intermittent — XGBoost hallucinates 40–71 where the truth is mostly zero, amber arrow at an overshoot peak" />
-    <div class="s6-cap">BPI2019-1 · Cancel → Record Invoice Receipt</div>
+         alt="BPI2019_1 intermittent — XGBoost hallucinates 40–71 where the truth is mostly zero, amber arrow at an overshoot peak" />
+    <div class="s6-cap">BPI2019_1 · Cancel → Record Invoice Receipt</div>
   </div>
 
 </div>
@@ -574,7 +571,7 @@ Two terms defined here so later slides can lean on them:
 
 ---
 layout: assertion-evidence
-locator: The bet
+locator: Why TSFMs
 assertion: Foundation models are built not to overfit
 ---
 
@@ -598,15 +595,15 @@ assertion: Foundation models are built not to overfit
 
   <!-- THE BET — the focal claim: a foundation model brings a prior -->
   <div class="s9-row s9-row--bet">
-    <div class="s9-tag s9-tag--brand">the bet</div>
+    <div class="s9-tag s9-tag--brand">TSFM</div>
     <div class="s9-line">
       <div class="s9-sub">
         <span class="s9-lead s9-lead--brand">pretrained on</span>
-        <span class="s9-chip s9-chip--big">millions of diverse series</span>
+        <span class="s9-chip s9-chip--big">a wide range of time series from various domains</span>
       </div>
       <div class="s9-sub">
         <span class="s9-arr s9-arr--brand">→</span>
-        <span class="s9-out s9-out--good">a <strong>broad prior</strong>, not a fresh fit</span>
+        <span class="s9-out s9-out--good"><strong>general forecasting knowledge</strong>, not a fresh fit</span>
       </div>
     </div>
   </div>
@@ -663,7 +660,7 @@ layout: center
 
 <div class="s10">
 
-<div class="s10-heading">Three questions this talk answers</div>
+<div class="s10-heading">Research questions</div>
 <div class="s10-rule"></div>
 
 <div class="s10-list">
@@ -731,7 +728,7 @@ Transition OUT (into S11 — The candidates): "Three questions. Here's what we p
 ---
 layout: assertion-evidence
 locator: Model coverage
-assertion: 3 model families, 12 variants, 3 settings
+assertion: 3 model families, 12 variants, 3 settings · 4 datasets · 84 runs
 ---
 
 <div class="s11-evidence">
@@ -952,7 +949,7 @@ assertion: Zero-shot tracks the drift, stays controlled on sparsity
       <img src="/figures/s14-drift-tsfm.png" v-click="1" class="s14-img s14-img--over"
            alt="BPI2017 drift revealed — MOIRAI-2.0 dips toward the truth in the boxed back-half where XGBoost stays elevated" />
     </div>
-    <div class="s14-cap">BPI2017 · Sent → Canceled</div>
+    <div class="s14-cap">BPI2017 · Sent → Cancelled</div>
   </div>
 
   <!-- RIGHT — sparsity: reveal MOIRAI-2.0 + amber arrow to the zero line -->
@@ -960,18 +957,18 @@ assertion: Zero-shot tracks the drift, stays controlled on sparsity
     <div class="s14-panel-label">Sparsity: controlled</div>
     <div class="s14-stack">
       <img src="/figures/s6-intermittent-xgb.png" v-click.hide="1" class="s14-img"
-           alt="BPI2019-1 intermittent — XGBoost hallucinates 40–71 where truth is mostly zero" />
+           alt="BPI2019_1 intermittent — XGBoost hallucinates 40–71 where truth is mostly zero" />
       <img src="/figures/s14-intermittent-tsfm.png" v-click="1" class="s14-img s14-img--over"
-           alt="BPI2019-1 intermittent revealed — MOIRAI-2.0 holds near zero (amber arrow), no false bursts, no spikes" />
+           alt="BPI2019_1 intermittent revealed — MOIRAI-2.0 holds near zero (amber arrow), no false bursts, no spikes" />
     </div>
-    <div class="s14-cap">BPI2019-1 · Cancel → Record Invoice Receipt</div>
+    <div class="s14-cap">BPI2019_1 · Cancel → Record Invoice Receipt</div>
   </div>
 
 </div>
 
-<div class="mt-4 text-center" style="font-size: 20px; color: #334155; line-height: 1.5">
-  <div>Drift: misses the drop, then <strong style="color: var(--brand)">adapts</strong>. Online context, no retraining.</div>
-  <div>Sparsity: holds near zero. No false bursts, but <strong>no spikes either</strong>.</div>
+<div class="mt-4 text-left" style="font-size: 20px; color: #334155; line-height: 1.5; width: fit-content; margin-left: auto; margin-right: auto" v-click="1">
+  <div>Drift: TSFM misses the initial drop, then <strong style="color: var(--brand)">adapts</strong>. A growing history window, no retraining.</div>
+  <div>Sparsity: TSFM holds near zero. No false bursts, but <strong>no spikes either</strong>.</div>
 </div>
 
 <style>
@@ -1030,12 +1027,12 @@ assertion: Fine-tuning barely helps
 ~1 min 30s. The clean-negative beat before S16's low-energy ER concession.
 Transition in: "TSFMs win zero-shot. Natural next question — can we make them better?"
 
-Panel order (logs are small on screen — name them aloud): top-left BPI2017, top-right BPI2019-1,
+Panel order (logs are small on screen — name them aloud): top-left BPI2017, top-right BPI2019_1,
 bottom-left Sepsis, bottom-right Hospital Billing.
 
 Read the slope: most lines hug the 1.0 zero-shot baseline (gray bundle — fine-tuning barely moves
 accuracy), while a few full-FT lines shoot up in amber (overfitting on small logs):
-MOIRAI-1.1-R-large +87% on BPI2019-1, +31% on Sepsis; Chronos-2 +16% on Sepsis. Click reveals the
+MOIRAI-1.1-R-large +87% on BPI2019_1, +31% on Sepsis; Chronos-2 +16% on Sepsis. Click reveals the
 tally: across all 36 LoRA + full fine-tuning runs, 19 (53%) landed worse than zero-shot. The few real
 gains (Sepsis full-FT −10 to −13%) are small and dataset-dependent.
 
@@ -1051,7 +1048,7 @@ process model?"
 
 ---
 layout: assertion-evidence
-locator: Evaluation
+locator: Process-aware evaluation
 assertion: Forecasting beats reuse, but better forecasts don't make better models
 ---
 
@@ -1062,14 +1059,14 @@ assertion: Forecasting beats reuse, but better forecasts don't make better model
 <div class="relative">
   <img src="/figures/er-hospital-billing.png" class="block mx-auto w-full max-h-[380px] object-contain rounded-lg" alt="Hospital Billing ER — reusing the historical (Training) model is far worse than any forecast; the five forecasts cluster close together" />
   <div class="absolute" style="left:40%;top:14%" v-click="1">
-    <Callout dir="left">Forecast ≫ reuse</Callout>
+    <Callout dir="left">Forecast ≫ the static discovery model over training set</Callout>
   </div>
   <div class="absolute" style="left:58%;top:40%" v-click="2">
     <Callout dir="down">TSFMs ≈ baselines</Callout>
   </div>
 </div>
 
-<div class="caption text-center mt-2" style="color:var(--neutral)">Hospital Billing · Truth = ideal floor · Training = reuse the historical model</div>
+<div class="caption text-center mt-2" style="color:var(--neutral)">Hospital Billing · Truth = ideal floor · Training = the discovered model, reused unchanged across the horizon</div>
 
 <!--
 [S-16]
@@ -1108,7 +1105,7 @@ which means the open problem has moved somewhere else."
 
 ---
 layout: assertion-evidence
-locator: Discussion
+locator: Future work
 assertion: The bottleneck has moved from forecasting accuracy to process-aware representation
 ---
 
@@ -1410,13 +1407,13 @@ locator: Backup
 assertion: LoRA and full fine-tuning rarely beat zero-shot
 ---
 
-<img src="/figures/ft-table.png" class="block mx-auto w-full max-h-[430px] object-contain rounded-lg" alt="Fine-tuning results (paper Table 6) — MAE and RMSE for zero-shot, LoRA and full fine-tuning on five TSFMs across the four logs; gains over zero-shot are small and inconsistent, and MOIRAI-1.1-R-large full fine-tuning degrades sharply on BPI2019-1 (23.06 vs 12.30)" />
+<img src="/figures/ft-table.png" class="block mx-auto w-full max-h-[430px] object-contain rounded-lg" alt="Fine-tuning results (paper Table 6) — MAE and RMSE for zero-shot, LoRA and full fine-tuning on five TSFMs across the four logs; gains over zero-shot are small and inconsistent, and MOIRAI-1.1-R-large full fine-tuning degrades sharply on BPI2019_1 (23.06 vs 12.30)" />
 
 <div class="flex justify-center mt-3">
   <Callout>Gains are marginal and inconsistent — full fine-tuning can degrade</Callout>
 </div>
 
-<!-- speaker note: [S-backup-FT] Paper Table 6 — the detail behind the S15 slope. Five fine-tunable models (Chronos-2 has no LoRA, hence two rows); MAE and RMSE per log for zero-shot vs LoRA vs full tune, grouped by model. Gains over zero-shot are small and dataset-dependent, and several rows get worse — the extreme is MOIRAI-1.1-R-large full fine-tuning on BPI2019-1 (23.06 vs 12.30 zero-shot). This is the per-number evidence behind "skip fine-tuning at PMF data scale." -->
+<!-- speaker note: [S-backup-FT] Paper Table 6 — the detail behind the S15 slope. Five fine-tunable models (Chronos-2 has no LoRA, hence two rows); MAE and RMSE per log for zero-shot vs LoRA vs full tune, grouped by model. Gains over zero-shot are small and dataset-dependent, and several rows get worse — the extreme is MOIRAI-1.1-R-large full fine-tuning on BPI2019_1 (23.06 vs 12.30 zero-shot). This is the per-number evidence behind "skip fine-tuning at PMF data scale." -->
 
 ---
 layout: assertion-evidence
@@ -1426,7 +1423,7 @@ locator: Backup
 assertion: ER reaches parity on three logs — Sepsis is the exception
 ---
 
-<img src="/figures/er-bars.png" class="block mx-auto w-full max-h-[400px] object-contain rounded-lg" alt="Entropic Relevance across four logs — TSFMs match baselines on BPI2017, BPI2019-1 and Hospital Billing, but trail far behind on Sepsis (bottom-left panel)" />
+<img src="/figures/er-bars.png" class="block mx-auto w-full max-h-[400px] object-contain rounded-lg" alt="Entropic Relevance across four logs — TSFMs match baselines on BPI2017, BPI2019_1 and Hospital Billing, but trail far behind on Sepsis (bottom-left panel)" />
 
 <div class="flex justify-center mt-3">
   <Callout>Sepsis (bottom-left): ER far above the rest — TSFMs worst</Callout>
