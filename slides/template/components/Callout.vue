@@ -31,7 +31,6 @@ defineProps({ dir: { type: String, default: '' } })
   line-height: 1.2;
   padding: 7px 13px;
   border-radius: 8px;
-  box-shadow: 0 6px 18px rgba(221, 138, 46, 0.35);
 }
 /* directional pointer (a small triangle on the chosen side) */
 .ae-callout::after {
