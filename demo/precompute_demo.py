@@ -16,6 +16,19 @@ The JSON files stay the regenerable source of truth; the SVGs are pre-rendered s
 HF Spaces can serve the bundled path with no ``dot`` binary at runtime (the same
 ``render`` code later serves user-submitted logs).
 
+Inputs (regeneration only — serving uses the committed assets, so this never runs
+at request time). Regenerating reads **two** gitignored sources, not just one:
+
+- ``outputs/zero_shot/`` + ``outputs/er/`` — the predictions/targets/metadata and
+  the precomputed ER sweep; and
+- ``data/processed_logs/<dataset>.xes`` — the processed XES event logs, reloaded by
+  the truth-DFG ER baseline (the same logs the ER sweep parses). ``outputs/`` alone
+  is no longer sufficient: the per-window ``truth_er`` is recomputed from these logs.
+
+So adding a model/dataset or rebuilding on a fresh checkout needs the XES logs
+present too. ``main`` checks for them up front and fails with a clear error if any
+are missing. (Serve-time is unaffected — ``truth_er`` is baked into ``metrics.json``.)
+
     uv run python demo/precompute_demo.py
 """
 
@@ -179,7 +192,35 @@ def precompute_one(
     return out_dir
 
 
+def _display_path(path: Path) -> str:
+    """Repo-relative display when possible, else the absolute path (never raises)."""
+    try:
+        return str(path.relative_to(REPO_ROOT))
+    except ValueError:
+        return str(path)
+
+
+def _check_logs_present(log_dir: Path = LOG_DIR) -> None:
+    """Fail fast if any processed XES log is missing before we write assets.
+
+    The truth-DFG ER baseline reloads ``data/processed_logs/<dataset>.xes`` (gitignored,
+    produced by the preprocess pipeline). Checking all of them up front gives a clear
+    error instead of an opaque loader failure part-way through the 12-pair sweep — after
+    earlier pairs have already been written.
+    """
+    missing = [log_dir / f"{dataset}.xes" for dataset in DATASET_DIRS]
+    missing = [p for p in missing if not p.exists()]
+    if missing:
+        listed = "\n  ".join(_display_path(p) for p in missing)
+        raise FileNotFoundError(
+            "Regenerating demo assets needs the processed XES logs (for the truth-DFG ER "
+            f"baseline), not just outputs/. Missing:\n  {listed}\n"
+            "These are gitignored — run the preprocess pipeline to produce them."
+        )
+
+
 def main() -> None:
+    _check_logs_present()
     for dataset, model in BUNDLED:
         out_dir = precompute_one(dataset, model, outputs_root=OUTPUTS_ROOT, assets_root=ASSETS_ROOT)
         print(f"wrote {out_dir.relative_to(REPO_ROOT)}")
