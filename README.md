@@ -24,7 +24,7 @@ Systematic evaluation of Time Series Foundation Models (TSFMs) for Process Model
 
 ## At a Glance
 
-- Zero-shot coverage: 13 TSFM variants across Chronos, Moirai, and TimesFM.
+- Zero-shot coverage: 12 TSFM variants across Chronos, Moirai, and TimesFM.
 - Fine-tuning coverage: LoRA for Chronos-Bolt and Moirai-1.1; full fine-tuning for Chronos-Bolt, Chronos-2, and Moirai-1.1.
 - Data assets: daily DF-count time series in Parquet and XES logs for Entropic Relevance evaluation.
 - Outputs: predictions under `outputs/{task}/{dataset}/{model}/` and checkpoints/adapters under `results/{task}/{dataset}/{model}/`.
@@ -35,7 +35,7 @@ Systematic evaluation of Time Series Foundation Models (TSFMs) for Process Model
 | Family | Variants |
 |--------|----------|
 | **Chronos** | Bolt Tiny, Bolt Mini, Bolt Small, Bolt Base, Chronos-2 |
-| **Moirai** | 1.1 Small/Base/Large, 2.0 Small, MoE Base |
+| **Moirai** | 1.1 Small/Large, 2.0 Small, MoE Base |
 | **TimesFM** | 1.0-200M, 2.0-500M, 2.5-200M |
 
 - LoRA experiments in this repo cover `chronos/bolt_small`, `chronos/bolt_base`, `moirai/1_1_small`, and `moirai/1_1_large`.
