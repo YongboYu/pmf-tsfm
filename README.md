@@ -11,12 +11,16 @@
 [![License](https://img.shields.io/badge/license-MIT-yellow.svg?style=flat-square&labelColor=2b3137)](https://opensource.org/licenses/MIT)
 [![arXiv](https://img.shields.io/badge/arXiv-2512.07624-b31b1b.svg?style=flat-square&labelColor=2b3137)](https://arxiv.org/abs/2512.07624)
 [![Dataset](https://img.shields.io/badge/dataset-Zenodo-007afc.svg?style=flat-square&logo=zenodo&logoColor=white&labelColor=2b3137)](https://zenodo.org/records/18327515)
+[![Demo](https://img.shields.io/badge/%F0%9F%A4%97%20demo-Space-ff9d00.svg?style=flat-square&labelColor=2b3137)](https://huggingface.co/spaces/YongboYu/pmf-tsfm-demo)
+[![Slides](https://img.shields.io/badge/%F0%9F%A4%97%20slides-Space-ffce00.svg?style=flat-square&labelColor=2b3137)](https://huggingface.co/spaces/YongboYu/pmf-tsfm-slides)
 
 </div>
 
 ---
 
 Systematic evaluation of Time Series Foundation Models (TSFMs) for Process Model Forecasting (PMF), predicting how directly-follows (DF) relations in a process evolve over time. The repository benchmarks Chronos, Moirai, and TimesFM across zero-shot, LoRA, and full fine-tuning settings on four real-world event logs, using MAE/RMSE alongside Entropic Relevance as a process-aware conformance metric.
+
+**Try it live:** an interactive [forecast explorer](https://huggingface.co/spaces/YongboYu/pmf-tsfm-demo) and the [talk slides](https://huggingface.co/spaces/YongboYu/pmf-tsfm-slides), both hosted as Hugging Face Spaces.
 
 ## At a Glance
 
@@ -258,16 +262,19 @@ For macOS with MPS, keep `training.num_workers=0`. For Linux systems with NVIDIA
 
 ```text
 pmf-tsfm/
-├── src/pmf_tsfm/       # Python package: model adapters, data modules, evaluation
+├── src/pmf_tsfm/       # Python package: model adapters, data modules, evaluation, api.py seam
 ├── configs/            # Hydra configs for tasks, models, datasets, loggers, paths
 ├── scripts/            # Local orchestration scripts and HPC helpers
+├── docker/             # Self-host image for the core pipeline (see docker/README.md)
+├── mcp/                # Headless FastMCP server over the api.py seam (see mcp/README.md)
+├── demo/               # Gradio forecast explorer, hosted as a live HF Space (see demo/README.md)
 ├── tests/              # pytest suite
 ├── data/               # Zenodo assets plus generated processed splits
 ├── outputs/            # Saved predictions and evaluation artifacts
 ├── results/            # Checkpoints and LoRA adapters
 ├── notebooks/          # Analysis notebooks
 ├── manuscript/         # Paper assets
-└── slides/             # Presentation materials
+└── slides/             # Slidev talk deck, published as a live HF Space
 ```
 
 ## HPC (VSC wICE cluster)
