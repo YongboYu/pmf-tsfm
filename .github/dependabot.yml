@@ -1,0 +1,19 @@
+# Guard rails for Dependabot's automatic security-update PRs.
+#
+# `open-pull-requests-limit: 0` keeps scheduled *version* updates off (we only take
+# Dependabot's security updates, as before adding this file); the `ignore` rules below
+# apply to security updates too.
+#
+# torch in demo/requirements.txt must stay on ZeroGPU's supported-version list
+# (currently 2.11.0/2.10.0/2.9.1/2.8.0): Dependabot bumping it to 2.12.0 (#150) took the
+# Space down with "torch version in requirements.txt is not compatible with ZeroGPU".
+# Any torch bump there has to be done by hand against that list.
+version: 2
+updates:
+  - package-ecosystem: "pip"
+    directory: "/demo"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 0
+    ignore:
+      - dependency-name: "torch"

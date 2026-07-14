@@ -19,6 +19,9 @@ pandas>=2.2.3,<3  # pm4py's pandas backend isn't pandas-3 ready: pandas 3's pyar
                  # string columns break pm4py variant filtering ("is_in has no kernel for
                  # list<string>"), which the live path hits during preprocessing.
 pm4py>=2.7.12.4
-torch>=2.12.0
+torch==2.11.0  # ZeroGPU only accepts specific torch versions (2.11.0/2.10.0/2.9.1/2.8.0);
+                # anything newer makes the Space fail with a configuration error. Keep this
+                # exact pin on ZeroGPU's supported list — Dependabot is told to leave it
+                # alone in .github/dependabot.yml.
 chronos-forecasting>=1.4.0
 boto3>=1.28  # Chronos-2 loads from an s3:// checkpoint (configs/model/chronos/chronos2.yaml)
