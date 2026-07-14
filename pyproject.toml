@@ -202,7 +202,13 @@ precision = 2
 # uni2ts declares torch<2.5 but works fine with newer torch at runtime.
 # This override keeps torch at the version we deliberately bumped to, rather
 # than letting uni2ts downgrade it.
+#
+# python-dotenv: uni2ts also hard-pins python-dotenv==1.0.0, which carries a
+# symlink-following vulnerability in set_key (Dependabot alert; #87). Override
+# to the patched release — dotenv's 1.x API is stable and uni2ts only reads
+# .env files through it.
 [tool.uv]
 override-dependencies = [
     "torch>=2.8.0",
+    "python-dotenv>=1.2.2",
 ]
