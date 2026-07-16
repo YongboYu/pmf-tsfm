@@ -58,7 +58,7 @@ timesfm_v25 = [
 # SDK provides FastMCP, which auto-derives each tool's schema from type hints + docstrings.
 # An extra (not a dev group) so the self-host Docker image (#134) can install it via
 # `pip install .[mcp]` and expose `docker run img mcp`.
-mcp = ["mcp>=1.2"]
+mcp = ["mcp>=1.28.1"]
 
 [project.scripts]
 pmf-inference = "pmf_tsfm.inference:main"
