@@ -3973,7 +3973,7 @@ requires-dist = [
     { name = "rich", specifier = ">=13.0.0" },
     { name = "safetensors", marker = "extra == 'timesfm-legacy'", specifier = ">=0.5.3" },
     { name = "timesfm", marker = "python_full_version >= '3.11' and extra == 'timesfm-v25'", url = "https://github.com/google-research/timesfm/archive/ed29ec5ef7e2d86c48b632859de3b63856ef9cad.zip" },
-    { name = "torch", specifier = ">=2.12.0" },
+    { name = "torch", specifier = ">=2.13.0" },
     { name = "uni2ts", specifier = ">=2.0.0" },
     { name = "utilsforecast", marker = "extra == 'timesfm-legacy'", specifier = ">=0.1.10" },
     { name = "wandb", specifier = ">=0.18.0" },
