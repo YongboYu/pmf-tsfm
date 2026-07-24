@@ -62,6 +62,7 @@ mcp = ["mcp>=1.2"]
 
 [project.scripts]
 pmf-inference = "pmf_tsfm.inference:main"
+pmf-export-results = "pmf_tsfm.export.hf_results:main"
 
 # [project.urls]
 # Repository = "https://github.com/YongboYu/pmf-tsfm"

@@ -213,6 +213,7 @@ __marimo__/
 # Generated outputs and results
 outputs/
 results/
+data/exports/
 
 # uv
 .python-version
