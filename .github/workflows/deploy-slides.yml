@@ -56,10 +56,14 @@ jobs:
           colorTo: yellow
           sdk: static
           pinned: false
+          short_description: Slides for the CAiSE 2026 talk on TSFMs for PMF
           ---
 
-          Live Slidev deck for the CAiSE 2026 talk (Process Model Forecasting with Time Series
-          Foundation Models). Built from `slides/template` in github.com/YongboYu/pmf-tsfm.
+          Live Slidev deck for the CAiSE 2026 talk on the paper
+          [*Time Series Foundation Models for Process Model Forecasting*](https://arxiv.org/abs/2512.07624).
+          Try the [interactive demo](https://huggingface.co/spaces/YongboYu/pmf-tsfm-demo). Built from
+          [`slides/template`](https://github.com/YongboYu/pmf-tsfm/tree/main/slides/template) in
+          [github.com/YongboYu/pmf-tsfm](https://github.com/YongboYu/pmf-tsfm).
           EOF
 
       - name: Push to the HF Space
