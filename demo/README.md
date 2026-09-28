@@ -6,18 +6,23 @@ colorTo: green
 sdk: gradio
 sdk_version: 6.16.0
 app_file: app.py
-pinned: false
+pinned: true
 license: mit
 short_description: Explore TSFM forecasts of directly-follows process behaviour
 suggested_hardware: zero-a10g
+models:
+  - amazon/chronos-2
+  - Salesforce/moirai-2.0-R-small
+  - google/timesfm-2.5-200m-pytorch
 ---
 
 # Process Model Forecasting Explorer
 
-An explorer for the CAiSE 2026 paper *Process Model Forecasting with Time Series Foundation Models*
-(arXiv:2512.07624). It makes the paper's result tangible: off-the-shelf Time-Series Foundation Models
-(Chronos-2, Moirai-2.0, TimesFM-2.5) can forecast how the **directly-follows (DF) relations** of a
-process evolve over time.
+An explorer for the CAiSE 2026 paper
+[*Time Series Foundation Models for Process Model Forecasting*](https://arxiv.org/abs/2512.07624)
+(code: [github.com/YongboYu/pmf-tsfm](https://github.com/YongboYu/pmf-tsfm)). It makes the paper's
+result tangible: off-the-shelf Time-Series Foundation Models (Chronos-2, Moirai-2.0, TimesFM-2.5) can
+forecast how the **directly-follows (DF) relations** of a process evolve over time.
 
 ## What you can do
 
@@ -54,7 +59,9 @@ uv run --with gradio python app.py
 
 ## Self-host & agent API
 
-This folder is the hosted **HF Space GUI** only. To run the core forecasting pipeline on your own
-data — a self-host **Docker** image (GUI + Hydra CLIs, no caps) or an **MCP** agent server — use the
-dedicated `docker/` and `mcp/` artifacts at the repo root, which wrap `pmf_tsfm.api` directly
-(ADR-0008). See `docker/README.md` and `mcp/README.md`.
+This Space is the hosted GUI only; its source is
+[`demo/`](https://github.com/YongboYu/pmf-tsfm/tree/main/demo) in the GitHub repository, deployed
+automatically on push. To run the core forecasting pipeline on your own data without the Space's
+limits, use the self-host [Docker image](https://github.com/YongboYu/pmf-tsfm/blob/main/docker/README.md)
+(GUI + Hydra CLIs) or the [MCP server](https://github.com/YongboYu/pmf-tsfm/blob/main/mcp/README.md)
+for agents; both wrap `pmf_tsfm.api` directly.
