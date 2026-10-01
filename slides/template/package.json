@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "build": "slidev build",
+    "build:public": "node scripts/make-public-deck.mjs && slidev build slides.public.md",
     "dev": "slidev --open",
     "export": "slidev export",
     "test": "vitest run"
