@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
-import { isBackup, joinSlides, splitSlides, toPublicDeck } from './publicDeck.js'
+import { isBackup, joinSlides, splitSlides, stripComments, toPublicDeck } from './publicDeck.js'
 
 const deck = `---
 theme: default
@@ -66,6 +66,17 @@ describe('splitSlides', () => {
   })
 })
 
+describe('stripComments', () => {
+  it('removes an own-line comment with its line, keeping the HTML block unbroken', () => {
+    const body = '<div>\n  <div>\n    <!-- note -->\n    <div>x</div>\n  </div>\n</div>'
+    expect(stripComments(body)).toBe('<div>\n  <div>\n    <div>x</div>\n  </div>\n</div>')
+  })
+
+  it('removes an inline comment but keeps the surrounding text', () => {
+    expect(stripComments('a <!-- c --> b\n')).toBe('a  b\n')
+  })
+})
+
 describe('toPublicDeck', () => {
   const out = toPublicDeck(deck)
 
@@ -95,5 +106,9 @@ describe('real deck', () => {
     expect(out).not.toContain('<!--')
     expect(splitSlides(out)).toHaveLength(main.length)
     expect(splitSlides(md).length).toBeGreaterThan(main.length)
+  })
+
+  it('leaves no whitespace-only lines behind (they would break HTML blocks)', () => {
+    expect(out).not.toMatch(/^[ \t]+$/m)
   })
 })

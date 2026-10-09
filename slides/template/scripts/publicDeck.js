@@ -58,8 +58,14 @@ export function isBackup({ frontmatter }) {
   return Boolean(m && /\bbackup\b/.test(m[1]))
 }
 
+// A comment on its own line goes with its line. Removing only the comment would leave an indented
+// whitespace-only line — a blank line to markdown — which ends the enclosing HTML block, so the
+// rest of the block (indented 4+ spaces) renders as a code block.
 export function stripComments(body) {
-  return body.replace(/<!--[\s\S]*?-->/g, '').replace(/\n{3,}/g, '\n\n')
+  return body
+    .replace(/^[ \t]*<!--[\s\S]*?-->[ \t]*(\n|$)/gm, '')
+    .replace(/<!--[\s\S]*?-->/g, '')
+    .replace(/\n{3,}/g, '\n\n')
 }
 
 export function toPublicDeck(md) {
